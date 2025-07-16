@@ -1,10 +1,11 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
-    },
+    "strict": true,
     "jsx": "react-native",
-    "types": ["nativewind/types"]
-  }
+    "moduleResolution": "node",
+    "allowJs": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  },
+  "extends": "expo/tsconfig.base"
 }
