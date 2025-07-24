@@ -2,11 +2,11 @@
 
 ✅ 공통 정보
 	•	Base URL: /api/v1
-	•	인증 방식: JWT (Authorization: Bearer <ACCESS_TOKEN>) 사용
+	•	인증 방식: JWT (Authorization: Bearer <ACCESS_TOKEN>) 사용 (JWT token에는 사용자 아이디 첨부.)
 
 ⸻
 
-1. 🧾 모임 생성 API
+1. 모임 생성 API
 
 POST /meetups
 
