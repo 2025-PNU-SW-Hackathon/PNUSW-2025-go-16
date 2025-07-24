@@ -132,4 +132,13 @@
 }
 ```
 
+#### Response (409 예시)
+
+```json
+{
+  "success": false,
+  "errorCode": "INVALID_PARAMETER"
+}
+```
+
 ---
