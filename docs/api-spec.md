@@ -1,17 +1,9 @@
-📘 API 명세서 - 단체 관람 예약 서비스
-
-✅ 공통 정보
-	•	Base URL: /api/v1
-	•	인증 방식: JWT (Authorization: Bearer <ACCESS_TOKEN>) 사용 (JWT token에는 사용자 아이디 첨부.)
-
-⸻
-
 # 📘 API 명세서 - 단체 관람 예약 서비스
 
 ## ✅ 공통 정보
 
 * **Base URL**: `/api/v1`
-* **인증 방식**: JWT (`Authorization: Bearer <ACCESS_TOKEN>`) 사용
+* **인증 방식**: JWT (`Authorization: Bearer <ACCESS_TOKEN>`) 사용 (사용자 아이디 필수 첨부)
 
 ---
 
@@ -29,11 +21,11 @@
 
 ```json
 {
-  "store_id": "store_123",
+  "store_id": "store_123" or null,
   "reservation_start_time": "2025-07-28T19:00:00",
   "reservation_end_time": "2025-07-28T21:00:00",
-  "reservation_match": "영화관람",
-  "reservation_bio": "부산 서면 메가박스에서 영화 보고 밥까지!",
+  "reservation_match": "맨시티 vs 첼시" (경기 정보),
+  "reservation_bio": "맥주한잔하며 즐겁게 보실분들!" (모임 설명),
   "reservation_max_participant_cnt": 6,
   "reservation_match_category": 1
 }
@@ -56,7 +48,6 @@
 ```json
 {
   "success": false,
-  "message": "store_id가 유효하지 않습니다.",
   "errorCode": "INVALID_STORE_ID"
 }
 ```
@@ -71,7 +62,7 @@
 
 #### Request Body (optional)
 
-* 없음 (토큰에서 user\_id 추출)
+* 없음 (토큰에서 user_id 추출) (db에서 reservation_status를 확인후 추가.)
 
 #### Response (200)
 
@@ -80,6 +71,15 @@
   "success": true,
   "message": "모임에 참여하였습니다.",
   "participant_cnt": 4
+}
+```
+
+#### Response (400)
+
+```json
+{
+  "success": false,
+  "errorCode": "INVALID_ACTION"
 }
 ```
 
@@ -107,9 +107,10 @@
 | --------- | ------ | ---------- |
 | `region`  | 지역 검색  | 부산         |
 | `date`    | 날짜 필터  | 2025-07-28 |
+| `category` | 스포츠 카테고리 필터  | 3 |
 | `keyword` | 키워드 검색 | 영화, 치킨     |
 
-#### Response
+#### Response (200)
 
 ```json
 {
@@ -118,11 +119,12 @@
     {
       "reservation_id": 101,
       "store_id": "store_123",
+      "store_name": "store_name",
       "reservation_start_time": "2025-07-28T19:00:00",
       "reservation_end_time": "2025-07-28T21:00:00",
       "reservation_bio": "부산 서면 메가박스에서 영화 보고 밥까지!",
-      "reservation_match": "영화관람",
-      "reservation_status": 0,
+      "reservation_match": "첼시 vs 맨시티",
+      "reservation_status": 0 or 1,
       "reservation_participant_cnt": 4,
       "reservation_max_participant_cnt": 6
     }
