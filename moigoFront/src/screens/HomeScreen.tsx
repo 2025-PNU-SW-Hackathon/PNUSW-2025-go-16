@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { View, Text, Alert, ScrollView } from 'react-native';
 import { COLORS } from '@/constants/colors';
+import { useAuthStore, useReservationStore } from '@/store';
 
 // ---------component test--------------
 import PrimaryButton from '../components/common/PrimaryButton';
@@ -13,6 +14,8 @@ import TagChip from '../components/common/TagChip';
 
 export default function HomeScreen() {
   const [modalVisible, setModalVisible] = useState(false);
+  const { user, logout } = useAuthStore();
+  const { reservations } = useReservationStore();
 
   return (
     <View style={{ flex: 1 }}>
@@ -28,7 +31,19 @@ export default function HomeScreen() {
 
 
       <ScrollView contentContainerStyle={{ padding: 20 }}>
-        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 20 }}>홈 화면</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <Text style={{ fontSize: 20, fontWeight: 'bold' }}>홈 화면</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={{ marginRight: 10, color: COLORS.mainGrayText }}>
+              {user?.name}님 환영합니다!
+            </Text>
+            <PrimaryButton 
+              title="로그아웃" 
+              color={COLORS.mainRed}
+              onPress={logout}
+            />
+          </View>
+        </View>
 
         {/* 1. PrimaryButton 테스트 */}
         <PrimaryButton title="버튼 눌러보기" onPress={() => Alert.alert('눌림!')} />
