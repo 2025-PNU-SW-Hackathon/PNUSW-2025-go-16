@@ -20,14 +20,15 @@ export default function TagChip({
 
 const styles = StyleSheet.create({
   chip: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 10,
     marginRight: 4,
     marginBottom: 4,
+    alignSelf: 'flex-start',
   },
   text: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
   },
 });

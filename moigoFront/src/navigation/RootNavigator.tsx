@@ -15,15 +15,15 @@ export default function RootNavigator() {
 return (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     {isLoggedIn ? (
-      <Stack.Screen name="Main">
+      <Stack.Screen name="Main" options={{ headerShown: false }}>
         {() => <MainTabNavigator />}
       </Stack.Screen>
     ) : (
       <>
-        <Stack.Screen name="Login">
+        <Stack.Screen name="Login" options={{ headerShown: false }}>
           {() => <LoginScreen onLogin={() => setIsLoggedIn(true)} />}
         </Stack.Screen>
-        <Stack.Screen name="Signup" component={SignupScreen} />
+        <Stack.Screen name="Signup" component={SignupScreen} options={{ headerShown: false }}/>
       </>
     )}
   </Stack.Navigator>
