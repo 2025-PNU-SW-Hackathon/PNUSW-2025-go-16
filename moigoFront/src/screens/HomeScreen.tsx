@@ -1,90 +1,94 @@
 // src/screens/HomeScreen.tsx
-import React, { useState } from 'react';
-import { View, Text, Alert, ScrollView } from 'react-native';
+import React from 'react';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { COLORS } from '@/constants/colors';
+import ReservationCard from '../components/common/ReservationCard';
+import { Ionicons } from '@expo/vector-icons';
 
-// ---------component test--------------
-import PrimaryButton from '../components/common/PrimaryButton';
-import ModalBox from '../components/common/ModalBox';
-import ReservationInfoItem from '../components/common/ReservationInfoItem';
-import ReservationStatusBadge from '../components/common/ReservationStatusBadge';
-import TagChip from '../components/common/TagChip';
-//-------------------------------------
+// 예약 카드 더미 데이터
+const reservations = [
+  {
+    id: 1,
+    status: { text: '모집중', color: '#FFE0B2', textColor: '#FF9800' },
+    time: '19:30',
+    date: '7월 06일',
+    title: '토트넘 vs 맨시티',
+    group: '스포츠 팬 클럽',
+    people: '4인 예약',
+    info: '인원 모집중',
+    infoIcon: 'time',
+    action: '상세보기',
+    actionColor: COLORS.mainOrange,
+  },
+  {
+    id: 2,
+    status: { text: '예약중', color: '#E3EDFF', textColor: '#2563EB' },
+    time: '20:00',
+    date: '7월 06일',
+    title: 'KBL 결승전',
+    group: '챔피언 스포츠 펍',
+    people: '3인 예약',
+    info: '30분 내 입금 필요',
+    infoIcon: 'alert-circle',
+    action: '상세보기',
+    actionColor: COLORS.mainOrange,
+  },
+  {
+    id: 3,
+    status: { text: '예약 확정', color: '#DCFCE7', textColor: '#16A34A' },
+    time: '18:00',
+    date: '7월 06일',
+    title: '두산 vs LG',
+    group: '스포츠 타임',
+    people: '6인 예약',
+    info: '예약이 확정되었습니다',
+    infoIcon: 'checkmark',
+    action: '상세보기',
+    actionColor: COLORS.mainOrange,
+  },
+];
 
 export default function HomeScreen() {
-  const [modalVisible, setModalVisible] = useState(false);
-
   return (
-    <View style={{ flex: 1 }}>
-       {modalVisible && (
-        <ModalBox
-          visible={modalVisible}
-          title="테스트 모달"
-          onClose={() => setModalVisible(false)}>
-          <ReservationInfoItem label="날짜" value="7월 20일" />
-          <PrimaryButton title="닫기" onPress={() => setModalVisible(false)} />
-        </ModalBox>
-      )}
+    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+      {/* 상단 앱바 */}
+      <View style={styles.appBar}>
+        <Text style={styles.logo}>🦊</Text>
+        <View style={{ flex: 1 }} />
+        <Ionicons name="notifications-outline" size={24} color={COLORS.mainDarkGray} />
+      </View>
 
-
-      <ScrollView contentContainerStyle={{ padding: 20 }}>
-        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 20 }}>홈 화면</Text>
-
-        {/* 1. PrimaryButton 테스트 */}
-        <PrimaryButton title="버튼 눌러보기" onPress={() => Alert.alert('눌림!')} />
-
-        {/* 2. 아이콘이 있는 버튼 테스트 */}
-        <View style={{ marginTop: 20 }}>
-          <PrimaryButton 
-            title="스포츠 팬으로 시작하기" 
-            color={COLORS.mainOrange}
-            icon="👤"
-            onPress={() => Alert.alert('스포츠 팬!')} 
-          />
-        </View>
-
-        <View style={{ marginTop: 10 }}>
-          <PrimaryButton 
-            title="사업자로 시작하기" 
-            color={COLORS.bizButton}
-            icon="🏢"
-            onPress={() => Alert.alert('사업자!')} 
-          />
-        </View>
-
-        <View style={{ marginTop: 10 }}>
-          <PrimaryButton 
-            title="카카오로 시작하기" 
-            color={COLORS.kakaoYellow}
-            icon="💬"
-            onPress={() => Alert.alert('카카오!')} 
-          />
-        </View>
-
-        {/* 3. 모달 테스트 */}
-        <View style={{ marginTop: 20 }}>
-          <PrimaryButton title="모달 열기" onPress={() => setModalVisible(true)} />
-        </View>
-
-
-        {/* 3. 상태 뱃지 테스트 */}
-        <View style={{ marginTop: 20 }}>
-          <ReservationStatusBadge text="예약 대기중" color="#FF9800" />
-          <ReservationStatusBadge text="확정됨" color="#4CAF50" />
-        </View>
-
-        {/* 4. TagChip 테스트 */}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 20 }}>
-          <TagChip label="모집중" color="#E0F7FA" textColor="#00796B" />
-          <TagChip label="예약완료" />
-          <TagChip label="경기 있음" color="#FFF9C4" textColor="#FBC02D" />
-        </View>
-
-        <View style={{flexDirection:'row', width:'100%'}}>
-          <View style={{width:'50%'}}><PrimaryButton title="수정" color='#DDDDDD'/></View>
-          <View style={{width:'50%'}}><PrimaryButton title="확인"/></View>
-        </View>
+      <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 0 }}>
+        <Text style={styles.sectionTitle}>예약 현황</Text>
+        {reservations.map(item => (
+          <ReservationCard key={item.id} item={item} />
+        ))}
       </ScrollView>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  appBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  logo: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: COLORS.mainOrange,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    marginTop: 8,
+    color: COLORS.mainDark,
+  },
+});
