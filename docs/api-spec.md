@@ -142,3 +142,34 @@
 ```
 
 ---
+
+## 4. 회원가입 API
+
+#### Request Body (JSON)
+
+```json
+{
+    "user_id": "user123",     
+    "user_password": "strongPassword123!", 
+    "user_email": "user123@example.com",
+    "user_name": "홍길동",          
+    "user_phone_number": "010-1234-5678" 
+}
+```
+
+#### Response (200)
+
+```json
+{
+    "message": "User registered successfully",
+    "user_id": "uuid-of-new-user"
+}
+```
+
+#### Response (409 예시)
+
+```json
+{
+    "error": "Duplicate username or email"
+}
+```
