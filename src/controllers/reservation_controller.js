@@ -1,7 +1,7 @@
 // 🎮 reservationController.js
 // 요청을 받아 서비스로 전달하고 응답 처리
 
-const reservationService = require('../services/reservationService');
+const reservationService = require('../services/reservation_service');
 
 // 🧾 모임 생성 컨트롤러
 exports.createReservation = async (req, res, next) => {

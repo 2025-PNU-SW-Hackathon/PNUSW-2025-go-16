@@ -1,7 +1,7 @@
 // src/middlewares/authMiddleware.js
 const jwt = require('jsonwebtoken');
 
-// jwt 
+// jwt 토큰 검증
 const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization;
 

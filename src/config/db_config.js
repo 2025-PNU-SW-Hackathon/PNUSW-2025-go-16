@@ -13,7 +13,8 @@ const connectDB = async () => {
       port: process.env.DB_PORT,
       waitForConnections: true,
       connectionLimit: 10,
-      queueLimit: 0
+      queueLimit: 0,
+      multipleStatements: true
     });
     console.log('✅ MySQL DB connected!');
   } catch (err) {

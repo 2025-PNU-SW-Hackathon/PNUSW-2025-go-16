@@ -3,7 +3,7 @@
 
 const express = require('express');
 const router = express.Router();
-const reservationController = require('../controllers/reservationController');
+const reservationController = require('../controllers/reservation_controller');
 const authMiddleware = require('../middlewares/authMiddleware');
 
 // 모임 생성 (POST /reservations)
