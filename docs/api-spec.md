@@ -150,7 +150,7 @@
 ```json
 {
     "user_id": "user123",     
-    "user_password": "strongPassword123!", 
+    "user_password": "strongPassword123!" (bcrypt), 
     "user_email": "user123@example.com",
     "user_name": "홍길동",          
     "user_phone_number": "010-1234-5678" 
@@ -165,8 +165,15 @@
     "user_id": "uuid-of-new-user"
 }
 ```
+#### Response (400)
 
-#### Response (409 예시)
+```json
+{
+  "error": "Missing or invalid fields"
+}
+```
+
+#### Response (409)
 
 ```json
 {
