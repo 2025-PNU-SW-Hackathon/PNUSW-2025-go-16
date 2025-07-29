@@ -3,6 +3,30 @@
 
 const reservationService = require('../services/reservation_service');
 
+exports.cancelReservation = async (req, res, next) => {
+  try {
+    const { reservation_id } = req.params;
+    const user_id = req.user.user_id;
+
+    const result = await reservationService.cancelReservation(reservation_id, user_id);
+
+    res.status(200).json({ success: true, message: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getReservationDetail = async (req, res, next) => {
+  try {
+    const { reservation_id } = req.params;
+    const detail = await reservationService.getReservationDetail(reservation_id);
+
+    res.status(200).json({ success: true, data: detail });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // 🧾 모임 생성 컨트롤러
 exports.createReservation = async (req, res, next) => {
   try {

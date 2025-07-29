@@ -15,4 +15,19 @@ router.post('/:reservation_id/join', authMiddleware, reservationController.joinR
 // 모임 리스트 조회 (GET /reservations)
 router.get('/', reservationController.getReservationList);
 
+// 모임 삭제 (DELETE /reservations/:reservation_id)
+router.delete(
+  '/:reservation_id',
+  authMiddleware,
+  reservationController.cancelReservation
+);
+
+// 모임 세부 정보 조회 (GET /reservations/:reservation_id)
+router.get(
+  '/:reservation_id',
+  authMiddleware,
+  reservationController.getReservationDetail
+);
+
+
 module.exports = router;

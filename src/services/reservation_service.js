@@ -19,6 +19,8 @@ exports.createReservation = async (user_id, data) => {
   } = data;
 
   const createdAt = new Date(); // MySQL DATETIME 타입과 호환
+  const [rows] = await conn.query('SELECT MAX(reservation_id) as maxId FROM reservation_table');
+  const reservation_current_id = (rows[0].maxId || 0) + 1;
 
   const [result] = await conn.query(
     `INSERT INTO reservation_table
@@ -29,7 +31,7 @@ exports.createReservation = async (user_id, data) => {
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 1, ?, ?);
      INSERT INTO reservation_participant_table(reservation_id, user_id) VALUES (?, ?)`,
     [
-      GLOBALS.RESERVATION_ID_SET_VALUE,
+      reservation_current_id,
       user_id,
       store_id,
       reservation_start_time,
@@ -154,4 +156,78 @@ exports.getReservationList = async (filters) => {
 
   const [rows] = await conn.query(query, params);
   return rows;
+};
+
+// 2차 명세서 추가 부분
+// 모임 취소 
+exports.cancelReservation = async (reservation_id, user_id) => {
+  const conn = getConnection();
+  const [rows] = await conn.query(
+    'SELECT user_id FROM reservation_table WHERE reservation_id = ?',
+    [reservation_id]
+  );
+
+  if (rows.length === 0) {
+    const error = new Error('예약을 찾을 수 없습니다.');
+    error.status = 404;
+    error.errorCode = 'RESERVATION_NOT_FOUND';
+    throw error;
+  }
+
+  if (rows[0].user_id !== user_id) {
+    const error = new Error('권한이 없습니다.');
+    console.log(error);
+    error.status = 403;
+    error.errorCode = 'FORBIDDEN';
+    throw error;
+  }
+
+  await conn.query(
+    'DELETE FROM reservation_table WHERE reservation_id = ?',
+    [reservation_id]
+  );
+
+  // ? 취소 후 로직 정의 필요
+
+  return '모임이 정상적으로 취소되었습니다.';
+};
+
+// 모임 세부 정보 전송
+exports.getReservationDetail = async (reservation_id) => {
+  const conn = getConnection();
+  const [reservationRows] = await conn.query(
+    'SELECT * FROM reservation_table WHERE reservation_id = ?',
+    [reservation_id]
+  );
+
+  if (reservationRows.length === 0) {
+    const error = new Error('예약을 찾을 수 없습니다.');
+    error.status = 404;
+    error.errorCode = 'RESERVATION_NOT_FOUND';
+    throw error;
+  }
+
+  const reservation = reservationRows[0];
+
+  const [participants] = await conn.query(
+    `SELECT u.user_id, u.user_name
+     FROM reservation_participant_table r
+     JOIN user_table u ON r.user_id = u.user_id
+     WHERE r.reservation_id = ?`,
+    [reservation_id]
+  );
+
+  return {
+    reservation_id: reservation.reservation_id,
+    store_id: reservation.store_id,
+    store_name: reservation.reservation_store_name,
+    reservation_start_time: reservation.reservation_start_time,
+    reservation_end_time: reservation.reservation_end_time,
+    reservation_match: reservation.reservation_match,
+    reservation_bio: reservation.reservation_bio,
+    reservation_status: reservation.reservation_status,
+    reservation_participant_cnt: reservation.reservation_participant_cnt,
+    reservation_max_participant_cnt: reservation.reservation_max_participant_cnt,
+    participants: participants
+  };
 };
