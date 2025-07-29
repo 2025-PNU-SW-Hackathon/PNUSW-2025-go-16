@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { mockEvents } from '@/mocks/events';
 
 export function useHomeScreen() {
@@ -6,14 +6,15 @@ export function useHomeScreen() {
   const filterLocations = ['서울', '경기', '인천', '대전', '대구', '부산'];
 
   // 필터 관련 상태
-  const [selectedFilter, setSelectedFilter] = useState('전체');
+  const [selectedFilter, setSelectedFilter] = useState<string>('전체');
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState<string>('');
 
   // 모달 관련 상태
-  const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
-  const [isEnterModalVisible, setIsEnterModalVisible] = useState(false);
+  const [isFilterModalVisible, setIsFilterModalVisible] = useState<boolean>(false);
+  const [isEnterModalVisible, setIsEnterModalVisible] = useState<boolean>(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [isModalTransitioning, setIsModalTransitioning] = useState<boolean>(false);
 
   // 위치 선택/해제 함수
   const toggleLocation = (location: string) => {
@@ -39,15 +40,38 @@ export function useHomeScreen() {
 
   // 이벤트 참여 함수
   const handleParticipate = (event: any) => {
-    setSelectedEvent(event);
-    setIsEnterModalVisible(true);
+    // 모달 전환 중에는 다른 액션 방지
+    if (isModalTransitioning) return;
+    
+    setIsModalTransitioning(true);
+    
+    // 필터 모달이 열려있다면 먼저 닫기
+    if (isFilterModalVisible) {
+      setIsFilterModalVisible(false);
+      // 약간의 지연 후 참여 모달 열기
+      setTimeout(() => {
+        setSelectedEvent(event);
+        setIsEnterModalVisible(true);
+        setIsModalTransitioning(false);
+      }, 200);
+    } else {
+      setSelectedEvent(event);
+      setIsEnterModalVisible(true);
+      setIsModalTransitioning(false);
+    }
   };
 
   // 모달 닫기 함수들
-  const closeFilterModal = () => setIsFilterModalVisible(false);
+  const closeFilterModal = () => {
+    setIsFilterModalVisible(false);
+  };
+  
   const closeEnterModal = () => {
     setIsEnterModalVisible(false);
-    setSelectedEvent(null);
+    // 약간의 지연 후 selectedEvent 초기화
+    setTimeout(() => {
+      setSelectedEvent(null);
+    }, 100);
   };
 
   // 검색어와 필터에 따른 이벤트 필터링
