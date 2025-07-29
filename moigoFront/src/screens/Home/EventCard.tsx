@@ -5,14 +5,15 @@ import Feather from 'react-native-vector-icons/Feather';
 import PrimaryButton from '@/components/common/PrimaryButton';
 import { mockEvents } from '@/mocks/events';
 
-export default function EventCard({ event }: { event: (typeof mockEvents)[0] }) {
-  const handleParticipate = (eventId: string) => {
-    Alert.alert('참여하기', '이벤트에 참여하시겠습니까?');
-  };
+interface EventCardProps {
+  event: (typeof mockEvents)[0];
+  onParticipate: (eventId: string) => void;
+}
 
+export default function EventCard({ event, onParticipate }: EventCardProps) {
   return (
-    <View className="p-6 mb-6 bg-white border border-gray-100 shadow-sm rounded-xl">
-      <View className="flex-row items-center justify-between mb-4">
+    <View className="p-6 mb-6 bg-white rounded-xl border border-gray-100 shadow-sm">
+      <View className="flex-row justify-between items-center mb-4">
         <View className="gap-2">
           <TagChip
             label={event.sportType}
@@ -25,15 +26,15 @@ export default function EventCard({ event }: { event: (typeof mockEvents)[0] }) 
             {event.title}
           </Text>
         </View>
-        <View className="items-start mb-2">
+        <View className="items-end mb-2">
           <Text className="text-gray-400 text-md">{event.date}</Text>
           <Text className="text-lg font-bold text-gray-800">{event.time}</Text>
         </View>
       </View>
-      <View className="flex-row items-center justify-between">
-        <View className="flex-row items-center">
+      <View className="flex-row justify-between items-center">
+        <View className="flex-row gap-2 items-center">
           <Feather
-            name="users"
+            name="user"
             size={14}
             color={COLORS.mainDarkGray}
             className="p-2 rounded-full bg-mainGray"
@@ -41,7 +42,7 @@ export default function EventCard({ event }: { event: (typeof mockEvents)[0] }) 
           <Text className="ml-1 text-gray-600 text-md">{event.participants}</Text>
         </View>
 
-        <View className="flex-row items-center">
+        <View className="flex-row gap-2 items-center">
           <Feather
             name="map-pin"
             size={14}
@@ -54,7 +55,7 @@ export default function EventCard({ event }: { event: (typeof mockEvents)[0] }) 
         <PrimaryButton
           title="참여하기"
           color={COLORS.mainOrange}
-          onPress={() => handleParticipate(event.id)}
+          onPress={() => onParticipate(event.id)}
           className="w-24"
         />
       </View>

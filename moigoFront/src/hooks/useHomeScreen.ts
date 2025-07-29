@@ -1,0 +1,96 @@
+import { useState } from 'react';
+import { mockEvents } from '@/mocks/events';
+
+export function useHomeScreen() {
+  const filterOptions = ['전체', '축구', '야구', '농구', '격투기', '게임'];
+  const filterLocations = ['서울', '경기', '인천', '대전', '대구', '부산'];
+
+  // 필터 관련 상태
+  const [selectedFilter, setSelectedFilter] = useState('전체');
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [searchText, setSearchText] = useState('');
+
+  // 모달 관련 상태
+  const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
+  const [isEnterModalVisible, setIsEnterModalVisible] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+
+  // 위치 선택/해제 함수
+  const toggleLocation = (location: string) => {
+    if (location === '전체') {
+      setSelectedLocations([]);
+    } else {
+      setSelectedLocations((prev) => {
+        if (prev.includes(location)) {
+          return prev.filter((loc) => loc !== location);
+        } else {
+          return [...prev, location];
+        }
+      });
+    }
+  };
+
+  // 필터 초기화 함수
+  const resetFilters = () => {
+    setSelectedFilter('전체');
+    setSelectedLocations([]);
+    setSearchText('');
+  };
+
+  // 이벤트 참여 함수
+  const handleParticipate = (event: any) => {
+    setSelectedEvent(event);
+    setIsEnterModalVisible(true);
+  };
+
+  // 모달 닫기 함수들
+  const closeFilterModal = () => setIsFilterModalVisible(false);
+  const closeEnterModal = () => {
+    setIsEnterModalVisible(false);
+    setSelectedEvent(null);
+  };
+
+  // 검색어와 필터에 따른 이벤트 필터링
+  const filteredEvents = mockEvents.filter((event) => {
+    // 검색어 필터링
+    const searchLower = searchText.toLowerCase();
+    const matchesSearch =
+      searchText === '' ||
+      event.title.toLowerCase().includes(searchLower) ||
+      event.location.toLowerCase().includes(searchLower) ||
+      event.sportType.toLowerCase().includes(searchLower);
+
+    // 카테고리 필터링
+    const matchesCategory = selectedFilter === '전체' || event.sportType === selectedFilter;
+
+    // 위치 필터링 (복수 선택)
+    const matchesLocation =
+      selectedLocations.length === 0 || selectedLocations.includes(event.region);
+
+    return matchesSearch && matchesCategory && matchesLocation;
+  });
+
+  return {
+    filterOptions,
+    filterLocations,
+
+    // 상태
+    selectedFilter,
+    selectedLocations,
+    searchText,
+    isFilterModalVisible,
+    isEnterModalVisible,
+    selectedEvent,
+    filteredEvents,
+
+    // 액션
+    setSelectedFilter,
+    setSearchText,
+    toggleLocation,
+    resetFilters,
+    handleParticipate,
+    setIsFilterModalVisible,
+    closeFilterModal,
+    closeEnterModal,
+  };
+}
