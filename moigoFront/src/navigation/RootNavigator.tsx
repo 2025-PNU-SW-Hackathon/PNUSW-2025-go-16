@@ -5,6 +5,7 @@ import MainTabNavigator from './MainTabNavigator';
 import OnboardingScreen from '@/screens/OnboardingScreen';
 import LoginScreen from '@/screens/LoginScreen';
 import SignupScreen from '@/screens/SignupScreen';
+import ChatRoomScreen from '@/screens/ChatRoomScreen';
 import type {RootStackParamList} from '@/types/RootStackParamList';
 import { useAuthStore } from '@/store';
 
@@ -17,9 +18,12 @@ export default function RootNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {isLoggedIn ? (
-        <Stack.Screen name="Main" options={{ headerShown: false }}>
-          {() => <MainTabNavigator />}
-        </Stack.Screen>
+        <>
+          <Stack.Screen name="Main" options={{ headerShown: false }}>
+            {() => <MainTabNavigator />}
+          </Stack.Screen>
+          <Stack.Screen name="ChatRoom" component={ChatRoomScreen} options={{ headerShown: false }} />
+        </>
       ) : (
         <>
           <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false }} />
