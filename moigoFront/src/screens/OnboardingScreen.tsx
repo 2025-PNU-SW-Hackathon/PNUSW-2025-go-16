@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/types/RootStackParamList';
@@ -13,12 +13,16 @@ export default function OnboardingScreen() {
     <View className="flex-1 bg-white justify-center items-center px-8">
       {/* 로고 */}
       <View className="mb-12">
-        <Text className="text-6xl font-bold text-mainOrange">S</Text>
+        <Image 
+          source={require('@/assets/moigoLogo.png')}
+          className="w-32 h-32"
+          resizeMode="contain"
+        />
       </View>
 
       {/* 메인 텍스트 */}
-      <View className="mb-16 items-center">
-        <Text className="text-2xl font-bold text-mainDark text-center mb-3">
+      <View className="mb-5 items-center">
+        <Text className="text-2xl font-bold text-mainDark text-center mb-5">
           같이 보는 스포츠, Spotple에서
         </Text>
         <Text className="text-base text-mainGrayText text-center leading-6">
@@ -28,18 +32,22 @@ export default function OnboardingScreen() {
 
       {/* 버튼들 */}
       <View className="w-full space-y-3">
-        <PrimaryButton 
-          title="스포츠 팬으로 시작하기" 
-          color={COLORS.mainOrange}
-          icon="👤"
-          onPress={() => navigation.navigate('Login')} 
-        />
-        <PrimaryButton 
-          title="사업자로 시작하기" 
-          color={COLORS.bizButton}
-          icon="🏢"
-          onPress={() => navigation.navigate('Login')} 
-        />
+        <View className="my-2">
+          <PrimaryButton 
+            title="스포츠 팬으로 시작하기" 
+            color={COLORS.mainOrange}
+            icon="👤"
+            onPress={() => navigation.navigate('Login')} 
+          />
+        </View>
+        <View className="my-2">
+          <PrimaryButton 
+            title="사업자로 시작하기" 
+            color={COLORS.bizButton}
+            icon="🏢"
+            onPress={() => navigation.navigate('Login')} 
+          />
+        </View>
       </View>
     </View>
   );
