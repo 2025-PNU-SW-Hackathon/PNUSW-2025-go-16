@@ -12,7 +12,7 @@ import ReservationStatusBadge from '../components/common/ReservationStatusBadge'
 import TagChip from '../components/common/TagChip';
 //-------------------------------------
 
-export default function HomeScreen() {
+export default function ComponentsTest() {
   const [modalVisible, setModalVisible] = useState(false);
   const { user, logout } = useAuthStore();
   const { reservations } = useReservationStore();

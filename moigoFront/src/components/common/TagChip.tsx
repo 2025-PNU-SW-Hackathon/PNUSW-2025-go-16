@@ -1,34 +1,32 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
+import { twMerge } from 'tailwind-merge';
 
 interface TagChipProps {
   label: string;
   color?: string;
   textColor?: string;
+  classNameView?: string;
+  classNameText?: string;
 }
 
 export default function TagChip({
   label,
   color = '#F0F0F0',
   textColor = '#333',
+  classNameView,
+  classNameText,
 }: TagChipProps) {
   return (
-    <View style={[styles.chip, { backgroundColor: color }]}>
-      <Text style={[styles.text, { color: textColor }]}>{label}</Text>
+    <View 
+      className={twMerge("self-start px-2 py-1 mr-1 mb-1 rounded-full", classNameView)}
+      style={{ backgroundColor: color }}
+    >
+      <Text 
+        className={twMerge("text-xs font-medium", classNameText)}
+        style={{ color: textColor }}
+      >
+        {label}
+      </Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  chip: {
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 10,
-    marginRight: 4,
-    marginBottom: 4,
-    alignSelf: 'flex-start',
-  },
-  text: {
-    fontSize: 11,
-    fontWeight: '500',
-  },
-});
