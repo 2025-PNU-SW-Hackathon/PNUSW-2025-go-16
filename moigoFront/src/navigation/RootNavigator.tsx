@@ -7,12 +7,11 @@ import LoginScreen from '@/screens/LoginScreen';
 import SignupScreen from '@/screens/SignupScreen';
 import type { RootStackParamList } from '@/types/RootStackParamList';
 import { useAuthStore } from '@/store';
-import CreateMeeting from '@/screens/CreateMeeting/CreateMeeting';
+import CreateMeeting from '@/screens/CreateMeeting/CreateMeeting/index';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootNavigator() {
-  // Zustand 스토어에서 로그인 상태 가져오기
   const { isLoggedIn } = useAuthStore();
 
   return (
