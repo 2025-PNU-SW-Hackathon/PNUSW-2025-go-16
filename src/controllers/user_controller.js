@@ -1,54 +1,60 @@
-// src/controllers/user_controller.js
+// 🎮 userController.js
+// 요청을 받아 사용자 관련 서비스로 전달하고 응답 처리
+
 const userService = require('../services/user_service');
 
-exports.getMyReviews = async (req, res, next) => {
-  try {
-    const user_id = req.user.user_id;
-    const data = await userService.getMyReviews(user_id);
-    res.status(200).json({ success: true, data });
-  } catch (err) {
-    next(err);
-  }
-};
+// 📝 사용자 등록 (회원가입) 컨트롤러
+exports.registerUser = async (req, res, next) => {
+    try {
+      const { user_id, user_pwd, user_email, user_name, user_phone_number, user_region, user_gender } = req.body;
+      
+      // 기본 유효성 검사
+      if (!user_id || !user_pwd || !user_email || !user_name || !user_phone_number) {
+        return res.status(400).json({
+          success: false,
+          message: '필수 필드가 누락되었습니다. (user_id, user_pwd, user_email, user_name, user_phone_number)'
+        });
+      }
 
-exports.getMyProfile = async (req, res, next) => {
-  try {
-    const user_id = req.user.user_id;
-    const data = await userService.getMyProfile(user_id);
-    res.status(200).json({ success: true, data });
-  } catch (err) {
-    next(err);
-  }
-};
+      // 비밀번호 길이 검사
+      if (user_pwd.length < 6) {
+        return res.status(400).json({
+          success: false,
+          message: '비밀번호는 6자 이상이어야 합니다.'
+        });
+      }
 
-exports.getMyMatchings = async (req, res, next) => {
-  try {
-    const user_id = req.user.user_id;
-    const data = await userService.getMyMatchings(user_id);
-    res.status(200).json({ success: true, data });
-  } catch (err) {
-    next(err);
-  }
-};
+      // 이메일 형식 검사
+      if (!user_email.includes('@') || !user_email.includes('.')) {
+        return res.status(400).json({
+          success: false,
+          message: '올바른 이메일 형식이 아닙니다.'
+        });
+      }
 
-exports.updateProfile = async (req, res, next) => {
-  try {
-    const user_id = req.user.user_id;
-    const profileData = req.body;
-    await userService.updateProfile(user_id, profileData);
-    res.status(200).json({ success: true, message: '프로필이 수정되었습니다.' });
-  } catch (err) {
-    next(err);
-  }
-};
+      const userData = {
+        user_id,
+        user_pwd,
+        user_email,
+        user_name,
+        user_phone_number,
+        user_region: user_region || "서울",
+        user_gender: user_gender || 1
+      };
 
-exports.updatePassword = async (req, res, next) => {
-  try {
-    const user_id = req.user.user_id;
-    const { old_password, new_password } = req.body;
-    await userService.updatePassword(user_id, old_password, new_password);
-    res.status(200).json({ success: true, message: '비밀번호가 성공적으로 변경되었습니다.' });
-  } catch (err) {
-    next(err);
-  }
-};
+      const result = await userService.registerUser(userData);
+      
+      res.status(201).json({
+        success: true,
+        message: '회원가입이 완료되었습니다.',
+        data: {
+          user_id: result.user_id,
+          user_name: result.user_name,
+          user_email: result.user_email,
+          user_phone_number: result.user_phone_number
+        }
+      });
+    } catch (err) {
+      next(err);
+    }
+  };

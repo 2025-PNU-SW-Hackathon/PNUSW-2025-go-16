@@ -3,7 +3,8 @@ const dotenv = require('dotenv');
 const { connectDB } = require('./config/db_config');
 const jwt = require('jsonwebtoken');
 const reservationRoutes = require('./routes/reservation_routes');
-const reviewRoutes = require('./routes/review_routes');
+const registerRoutes = require('./routes/register_routes');
+const loginRoutes = require('./routes/login_routes');
 
 dotenv.config();
 
@@ -13,6 +14,8 @@ const app = express();
 const errorHandler = require('./middlewares/errorHandler');
 const requestLogger = require('./middlewares/requestLogger');
 
+//인증 미들웨어
+const authMiddleware = require('./middlewares/authMiddleware');
 // DB 연결
 connectDB();
 
@@ -22,8 +25,13 @@ app.use(requestLogger);
 
 // 내부 라우팅 등록
 app.use('/api/v1/reservations', reservationRoutes);
-app.use('/api/v1/reviews', reviewRoutes);
-app.use('/api/v1/users', userRoutes);
+// app.use('/api/v1/reviews', reviewRoutes);
+// app.use('/api/v1/users', userRoutes);
+
+app.use('/reservations', reservationRoutes); 
+app.use('/register', registerRoutes);       
+app.use('/auth', loginRoutes);             
+
 
 // 404 및 에러 핸들러 등록
 //app.use(notFound);
@@ -42,7 +50,7 @@ const test_token = jwt.sign(
     { expiresIn: process.env.JWT_EXPIRES_IN || '2h' }
   );
 */
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);

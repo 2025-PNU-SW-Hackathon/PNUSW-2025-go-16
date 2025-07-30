@@ -1,59 +1,87 @@
-// src/services/user_service.js
+// services/user_service.js
+
 const { getConnection } = require('../config/db_config');
+const bcrypt = require('bcryptjs');
 
-exports.getMyReviews = async (user_id) => {
-  const conn = getConnection();
-  const [rows] = await conn.query(
-    `SELECT r.review_id, r.store_id, s.store_name, r.review_text, r.review_rating, r.review_created_time
-     FROM review_table r
-     JOIN store_table s ON r.store_id = s.store_id
-     WHERE r.user_id = ?`,
-    [user_id]
-  );
-  return rows;
-};
+// 사용자 등록 서비스
+exports.registerUser = async (userData) => {
+    const conn = getConnection();
+    const {
+      user_id,
+      user_pwd,
+      user_email,
+      user_name,
+      user_region,
+      user_phone_number,
+      user_gender,
+    } = userData;
 
-exports.getMyProfile = async (user_id) => {
-  const conn = getConnection();
-  const [rows] = await conn.query(
-    `SELECT user_id, user_name, user_email, user_region, user_gender, user_phone_number, user_thumbnail
-     FROM user_table WHERE user_id = ?`,
-    [user_id]
-  );
-  return rows[0];
-};
+    try {
+        // 사용자 ID 중복 확인
+        const [existingUser] = await conn.query(
+          `SELECT user_id FROM user_table WHERE user_id = ?`,
+          [user_id]
+        );
+    
+        if (existingUser.length > 0) {
+          const err = new Error('이미 존재하는 사용자 ID입니다.');
+          err.statusCode = 409;
+          err.errorCode = 'DUPLICATE_USER_ID';
+          throw err;
+        }
 
-exports.getMyMatchings = async (user_id) => {
-  const conn = getConnection();
-  const [rows] = await conn.query(
-    `SELECT r.reservation_id, r.reservation_match, r.reservation_start_time, r.reservation_store_name as store_name,
-            '참여완료' as status
-     FROM reservation_participant_table p
-     JOIN reservation_table r ON p.reservation_id = r.reservation_id
-     WHERE p.user_id = ?`,
-    [user_id]
-  );
-  return rows;
-};
+        // 이메일 중복 확인
+        const [existingEmail] = await conn.query(
+          `SELECT user_id FROM user_table WHERE user_email = ?`,
+          [user_email]
+        );
+    
+        if (existingEmail.length > 0) {
+          const err = new Error('이미 사용 중인 이메일입니다.');
+          err.statusCode = 409;
+          err.errorCode = 'DUPLICATE_EMAIL';
+          throw err;
+        }
+    
+        // 비밀번호 해싱
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(user_pwd, salt);
+    
+        const createdAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    
+        // 사용자 정보 데이터베이스에 삽입
+        const [result] = await conn.query(
+          `INSERT INTO user_table
+           (user_id, user_pwd, user_email, user_name, user_region, user_phone_number,
+            user_gender, user_updated_time)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            user_id,
+            hashedPassword,
+            user_email,
+            user_name,
+            user_region,
+            user_phone_number,
+            user_gender,
+            createdAt,
+          ]
+        );
 
-exports.updateProfile = async (user_id, data) => {
-  const conn = getConnection();
-  const { user_name, user_region, user_phone_number, user_thumbnail } = data;
-  await conn.query(
-    `UPDATE user_table SET user_name=?, user_region=?, user_phone_number=?, user_thumbnail=?, user_updated_time=NOW()
-     WHERE user_id = ?`,
-    [user_name, user_region, user_phone_number, user_thumbnail, user_id]
-  );
-};
-
-exports.updatePassword = async (user_id, old_password, new_password) => {
-  const conn = getConnection();
-  const [rows] = await conn.query('SELECT user_pwd FROM user_table WHERE user_id = ?', [user_id]);
-  if (rows.length === 0 || rows[0].user_pwd !== old_password) {
-    const err = new Error('기존 비밀번호가 일치하지 않습니다.');
-    err.status = 400;
-    err.errorCode = 'WRONG_PASSWORD';
-    throw err;
-  }
-  await conn.query('UPDATE user_table SET user_pwd = ? WHERE user_id = ?', [new_password, user_id]);
-};
+        // 삽입된 사용자 정보 반환 (비밀번호 제외)
+        return {
+          user_id: user_id,
+          user_email: user_email,
+          user_name: user_name,
+          user_phone_number: user_phone_number,
+          user_region: user_region,
+          user_gender: user_gender
+        };
+    } catch (error) {
+      // 이미 정의된 에러가 아니면 일반 서버 에러로 처리
+      if (!error.statusCode) {
+        error.statusCode = 500;
+        error.message = '회원가입 중 오류가 발생했습니다.';
+      }
+      throw error;
+    }
+  };
