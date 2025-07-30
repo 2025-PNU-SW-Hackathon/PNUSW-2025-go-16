@@ -444,7 +444,7 @@
       "chat_room_name": "부산 직관 모임",
       "last_message": "그럼 7시에 만날까요?",
       "last_message_time": "2025-07-30T20:15:00"
-    }
+    },
   ]
 }
 ```
@@ -538,7 +538,7 @@
 {
   "success": true,
   "data": {
-    "user_id": 12,
+    "user_id": "yejun",
     "nickname": "축구사랑러",
     "profile_image_url": "https://cdn.example.com/profiles/12.jpg"
   }
@@ -570,8 +570,58 @@
       "message": "안녕하세요!",
       "created_at": "2025-07-30T20:15:00",
       "read_count": 3
-    }
+    },
   ]
+}
+```
+
+### 12.6. 채팅방 생성 기능
+
+**POST** `/chat/rooms/enter`
+
+>>채팅방 생성 기능
+
+#### Headers
+
+* Authorization: Bearer `<JWT>` ✅ 필수
+
+#### Request Body
+
+```json
+{
+  "group_id": 101
+}
+```
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "data": {
+    "chat_room_id": 12,
+    "message": "입장 완료"
+  }
+}
+```
+
+#### Response (400)
+
+```json
+{
+  "success": false,
+  "errorCode": "INVALID_RESERVATION_ID",
+  "message": "존재하지 않는 모임입니다."
+}
+```
+
+#### Response (403)
+
+```json
+{
+  "success": false,
+  "errorCode": "NOT_A_PARTICIPANT",
+  "message": "모임 참여자만 채팅방에 입장할 수 있습니다."
 }
 ```
 
