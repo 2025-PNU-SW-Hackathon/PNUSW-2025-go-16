@@ -421,4 +421,177 @@
 }
 ```
 
+## 12. 💬 채팅 기능 API
+
+### 12.1. 채팅방 목록 조회 API
+
+**GET** `/chat/rooms`
+
+> 유저가 참여 중인 채팅방 목록을 조회합니다.
+
+#### Headers
+
+* Authorization: Bearer `<JWT>` ✅ 필수
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "chat_room_id": 12,
+      "chat_room_name": "부산 직관 모임",
+      "last_message": "그럼 7시에 만날까요?",
+      "participants": [3, 12, 18]
+    }
+  ]
+}
+```
+
+---
+
+### 12.2. 채팅방 생성 및 입장 API
+
+**POST** `/chat/rooms/enter`
+
+#### Request Body
+
+```json
+{
+  "group_id": 101
+}
+```
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "data": {
+    "chat_room_id": 12,
+    "message": "입장 완료"
+  }
+}
+```
+
+---
+
+### 12.3. 채팅 메시지 조회 API
+
+**GET** `/chat/rooms/:roomId/messages`
+
+#### Query Params
+
+| 이름     | 설명                    |
+|--------|-----------------------|
+| cursor | 마지막 메시지 ID (선택)     |
+| limit  | 가져올 개수 (기본 30, 최대 100) |
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "message_id": 345,
+      "sender_id": 3,
+      "message": "안녕하세요!",
+      "created_at": "2025-07-30T20:15:00",
+      "read_by": [3, 5, 8]
+    }
+  ]
+}
+```
+
+---
+
+### 12.4. 채팅방 나가기 API
+
+**DELETE** `/chat/rooms/:roomId/leave`
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "message": "채팅방을 나갔습니다"
+}
+```
+
+---
+
+### 12.5. 채팅방 상태 변경 API
+
+**PATCH** `/chat/rooms/:roomId/status`
+
+```json
+{
+  "status": 2
+}
+```
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "message": "채팅방 상태가 예약완료로 변경되었습니다"
+}
+```
+
+---
+
+### 12.6. 채팅방 강퇴 API
+
+**DELETE** `/chat/rooms/:roomId/kick/:userId`
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "message": "유저를 채팅방에서 강퇴했습니다"
+}
+```
+
+---
+
+### 12.7. 유저 정보 조회 API
+
+**GET** `/users/:userId/profile`
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "data": {
+    "user_id": 12,
+    "nickname": "축구사랑러",
+    "profile_image_url": "https://cdn.example.com/profiles/12.jpg"
+  }
+}
+```
+
+---
+
+### 12.8. 메시지 읽음 처리 API
+
+**POST** `/chat/messages/:messageId/read`
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "message": "읽음 처리 완료",
+  "read_at": "2025-07-30T20:34:00"
+}
+```
+
+---
+
+
 ---
