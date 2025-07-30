@@ -48,13 +48,13 @@ export default function ChatBubble({
                 return (
                   <View 
                     key={message.id}
-                    className={`rounded-2xl px-4 py-3 bg-gray150 self-start ${
+                    className={`rounded-2xl px-4 py-3 bg-gray-100 self-start ${
                       index > 0 ? 'mt-2' : ''
                     }`}
                     style={{ maxWidth: 280 }}
                   >
                     <Text 
-                      className="text-sm leading-5 text-gray-800"
+                      className="text-sm leading-5 text-gray-600"
                       numberOfLines={0} // 자동 줄바꿈
                     >
                       {message.content}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, TouchableWithoutFeedback } from 'react-native';
 
 export interface DropdownOption {
   id: string;
@@ -49,25 +49,29 @@ export default function DropdownMenu({
   };
 
   return (
-    <View className={`bg-white rounded-lg shadow-lg border border-gray-200 z-50 min-w-[150px] ${getPositionClass()} ${customClassName.container || ''}`}>
-      {options.map((option, index) => (
-        <TouchableOpacity
-          key={option.id}
-          onPress={() => handleOptionPress(option)}
-          className={`px-4 py-3 border-b border-gray-100 last:border-b-0 ${customClassName.item || ''}`}
-          activeOpacity={0.7}
-        >
-          <Text 
-            className={`text-sm ${
-              option.isDanger 
-                ? `text-red-500 ${customClassName.dangerText || ''}` 
-                : `text-gray-700 ${customClassName.text || ''}`
-            }`}
-          >
-            {option.label}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
+    <TouchableWithoutFeedback onPress={onClose}>
+      <View className="absolute inset-0 z-40">
+        <View className={`bg-white rounded-2xl shadow-lg border border-gray-200 z-50 min-w-[150px] ${getPositionClass()} ${customClassName.container || ''}`}>
+          {options.map((option, index) => (
+            <TouchableOpacity
+              key={option.id}
+              onPress={() => handleOptionPress(option)}
+              className={`px-4 py-3 border-b border-gray-100 last:border-b-0 ${customClassName.item || ''}`}
+              activeOpacity={0.7}
+            >
+              <Text 
+                className={`text-sm ${
+                  option.isDanger 
+                    ? `text-red-500 ${customClassName.dangerText || ''}` 
+                    : `text-gray-700 ${customClassName.text || ''}`
+                }`}
+              >
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    </TouchableWithoutFeedback>
   );
 } 

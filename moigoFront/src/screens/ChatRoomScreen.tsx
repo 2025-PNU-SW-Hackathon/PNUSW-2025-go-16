@@ -274,7 +274,7 @@ export default function ChatRoomScreen() {
 
   return (
     <KeyboardAvoidingView 
-      className="flex-1 bg-gray-50"
+      className="flex-1 bg-white"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
         {/* 헤더 */}
