@@ -4,6 +4,8 @@ const { connectDB } = require('./config/db_config');
 const jwt = require('jsonwebtoken');
 const reservationRoutes = require('./routes/reservation_routes');
 const reviewRoutes = require('./routes/review_routes');
+const userRoutes = require('./routes/review_routes');
+const chatRoutes = require('./routes/chat_routes');
 
 dotenv.config();
 
@@ -24,6 +26,7 @@ app.use(requestLogger);
 app.use('/api/v1/reservations', reservationRoutes);
 app.use('/api/v1/reviews', reviewRoutes);
 app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/chats', chatRoutes);
 
 // 404 및 에러 핸들러 등록
 //app.use(notFound);

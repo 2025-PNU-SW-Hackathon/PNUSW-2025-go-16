@@ -4,6 +4,7 @@
 const { getConnection } = require('../config/db_config');
 var reservation_id_set_value = 3;
 const GLOBALS = require('../config/globals');
+const chatService = require('../services/chat_service');
 
 // 🧾 1. 모임 생성 서비스
 exports.createReservation = async (user_id, data) => {
@@ -46,6 +47,12 @@ exports.createReservation = async (user_id, data) => {
       GLOBALS.RESERVATION_ID_SET_VALUE,
       user_id,
     ]
+  );
+
+  const create_chatRoom = await chatService.enterChatRoom(user_id, reservation_current_id);
+  await conn.query(
+    `INSERT INTO reservation_participant_table (reservation_id, user_id) VALUES (?, ?)`,
+    [reservation_current_id, user_id]
   );
   GLOBALS.RESERVATION_ID_SET_VALUE = GLOBALS.RESERVATION_ID_SET_VALUE+1;
 
@@ -91,6 +98,8 @@ exports.joinReservation = async (user_id, reservation_id) => {
     `INSERT INTO reservation_participant_table (reservation_id, user_id) VALUES (?, ?)`,
     [reservation_id, user_id]
   );
+
+  const create_chatRoom = await chatService.enterChatRoom(user_id, reservation_id);
 
   // 참여자 수 증가 (reservation_table에 기록된 수치 업데이트)
   // 모임 정보 업데이트
