@@ -7,4 +7,7 @@ export { useAuthStore } from './authStore';
 export { useReservationStore } from './reservationStore';
 
 // 마이페이지 관련 스토어
-export { useMyStore } from './myStore'; 
+export { useMyStore } from './myStore';
+
+// 설정 관련 스토어
+export { useSettingsStore } from './settingsStore'; 

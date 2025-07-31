@@ -5,6 +5,7 @@ import MainTabNavigator from './MainTabNavigator';
 import OnboardingScreen from '@/screens/OnboardingScreen';
 import LoginScreen from '@/screens/LoginScreen';
 import SignupScreen from '@/screens/SignupScreen';
+import MyInfoSetting from '@/screens/Mypage/MyInfoSetting';
 import type {RootStackParamList} from '@/types/RootStackParamList';
 import { useAuthStore } from '@/store';
 
@@ -17,9 +18,21 @@ export default function RootNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {isLoggedIn ? (
-        <Stack.Screen name="Main" options={{ headerShown: false }}>
-          {() => <MainTabNavigator />}
-        </Stack.Screen>
+        <>
+          <Stack.Screen name="Main" options={{ headerShown: false }}>
+            {() => <MainTabNavigator />}
+          </Stack.Screen>
+          <Stack.Screen 
+            name="MyInfoSetting" 
+            component={MyInfoSetting} 
+            options={{ 
+              headerShown: true,
+              title: '설정',
+              headerTitleStyle: { fontWeight: 'bold' },
+              headerBackTitle: '뒤로',
+            }} 
+          />
+        </>
       ) : (
         <>
           <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false }} />

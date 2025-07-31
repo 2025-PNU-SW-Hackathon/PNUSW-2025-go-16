@@ -5,6 +5,7 @@ import { twMerge } from 'tailwind-merge';
 
 interface MenuItemProps {
   title: string;
+  subtitle?: string;
   icon: string;
   iconColor: string;
   onPress: () => void;
@@ -14,6 +15,7 @@ interface MenuItemProps {
 
 export default function MenuItem({
   title,
+  subtitle,
   icon,
   iconColor,
   onPress,
@@ -21,11 +23,20 @@ export default function MenuItem({
   className = '',
 }: MenuItemProps) {
   return (
-    <TouchableOpacity className={`p-8 mx-4 bg-white ${className}`} onPress={onPress}>
+    <TouchableOpacity className={`p-6 mx-4 bg-white ${className}`} onPress={onPress}>
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center flex-1">
-          <Feather name={icon as any} size={20} color={iconColor} />
-          <Text className="ml-3 font-medium text-gray-800">{title}</Text>
+          <View
+            className="items-center justify-center w-12 h-12 rounded-full"
+            style={{ backgroundColor: `${iconColor}20` }}
+          >
+            <Feather name={icon as any} size={20} color={iconColor} />
+          </View>
+
+          <View className="flex-col gap-1">
+            <Text className="ml-4 font-medium text-gray-800">{title}</Text>
+            {subtitle && <Text className="ml-4 text-mainGrayText">{subtitle}</Text>}
+          </View>
         </View>
 
         {rightComponent ? (
