@@ -1,7 +1,6 @@
 import { View, Text, TouchableOpacity } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { COLORS } from '@/constants/colors';
-import { LinearGradient } from 'expo-linear-gradient';
 
 interface GradeCardProps {
   grade: string;
@@ -20,11 +19,9 @@ export default function GradeCard({
 }: GradeCardProps) {
   return (
     <View className="mx-4 mb-4 overflow-hidden rounded-2xl">
-      <LinearGradient
-        colors={[COLORS.mainOrange, '#FF8533', '#f1b458']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={{ padding: 24 }}
+      <View 
+        className="p-6"
+        style={{ backgroundColor: COLORS.mainOrange }}
       >
         <View className="flex-row items-center justify-between pb-4">
           {/* 상단: 등급 라벨과 크라운 아이콘 */}
@@ -63,7 +60,7 @@ export default function GradeCard({
             </View>
           </View>
         </View>
-      </LinearGradient>
+      </View>
     </View>
   );
 }

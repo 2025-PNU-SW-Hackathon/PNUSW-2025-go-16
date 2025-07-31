@@ -54,7 +54,7 @@ export default function MyInfoSetting() {
 
   if (isLoading) {
     return (
-      <View className="items-center justify-center flex-1 bg-gray-100">
+      <View className="flex-1 justify-center items-center bg-gray-100">
         <Text>로딩 중...</Text>
       </View>
     );
@@ -163,7 +163,7 @@ export default function MyInfoSetting() {
           />
           <MenuItem
             title="테마 설정"
-            icon="pen-tool"
+            icon="settings"
             iconColor="#EC4899"
             rightComponent={<Text className="font-medium text-gray-500">{appSettings.theme}</Text>}
             onPress={handleThemeSettings}

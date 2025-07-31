@@ -3,23 +3,19 @@ import { useAuthStore } from '@/store/authStore';
 
 export function useMyScreen() {
   const {
-    userProfile,
     settings,
     isLoading,
-    updateProfile,
     toggleNotifications,
-    logout: myLogout,
     setLoading,
   } = useMyStore();
 
-  const { logout: authLogout } = useAuthStore();
+  const { user, logout: authLogout } = useAuthStore();
 
   // 로그아웃 처리
   const handleLogout = () => {
     setLoading(true);
     // 실제 로그아웃 로직
     authLogout();
-    myLogout();
     setLoading(false);
   };
 
@@ -55,12 +51,11 @@ export function useMyScreen() {
 
   return {
     // 상태
-    userProfile,
+    userProfile: user,
     settings,
     isLoading,
     
     // 액션
-    updateProfile,
     toggleNotifications,
     handleLogout,
     handleViewGradeBenefits,

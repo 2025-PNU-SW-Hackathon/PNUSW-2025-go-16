@@ -112,7 +112,6 @@ export function useMyInfoSetting() {
   const handleLogout = () => {
     setLoading(true);
     authLogout();
-    settingsLogout();
     setLoading(false);
   };
 
@@ -120,7 +119,6 @@ export function useMyInfoSetting() {
   const handleWithdraw = () => {
     setLoading(true);
     authLogout();
-    settingsWithdraw();
     setLoading(false);
   };
 
