@@ -5,7 +5,9 @@ import MainTabNavigator from './MainTabNavigator';
 import OnboardingScreen from '@/screens/OnboardingScreen';
 import LoginScreen from '@/screens/LoginScreen';
 import SignupScreen from '@/screens/SignupScreen';
+import Profile from '@/screens/Mypage/Profile';
 import MyInfoSetting from '@/screens/Mypage/MyInfoSetting';
+import CustomHeader from '@/components/common/CustomHeader';
 import type {RootStackParamList} from '@/types/RootStackParamList';
 import { useAuthStore } from '@/store';
 
@@ -27,11 +29,13 @@ export default function RootNavigator() {
             component={MyInfoSetting} 
             options={{ 
               headerShown: true,
-              title: '설정',
-              headerTitleStyle: { fontWeight: 'bold' },
-              headerBackTitle: '뒤로',
+              header: () => <CustomHeader title="설정" />,
             }} 
           />
+          <Stack.Screen name="Profile" component={Profile} options={{ 
+              headerShown: true,
+              header: () => <CustomHeader title="프로필 관리" />,
+            }}  />
         </>
       ) : (
         <>

@@ -1,7 +1,11 @@
 import { useSettingsStore } from '@/store/settingsStore';
 import { useAuthStore } from '@/store/authStore';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '@/types/RootStackParamList';
 
 export function useMyInfoSetting() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const {
     accountSettings,
     privacySettings,
@@ -25,6 +29,7 @@ export function useMyInfoSetting() {
 
   // 프로필 관리
   const handleProfileManagement = () => {
+    navigation.navigate('Profile');
     console.log('프로필 관리 페이지로 이동');
   };
 
