@@ -23,11 +23,13 @@ export default function PrimaryButton({
   className,
 }: PrimaryButtonProps) {
   const textColor = getTextColor(color);
+  const buttonColor = disabled ? '#E5E7EB' : color;
+  const buttonTextColor = disabled ? '#9CA3AF' : textColor;
   
   return (
     <TouchableOpacity
       className={twMerge("items-center px-5 py-3 rounded-lg", className)}
-      style={{ backgroundColor: color }}
+      style={{ backgroundColor: buttonColor }}
       onPress={onPress}
       activeOpacity={0.8}
       disabled={disabled}
@@ -52,7 +54,7 @@ export default function PrimaryButton({
         )}
         <Text 
           className="font-bold"
-          style={{ color: textColor }}
+          style={{ color: buttonTextColor }}
         >
           {title}
         </Text>

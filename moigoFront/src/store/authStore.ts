@@ -8,6 +8,10 @@ interface User {
   id: string;
   email: string;
   name: string;
+  phone: string;
+  birthDate: string;
+  gender: 'male' | 'female';
+  bio: string;
   userType: 'sports_fan' | 'business';
   profileImage?: string;
   // 마이페이지 전용 정보들
@@ -36,8 +40,12 @@ interface AuthState {
 // 초기 사용자 데이터
 const initialUser: User = {
   id: '1',
-  email: 'park.jihoon@example.com',
-  name: '박지훈',
+  email: 'ptw0414@naver.com',
+  name: '김서연',
+  phone: '010-1234-5678',
+  birthDate: '1995년 3월 15일',
+  gender: 'female',
+  bio: '안녕하세요! 새로운 사람들과의 만남을 좋아하는 김서연입니다. 다양한 스포츠를 좋아하고 야구를 특히 좋아해요. 함께 즐거운 시간을 보낼 수 있는 분들과 만나고 싶습니다!',
   userType: 'sports_fan',
   profileImage: undefined,
   grade: 'GOLD',
