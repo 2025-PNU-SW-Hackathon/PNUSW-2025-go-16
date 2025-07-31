@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuthStore } from '@/store/authStore';
+import { useMyStore } from '@/store/myStore';
 import type { ProfileFormData } from '@/types/profile';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -7,7 +7,7 @@ import type { RootStackParamList } from '@/types/RootStackParamList';
 
 export function useProfile() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { user, isLoading, updateUser, setLoading } = useAuthStore();
+  const { userProfile, isLoading, updateUserProfile, updateProfileImage, setLoading } = useMyStore();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<ProfileFormData>({
     name: '',
@@ -17,20 +17,21 @@ export function useProfile() {
     gender: 'female',
     bio: '',
   });
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
-  // user 데이터가 변경될 때 formData 업데이트
+  // userProfile 데이터가 변경될 때 formData 업데이트
   useEffect(() => {
-    if (user) {
+    if (userProfile) {
       setFormData({
-        name: user.name,
-        phone: user.phone,
-        email: user.email,
-        birthDate: user.birthDate,
-        gender: user.gender,
-        bio: user.bio,
+        name: userProfile.name,
+        phone: userProfile.phone,
+        email: userProfile.email,
+        birthDate: userProfile.birthDate,
+        gender: userProfile.gender,
+        bio: userProfile.bio,
       });
     }
-  }, [user]);
+  }, [userProfile]);
 
   // 편집 모드 시작
   const startEditing = () => {
@@ -40,14 +41,14 @@ export function useProfile() {
   // 편집 모드 종료
   const cancelEditing = () => {
     setIsEditing(false);
-    if (user) {
+    if (userProfile) {
       setFormData({
-        name: user.name,
-        phone: user.phone,
-        email: user.email,
-        birthDate: user.birthDate,
-        gender: user.gender,
-        bio: user.bio,
+        name: userProfile.name,
+        phone: userProfile.phone,
+        email: userProfile.email,
+        birthDate: userProfile.birthDate,
+        gender: userProfile.gender,
+        bio: userProfile.bio,
       });
     }
   };
@@ -62,15 +63,15 @@ export function useProfile() {
 
   // 프로필 저장
   const handleSave = async () => {
-    if (!user || !formData.name || !formData.phone || !formData.email || !formData.gender) return;
+    if (!userProfile || !formData.name || !formData.phone || !formData.email || !formData.gender) return;
 
     setLoading(true);
     try {
       // API 호출 로직 (나중에 구현)
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // authStore 업데이트
-      updateUser({
+      // myStore 업데이트
+      updateUserProfile({
         name: formData.name,
         phone: formData.phone,
         email: formData.email,
@@ -80,7 +81,8 @@ export function useProfile() {
       });
 
       console.log('프로필 저장 완료');
-      navigation.navigate('Main', { screen: 'My' });
+      setIsModalOpen(true);
+      // navigation.navigate('Main', { screen: 'My' });
       setIsEditing(false);
     } catch (error) {
       console.error('프로필 저장 실패:', error);
@@ -91,8 +93,8 @@ export function useProfile() {
 
   // 프로필 이미지 변경
   const handleImageChange = (imageUri: string) => {
-    if (!user) return;
-    updateUser({ profileImage: imageUri });
+    if (!userProfile) return;
+    updateProfileImage(imageUri);
   };
 
   // 성별 변경
@@ -113,7 +115,7 @@ export function useProfile() {
   };
 
   // 필드별 오류 메시지
-  const getFieldError = (field: keyof ProfileFormData) => {
+  function getFieldError(field: keyof ProfileFormData) {
     const value = formData[field];
 
     switch (field) {
@@ -134,10 +136,10 @@ export function useProfile() {
       default:
         return '';
     }
-  };
+  }
 
   // 필수 필드 검증
-  const isFormValid = () => {
+  function isFormValid() {
     return !!(
       formData.name?.trim() &&
       formData.phone?.trim() &&
@@ -146,11 +148,17 @@ export function useProfile() {
       validateEmail(formData.email) &&
       formData.gender
     );
-  };
+  }
+
+  // 모달에서 확인 클릭
+  function handleModalClick() {
+    setIsModalOpen(false);
+    navigation.navigate('Main', { screen: 'My' });
+  }
 
   return {
     // 상태
-    profileData: user || {
+    profileData: userProfile || {
       id: '',
       email: '',
       name: '',
@@ -170,6 +178,7 @@ export function useProfile() {
     formData,
     isLoading,
     isEditing,
+    isModalOpen,
     isFormValid: isFormValid(),
     getFieldError,
 
@@ -180,5 +189,6 @@ export function useProfile() {
     handleSave,
     handleImageChange,
     handleGenderChange,
+    handleModalClick,
   };
 }

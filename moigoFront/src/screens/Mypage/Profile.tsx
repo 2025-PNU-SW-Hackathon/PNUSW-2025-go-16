@@ -1,13 +1,15 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Feather from 'react-native-vector-icons/Feather';
 import { useProfile } from '@/hooks/useProfile';
 import ProfileImage from '@/components/profile/ProfileImage';
 import ProfileFormField from '@/components/profile/ProfileFormField';
 import GenderSelector from '@/components/profile/GenderSelector';
 import BioTextArea from '@/components/profile/BioTextArea';
 import PrimaryButton from '@/components/common/PrimaryButton';
+import CheckModal from '@/components/common/CheckModal';
+import { COLORS } from '@/constants/colors';
 
 export default function Profile() {
   const {
@@ -16,6 +18,7 @@ export default function Profile() {
     isLoading,
     isEditing,
     isFormValid,
+    isModalOpen,
     getFieldError,
     startEditing,
     cancelEditing,
@@ -23,6 +26,7 @@ export default function Profile() {
     handleSave,
     handleImageChange,
     handleGenderChange,
+    handleModalClick,
   } = useProfile();
 
   const handleImagePress = () => {
@@ -37,6 +41,20 @@ export default function Profile() {
 
   return (
     <SafeAreaView className="flex-1 bg-white">
+      <CheckModal visible={isModalOpen} title={''} onClose={handleModalClick}>
+        <View className="flex-col items-center gap-4 mb-8">
+          <View className="items-center justify-center w-20 h-20 rounded-full bg-mainOrange">
+            <Feather name="check" size={30} color="white" />
+          </View>
+          <Text className="text-2xl font-bold ">저장완료</Text>
+          <Text className="text-mainDarkGray">개인정보가 성공적으로 수정되었습니다.</Text>
+        </View>
+        <PrimaryButton
+          title="확인"
+          onPress={handleModalClick}
+          disabled={isLoading || !isFormValid}
+        />
+      </CheckModal>
       <ScrollView className="flex-1">
         {/* 프로필 이미지 */}
         <ProfileImage imageUri={profileData.profileImage} onImageChange={handleImagePress} />

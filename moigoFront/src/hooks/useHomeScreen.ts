@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { mockEvents } from '@/mocks/events';
+import { useMyStore } from '@/store/myStore';
 
 export function useHomeScreen() {
-  const filterOptions = ['전체', '축구', '야구', '농구', '격투기', '게임'];
+  const { userProfile } = useMyStore();
+  const filterOptions = ['전체', ...(userProfile?.preferredSports || [])];
   const filterLocations = ['서울', '경기', '인천', '대전', '대구', '부산'];
 
   // 필터 관련 상태

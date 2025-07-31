@@ -3,13 +3,14 @@ import { useAuthStore } from '@/store/authStore';
 
 export function useMyScreen() {
   const {
+    userProfile,
     settings,
     isLoading,
     toggleNotifications,
     setLoading,
   } = useMyStore();
 
-  const { user, logout: authLogout } = useAuthStore();
+  const { logout: authLogout } = useAuthStore();
 
   // 로그아웃 처리
   const handleLogout = () => {
@@ -51,7 +52,7 @@ export function useMyScreen() {
 
   return {
     // 상태
-    userProfile: user,
+    userProfile,
     settings,
     isLoading,
     
