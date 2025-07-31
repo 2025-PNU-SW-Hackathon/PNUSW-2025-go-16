@@ -4,4 +4,7 @@
 export { useAuthStore } from './authStore';
 
 // 예약 관련 스토어
-export { useReservationStore } from './reservationStore'; 
+export { useReservationStore } from './reservationStore';
+
+// 마이페이지 관련 스토어
+export { useMyStore } from './myStore'; 
