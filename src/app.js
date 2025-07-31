@@ -6,7 +6,9 @@ const reservationRoutes = require('./routes/reservation_routes');
 const reviewRoutes = require('./routes/review_routes');
 const userRoutes = require('./routes/review_routes');
 const chatRoutes = require('./routes/chat_routes');
-
+const { Server } = require('socket.io');
+const handleSocket = require('./controllers/socket_controller');
+const http = require('http');
 dotenv.config();
 
 const app = express();
@@ -36,18 +38,29 @@ app.get('/', (req, res) => {
   res.send('API is running...');
 });
 
-/*
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: '*', // 테스트 시 허용
+    methods: ['GET', 'POST'],
+  },
+});
+
+// 👇 소켓 핸들러 등록
+handleSocket(io);
+
 const test_token = jwt.sign(
     {
-      user_id: "yejun",
+      user_id: "testid2",
     },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '2h' }
   );
-*/
+
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
-  //console.log(test_token);
+  console.log(test_token);
 });

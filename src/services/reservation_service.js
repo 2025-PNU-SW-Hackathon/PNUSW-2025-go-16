@@ -2,8 +2,6 @@
 // DB 직접 접근하는 비즈니스 로직 모음
 
 const { getConnection } = require('../config/db_config');
-var reservation_id_set_value = 3;
-const GLOBALS = require('../config/globals');
 const chatService = require('../services/chat_service');
 
 // 🧾 1. 모임 생성 서비스
@@ -29,8 +27,7 @@ exports.createReservation = async (user_id, data) => {
       reservation_match, reservation_bio, reservation_max_participant_cnt,
       reservation_match_category, reservation_status, reservation_created_time,
       reservation_participant_cnt, reservation_participant_id, reservation_user_name)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 1, ?, ?);
-     INSERT INTO reservation_participant_table(reservation_id, user_id) VALUES (?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 1, ?, ?)`,
     [
       reservation_current_id,
       user_id,
@@ -44,18 +41,10 @@ exports.createReservation = async (user_id, data) => {
       createdAt,
       user_id,      // participant_id 초기값 = user_id
       '알수없음',
-      GLOBALS.RESERVATION_ID_SET_VALUE,
-      user_id,
     ]
   );
 
   const create_chatRoom = await chatService.enterChatRoom(user_id, reservation_current_id);
-  await conn.query(
-    `INSERT INTO reservation_participant_table (reservation_id, user_id) VALUES (?, ?)`,
-    [reservation_current_id, user_id]
-  );
-  GLOBALS.RESERVATION_ID_SET_VALUE = GLOBALS.RESERVATION_ID_SET_VALUE+1;
-
   return {
     reservation_id: result.insertId,
     created_at: createdAt.toISOString(),
@@ -68,7 +57,7 @@ exports.joinReservation = async (user_id, reservation_id) => {
 
   // 이미 참여했는지 확인
   const [exists] = await conn.query(
-    `SELECT * FROM reservation_participant_table WHERE user_id = ? AND reservation_id = ?`,
+    `SELECT * FROM chat_room_users WHERE user_id = ? AND reservation_id = ?`,
     [user_id, reservation_id]
   );
   if (exists.length > 0) {
@@ -94,11 +83,7 @@ exports.joinReservation = async (user_id, reservation_id) => {
 
   // 참여 등록
   // 참여자 목록에 추가
-  await conn.query(
-    `INSERT INTO reservation_participant_table (reservation_id, user_id) VALUES (?, ?)`,
-    [reservation_id, user_id]
-  );
-
+  // 채팅방에 참여자로 추가
   const create_chatRoom = await chatService.enterChatRoom(user_id, reservation_id);
 
   // 참여자 수 증가 (reservation_table에 기록된 수치 업데이트)
@@ -191,12 +176,13 @@ exports.cancelReservation = async (reservation_id, user_id) => {
     throw error;
   }
 
+  // ? 취소 후 로직 정의 필요
   await conn.query(
     'DELETE FROM reservation_table WHERE reservation_id = ?',
     [reservation_id]
   );
-
-  // ? 취소 후 로직 정의 필요
+  // 모임 취소 알림.
+  // 참여자에게 kicked 설정
 
   return '모임이 정상적으로 취소되었습니다.';
 };
@@ -220,7 +206,7 @@ exports.getReservationDetail = async (reservation_id) => {
 
   const [participants] = await conn.query(
     `SELECT u.user_id, u.user_name
-     FROM reservation_participant_table r
+     FROM chat_room_users r
      JOIN user_table u ON r.user_id = u.user_id
      WHERE r.reservation_id = ?`,
     [reservation_id]
