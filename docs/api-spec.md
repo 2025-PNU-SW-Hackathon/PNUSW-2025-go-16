@@ -626,3 +626,204 @@
 ```
 
 ---
+
+## 13. 💰 채팅방 결제/예약 관련 기능 API
+
+
+### 13.1. 방장의 예약금 결제 요청 API
+
+**POST** `/chat/rooms/{roomId}/payments/request`
+
+> 모임의 방장이 채팅방 내에서 참여자들에게 예약금 결제 요청을 보냅니다.
+
+#### Headers
+
+* Authorization: Bearer `<JWT>` ✅ 필수 (방장 권한 확인)
+
+#### Request Body
+
+```json
+{
+  "amount": 5000,
+  "message": "모임 확정을 위해 예약금을 결제해주세요!"
+}
+```
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "message": "예약금 결제 요청 메시지가 발송되었습니다."
+}
+```
+
+---
+
+### 13.2. 예약금 결제 시작 API 
+
+**POST** `/chat/rooms/{roomId}/payments/initiate`
+
+> 사용자가 채팅방 내에서 결제 버튼을 눌러 PG(결제대행사) 호출에 필요한 정보를 서버로부터 받습니다
+
+#### Headers
+
+* Authorization: Bearer `<JWT>` ✅ 필수
+
+#### Request Body
+
+```json
+{
+  "amount": 5000,
+  "payment_method": "KAKAO_PAY"
+}
+```
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "data": {
+    "order_id": "ORD-20250728-12345",
+    "payment_gateway_url": "https://pg.kakaopay.com/v1/order/123456789...",
+    "product_name": "[맨시티 vs 첼시] 모임 예약금"
+  }
+}
+```
+
+---
+
+### 13.3. 결제 결과 콜백/알림 API
+
+**POST** `/api/payments/callback`
+
+> 사용자가 PG사에서 결제를 완료하면, PG사가 이 결과를 백엔드 서버로 통보합니다. (PG사 -> 서버)
+
+#### Headers
+
+* Authorization: Bearer `<JWT>` ✅ 필수 
+
+#### Request Body
+
+
+```json
+{
+    "tid": "T1234567890", // 트랜잭션 ID
+    "order_id": "ORD_20250730_001",
+    "status": "SUCCESS", 
+    "amount": 5000,
+    "payload": "{...}" 
+}
+```
+
+#### Response (200)
+
+```json
+{
+    "type": "PAYMENT_COMPLETED",
+    "chat_room_id": "chat_room_001",
+    "user_id": "user_abc",
+    "nickname": "결제자닉네임",
+    "amount": 5000,
+    "timestamp": "2025-07-30T22:55:00Z",
+    "message": "XXX님이 예약금 결제를 완료했습니다."
+}
+```
+
+---
+
+### 13.4. 사장님 예약 승인/거절 API
+
+**POST** `/api/reservations/{reservationId}/approval`
+
+> 사장님이 결제 완료된 매칭(예약)을 확인하고 최종 승인하거나 거절합니다.
+
+
+#### Headers
+
+* Authorization: Bearer `<JWT>` ✅ 필수 
+
+#### Request Body
+
+
+```json
+{
+    "managerId": "manager_user_id", // 승인/거절을 수행하는 사장/관리자 ID (인증 토큰에서 추출)
+    "action": "APPROVE" // 또는 "REJECT"
+    // (선택 사항) "reason": "시설 예약 불가"
+}
+```
+
+#### Response (200)
+
+```json
+{
+    "status": "success",
+    "message": "예약이 성공적으로 승인되었습니다.", 
+    "data": {
+        "reservationId": "match_001",
+        "newStatus": "RESERVATION_CONFIRMED" 
+    }
+}
+```
+
+---
+
+### 13.5. 채팅방 내 결제 현황 조회 API
+
+**GET** `/chat/rooms/{roomId}/payments/status`
+
+> 채팅방 내에서 각 참가자의 예약금 결제 상태를 확인합니다.
+
+
+#### Headers
+
+* Authorization: Bearer `<JWT>` ✅ 필수 
+
+
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "data": {
+    "reservation_id": 101,
+    "reservation_status": "PENDING_DEPOSIT",
+    "required_participants_count": 5,
+    "current_paid_participants_count": 2,
+    "participants_payment_status": [
+      { "user_id": "user1", "nickname": "홍길동", "payment_status": "PAID" },
+      { "user_id": "user2", "nickname": "김철수", "payment_status": "PAID" },
+      { "user_id": "user3", "nickname": "박영희", "payment_status": "PENDING" }
+    ]
+  }
+}
+```
+
+---
+
+### 13.6. 결제 미완료 참가자 강퇴 API
+
+**DELETE** `/chat/rooms/{roomId}/participants/{userId}`
+
+> 방장이 결제 기한이 지난 참가자를 채팅방에서 강퇴시킵니다.
+
+
+#### Headers
+
+* Authorization: Bearer `<JWT>` ✅ 필수 (방장 권한 확인)
+
+
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "message": "참가자가 성공적으로 강퇴되었습니다."
+}
+```
+
+---
