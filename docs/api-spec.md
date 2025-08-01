@@ -706,7 +706,6 @@
 
 #### Request Body
 
-
 ```json
 {
     "tid": "T1234567890", // 트랜잭션 ID
@@ -738,7 +737,6 @@
 **POST** `/api/reservations/{reservationId}/approval`
 
 > 사장님이 결제 완료된 매칭(예약)을 확인하고 최종 승인하거나 거절합니다.
-
 
 #### Headers
 
@@ -776,12 +774,9 @@
 
 > 채팅방 내에서 각 참가자의 예약금 결제 상태를 확인합니다.
 
-
 #### Headers
 
 * Authorization: Bearer `<JWT>` ✅ 필수 
-
-
 
 #### Response (200)
 
@@ -810,12 +805,9 @@
 
 > 방장이 결제 기한이 지난 참가자를 채팅방에서 강퇴시킵니다.
 
-
 #### Headers
 
 * Authorization: Bearer `<JWT>` ✅ 필수 (방장 권한 확인)
-
-
 
 #### Response (200)
 
@@ -824,6 +816,142 @@
   "success": true,
   "message": "참가자가 성공적으로 강퇴되었습니다."
 }
+```
+
+---
+
+## 14. 👤 마이페이지 관련 API
+
+### 14.1. 마이페이지 정보 조회 API
+
+**GET** `/users/me`
+
+> 마이페이지 화면에 필요한 사용자 프로필, 활동 요약, 설정 정보 등을 한 번에 조회합니다.
+
+#### Headers
+
+* Authorization: Bearer `<JWT>` ✅ 필수 
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "data": {
+    "user_id": "user123",
+    "user_name": "홍길동",
+    "user_email": "hong@example.com",
+    "user_phone_number": "010-1234-5678",
+    "user_thumbnail_url": "https://cdn.example.com/profiles/12.jpg",
+    "user_region": "부산",
+    "user_gender": 1,
+    "user_level": "GOLD",
+    "user_coupon_count": 5,
+    "user_activity_summary": {
+      "participated_matches_count": 27,
+      "written_reviews_count": 23
+    },
+    "user_settings": {
+      "push_notifications_enabled": true,
+      "email_notifications_enabled": true,
+      "marketing_opt_in": true,
+      "location_tracking_enabled": true
+    }
+  }
+}
+```
+
+---
+
+### 14.2. 사용자 설정 변경 API
+
+**GET** `/users/me`
+
+> 알림 설정, 마케팅 수신 동의 등 다양한 사용자 설정을 변경합니다. PATCH를 사용하여 변경하려는 속성만 보냅니다.
+
+#### Headers
+
+* Authorization: Bearer `<JWT>` ✅ 필수
+
+#### Request Body
+
+```json
+{
+  "push_notifications_enabled": false,
+  "marketing_opt_in": false
+}
+```
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "message": "설정이 성공적으로 변경되었습니다."
+}
+```
+
+---
+
+### 14.3. 프로필 수정 API
+
+**PUT** `/users/me/profile`
+
+> 사용자 프로필 정보를 수정합니다.
+
+#### Headers
+
+* Authorization: Bearer `<JWT>` ✅ 필수
+
+#### Request Body
+
+```json
+{
+  "user_thumbnail_url": "https://cdn.example.com/profiles/new_image.jpg",
+  "user_name": "김서연",
+  "user_phone_number": "010-1234-5678",
+  "user_email": "ptw0414@naver.com",
+  "user_date_of_birth": "1995-03-15",
+  "user_gender": "여성",
+  "user_bio": "안녕하세요! 새로운 사람들과의 만남을 좋아하는 김서연입니다. 다양한 스포츠를 좋아하고 야구를 특히 좋아해요. 함께 즐거운 시간을 보낼 수 있는 분들과 만나고 싶습니다!"
+}
+```
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "message": "프로필이 성공적으로 업데이트되었습니다."
+}
+```
+
+---
+### 14.4. 로그아웃 API
+
+**POST** `/auth/logout`
+
+> 사용자의 현재 세션을 종료합니다.
+
+#### Headers
+
+* Authorization: Bearer `<JWT>` ✅ 필수
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "message": "로그아웃 되었습니다."
+}
+```
+
+#### Response (400)
+
+```json
+  "success": false,
+  "errorCode": "UNAUTHORIZED",
+  "message": "유효하지 않은 토큰입니다."
 ```
 
 ---
