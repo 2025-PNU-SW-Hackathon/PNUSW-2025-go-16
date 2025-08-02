@@ -1,41 +1,55 @@
 import { create } from 'zustand';
+import { useMyStore } from './myStore';
 
-// 사용자 타입 정의
-interface User {
+// 로그인 사용자 타입 정의
+interface AuthUser {
   id: string;
   email: string;
-  name: string;
   userType: 'sports_fan' | 'business';
-  profileImage?: string;
 }
 
 // 인증 스토어 타입 정의
 interface AuthState {
   // 상태
   isLoggedIn: boolean;
-  user: User | null;
+  user: AuthUser | null;
   isLoading: boolean;
   
   // 액션
-  login: (userData: User) => void;
+  login: (userData: AuthUser) => void;
   logout: () => void;
   setLoading: (loading: boolean) => void;
-  updateUser: (userData: Partial<User>) => void;
+  updateUser: (userData: Partial<AuthUser>) => void;
 }
 
+// 초기 인증 사용자 데이터
+const initialAuthUser: AuthUser = {
+  id: '1',
+  email: 'ptw0414@naver.com',
+  userType: 'sports_fan',
+};
+
 // 인증 스토어 생성
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   // 초기 상태
-  isLoggedIn: false,
-  user: null,
+  isLoggedIn: true, // 개발용으로 로그인 상태로 설정
+  user: initialAuthUser, // 초기 사용자 데이터로 설정
   isLoading: false,
   
   // 로그인 액션
-  login: (userData: User) => {
+  login: (userData: AuthUser) => {
     set({
       isLoggedIn: true,
       user: userData,
       isLoading: false,
+    });
+    
+    // myStore의 userProfile도 함께 업데이트
+    const { updateUserProfile } = useMyStore.getState();
+    updateUserProfile({
+      id: userData.id,
+      name: userData.email, // 로그인 아이디를 이름으로 설정
+      email: userData.email, // 로그인 아이디를 이메일로 설정
     });
   },
   
@@ -54,7 +68,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   
   // 사용자 정보 업데이트
-  updateUser: (userData: Partial<User>) => {
+  updateUser: (userData: Partial<AuthUser>) => {
     set((state) => ({
       user: state.user ? { ...state.user, ...userData } : null,
     }));

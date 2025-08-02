@@ -5,7 +5,10 @@ import MainTabNavigator from './MainTabNavigator';
 import OnboardingScreen from '@/screens/OnboardingScreen';
 import LoginScreen from '@/screens/LoginScreen';
 import SignupScreen from '@/screens/SignupScreen';
-import type { RootStackParamList } from '@/types/RootStackParamList';
+import Profile from '@/screens/Mypage/Profile';
+import MyInfoSetting from '@/screens/Mypage/MyInfoSetting';
+import CustomHeader from '@/components/common/CustomHeader';
+import type {RootStackParamList} from '@/types/RootStackParamList';
 import { useAuthStore } from '@/store';
 import CreateMeeting from '@/screens/CreateMeeting/CreateMeeting/index';
 
@@ -21,11 +24,18 @@ export default function RootNavigator() {
           <Stack.Screen name="Main" options={{ headerShown: false }}>
             {() => <MainTabNavigator />}
           </Stack.Screen>
-          <Stack.Screen
-            name="CreateMeeting"
-            component={CreateMeeting}
-            options={{ headerShown: false }}
+          <Stack.Screen 
+            name="MyInfoSetting" 
+            component={MyInfoSetting} 
+            options={{ 
+              headerShown: true,
+              header: () => <CustomHeader title="설정" />,
+            }} 
           />
+          <Stack.Screen name="Profile" component={Profile} options={{ 
+              headerShown: true,
+              header: () => <CustomHeader title="프로필 관리" />,
+            }}  />
         </>
       ) : (
         <>
