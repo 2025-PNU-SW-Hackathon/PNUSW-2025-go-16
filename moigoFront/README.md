@@ -64,4 +64,4 @@ moigoFront/
 │   └── utils/          # 유틸리티 함수
 ├── .github/workflows/  # GitHub Actions 워크플로우
 └── eas.json           # EAS 빌드 설정
-``` 
+``` # 테스트용 변경사항
