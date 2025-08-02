@@ -23,7 +23,7 @@ export default function MenuItem({
   className = '',
 }: MenuItemProps) {
   return (
-    <TouchableOpacity className={`p-6 mx-4 bg-white ${className}`} onPress={onPress}>
+    <TouchableOpacity className={`p-6 bg-white ${className}`} onPress={onPress}>
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center flex-1">
           <View

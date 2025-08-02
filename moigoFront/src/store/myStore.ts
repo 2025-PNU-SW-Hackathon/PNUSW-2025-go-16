@@ -1,17 +1,14 @@
 import { create } from 'zustand';
+import { useAuthStore } from './authStore';
 
 // 사용자 등급 타입
 type UserGrade = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'DIAMOND';
 
-// 사용자 정보 타입
+// 마이페이지 사용자 정보 타입
 interface UserProfile {
   id: string;
   name: string;
   email: string;
-  phone: string;
-  birthDate: string;
-  gender: 'male' | 'female';
-  bio: string;
   profileImage?: string;
   grade: UserGrade;
   progressToNextGrade: number;
@@ -30,36 +27,17 @@ interface MyPageSettings {
 // MyScreen 스토어 타입 정의
 interface MyState {
   // 상태
-  userProfile: UserProfile;
+  userProfile: UserProfile | null;
   settings: MyPageSettings;
   isLoading: boolean;
-  
+
   // 액션
   updateUserProfile: (profile: Partial<UserProfile>) => void;
-  updateProfileImage: (imageUri: string) => void;
+  initializeUserProfile: (authUser: { id: string; email: string }) => void;
+  resetUserProfile: () => void;
   toggleNotifications: () => void;
   setLoading: (loading: boolean) => void;
 }
-
-// 초기 사용자 프로필 데이터
-const initialUserProfile: UserProfile = {
-  id: '1',
-  name: 'ptw0414@naver.com', // 로그인 아이디로 초기화
-  email: 'ptw0414@naver.com', // 로그인 아이디로 초기화
-  phone: '',
-  birthDate: '',
-  gender: 'female',
-  bio: '',
-  profileImage: undefined,
-  grade: 'BRONZE',
-  progressToNextGrade: 0,
-  coupons: 0,
-  participatedMatches: 0,
-  writtenReviews: 0,
-  preferredSports: [
-    '축구', '야구', '농구', '격투기' ,'게임'
-  ],
-};
 
 // 초기 마이페이지 설정
 const initialSettings: MyPageSettings = {
@@ -67,27 +45,50 @@ const initialSettings: MyPageSettings = {
   appVersion: 'v2.1.0',
 };
 
+// authStore의 사용자 정보를 기반으로 마이페이지 사용자 정보 생성
+const createUserProfileFromAuth = (authUser: { id: string; email: string }): UserProfile => {
+  // 이메일에서 @ 앞부분을 이름으로 사용
+  const name = authUser.email.split('@')[0];
+
+  return {
+    id: authUser.id,
+    name: name,
+    email: authUser.email,
+    profileImage: undefined,
+    grade: 'BRONZE',
+    progressToNextGrade: 0,
+    coupons: 0,
+    participatedMatches: 0,
+    writtenReviews: 0,
+    preferredSports: [],
+  };
+};
+
 // MyScreen 스토어 생성
-export const useMyStore = create<MyState>((set) => ({
+export const useMyStore = create<MyState>((set, get) => ({
   // 초기 상태
-  userProfile: initialUserProfile,
+  userProfile: null,
   settings: initialSettings,
   isLoading: false,
-  
+
   // 사용자 프로필 업데이트
-  updateUserProfile: (profile) => {
+  updateUserProfile: (profile: Partial<UserProfile>) => {
     set((state) => ({
-      userProfile: { ...state.userProfile, ...profile },
+      userProfile: state.userProfile ? { ...state.userProfile, ...profile } : null,
     }));
   },
-  
-  // 프로필 이미지 업데이트
-  updateProfileImage: (imageUri) => {
-    set((state) => ({
-      userProfile: { ...state.userProfile, profileImage: imageUri },
-    }));
+
+  // authStore의 사용자 정보로 프로필 초기화
+  initializeUserProfile: (authUser: { id: string; email: string }) => {
+    const userProfile = createUserProfileFromAuth(authUser);
+    set({ userProfile });
   },
-  
+
+  // 사용자 프로필 초기화 (로그아웃 시 사용)
+  resetUserProfile: () => {
+    set({ userProfile: null });
+  },
+
   // 알림 설정 토글
   toggleNotifications: () => {
     set((state) => ({
@@ -97,9 +98,9 @@ export const useMyStore = create<MyState>((set) => ({
       },
     }));
   },
-  
+
   // 로딩 상태 설정
   setLoading: (loading: boolean) => {
     set({ isLoading: loading });
   },
-})); 
+}));

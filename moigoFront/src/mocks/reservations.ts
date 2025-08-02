@@ -67,3 +67,57 @@ export const reservations: Reservation[] = [
     status: '예약이 확정되었습니다',
   },
 ];
+
+// 참여한 매칭 이력 목데이터
+export const participatedMatches: ParticipatedMatch[] = [
+  {
+    id: '1',
+    title: 'KBO 두산 vs 롯데',
+    date: '2024년 7월 10일',
+    time: '오후 6:30',
+    location: '스포츠 펍 홈런, 강남구 역삼동',
+    participants: 8,
+    category: '야구',
+    hasReview: false,
+  },
+  {
+    id: '2',
+    title: 'K리그 FC서울 vs 울산현대',
+    date: '2024년 7월 9일',
+    time: '오후 7:00',
+    location: '축구 카페 골든볼, 마포구 서교동',
+    participants: 12,
+    category: '축구',
+    hasReview: false,
+  },
+  {
+    id: '3',
+    title: 'KBL 서울 SK vs 안양 KGC',
+    date: '2024년 7월 8일',
+    time: '오후 8:00',
+    location: '농구존, 송파구 잠실동',
+    participants: 15,
+    category: '농구',
+    hasReview: false,
+  },
+  {
+    id: '4',
+    title: 'LCK T1 vs Gen.G',
+    date: '2024년 7월 7일',
+    time: '오후 5:00',
+    location: '게임 카페 넥서스, 강남구 논현동',
+    participants: 6,
+    category: '게임',
+    hasReview: true,
+  },
+  {
+    id: '5',
+    title: 'UFC 김동현 vs 박철수',
+    date: '2024년 7월 6일',
+    time: '오후 9:00',
+    location: '격투기 바, 용산구 이태원동',
+    participants: 10,
+    category: '격투기',
+    hasReview: true,
+  },
+];

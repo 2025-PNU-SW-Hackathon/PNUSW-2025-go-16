@@ -1,5 +1,6 @@
 import { useSettingsStore } from '@/store/settingsStore';
 import { useAuthStore } from '@/store/authStore';
+import { useMyStore } from '@/store/myStore';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/types/RootStackParamList';
@@ -26,6 +27,7 @@ export function useMyInfoSetting() {
   } = useSettingsStore();
 
   const { logout: authLogout } = useAuthStore();
+  const { resetUserProfile } = useMyStore();
 
   // 프로필 관리
   const handleProfileManagement = () => {
@@ -116,6 +118,8 @@ export function useMyInfoSetting() {
   // 로그아웃
   const handleLogout = () => {
     setLoading(true);
+    // myStore의 사용자 정보 초기화
+    resetUserProfile();
     authLogout();
     setLoading(false);
   };
@@ -123,6 +127,8 @@ export function useMyInfoSetting() {
   // 회원탈퇴
   const handleWithdraw = () => {
     setLoading(true);
+    // myStore의 사용자 정보 초기화
+    resetUserProfile();
     authLogout();
     setLoading(false);
   };
@@ -136,7 +142,7 @@ export function useMyInfoSetting() {
     otherSettings,
     customerSupport,
     isLoading,
-    
+
     // 액션
     handleProfileManagement,
     handleAccountSecurity,
@@ -158,4 +164,4 @@ export function useMyInfoSetting() {
     handleLogout,
     handleWithdraw,
   };
-} 
+}
