@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { mockEvents } from '@/mocks/events';
+import { events } from '@/mocks/events';
 import { useMyStore } from '@/store/myStore';
 
 export function useHomeScreen() {

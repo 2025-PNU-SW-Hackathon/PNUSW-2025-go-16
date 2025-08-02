@@ -1,6 +1,7 @@
 import { TouchableOpacity, Text, Alert, Image, View } from 'react-native';
 import { COLORS } from '@/constants/colors';
 import { getTextColor } from '@/utils';
+import { twMerge } from 'tailwind-merge';
 
 interface PrimaryButtonProps {
   title?: string;

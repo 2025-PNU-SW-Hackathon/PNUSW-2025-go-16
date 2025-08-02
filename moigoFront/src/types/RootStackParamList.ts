@@ -8,4 +8,5 @@ export type RootStackParamList = {
     ChatRoom: { chatRoom: ChatRoom };
     MyInfoSetting: undefined;
     Profile: undefined;
+    CreateMeeting: undefined;
   };

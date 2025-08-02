@@ -38,6 +38,7 @@ export default function RootNavigator() {
               headerShown: true,
               header: () => <CustomHeader title="프로필 관리" />,
             }}  />
+            <Stack.Screen name="CreateMeeting" component={CreateMeeting} options={{ headerShown: false }} />
         </>
       ) : (
         <>
