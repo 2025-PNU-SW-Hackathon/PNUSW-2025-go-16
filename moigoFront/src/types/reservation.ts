@@ -21,3 +21,17 @@ export interface ParticipatedMatch {
 
 export type MatchCategory = '전체' | '축구' | '야구' | '농구' | '격투기' | '게임';
 export type SortOption = '최신순' | '오래된순';
+
+// 리뷰 관련 타입들
+export interface Review {
+  id: string;
+  matchId: string;
+  rating: number;
+  content: string;
+  createdAt: string;
+}
+
+export interface ReviewFormData {
+  rating: number;
+  content: string;
+}
