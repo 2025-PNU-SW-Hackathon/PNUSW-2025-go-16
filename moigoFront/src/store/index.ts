@@ -10,4 +10,5 @@ export { useReservationStore } from './reservationStore';
 export { useMyStore } from './myStore';
 
 // 설정 관련 스토어
-export { useSettingsStore } from './settingsStore'; 
+export { useSettingsStore } from './settingsStore';
+export { useParticipatedMatchesStore } from './participatedMatchesStore'; 

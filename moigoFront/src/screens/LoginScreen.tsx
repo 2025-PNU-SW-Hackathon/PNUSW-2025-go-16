@@ -14,10 +14,10 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
 
   return (
-    <View className="flex-1 bg-white justify-center items-center px-8">
+    <View className="items-center justify-center flex-1 px-8 bg-white">
       {/* 로고 */}
       <View className="mb-12">
-        <Image 
+        <Image
           source={require('@/assets/moigoLogo.png')}
           className="w-20 h-20"
           resizeMode="contain"
@@ -26,7 +26,7 @@ export default function LoginScreen() {
 
       {/* 입력 필드들 */}
       <View className="w-full mb-5 space-y-4">
-        <View className="bg-white rounded-lg border border-gray-200 mb-3 px-4 py-2">
+        <View className="px-4 py-2 mb-3 bg-white border border-gray-200 rounded-lg">
           <TextInput
             placeholder="이메일"
             value={email}
@@ -36,7 +36,7 @@ export default function LoginScreen() {
             keyboardType="email-address"
           />
         </View>
-        <View className="bg-white rounded-lg border border-gray-200 px-4 py-2 mb-3">
+        <View className="px-4 py-2 mb-3 bg-white border border-gray-200 rounded-lg">
           <TextInput
             placeholder="비밀번호"
             value={password}
@@ -49,8 +49,8 @@ export default function LoginScreen() {
 
       {/* 로그인 버튼 */}
       <View className="w-full mb-5">
-        <PrimaryButton 
-          title="로그인" 
+        <PrimaryButton
+          title="로그인"
           color={COLORS.mainOrange}
           onPress={() => {
             // 간단한 유효성 검사
@@ -62,15 +62,14 @@ export default function LoginScreen() {
               Alert.alert('알림', '비밀번호를 입력해주세요.');
               return;
             }
-            
+
             // 로그인 성공 시 사용자 정보로 로그인
             login({
-              id: '1',
+              id: Date.now().toString(), // 고유 ID 생성
               email: email.trim(),
-              name: email.split('@')[0], // 이메일 앞부분을 이름으로 사용
-              userType: 'sports_fan'
+              userType: 'sports_fan',
             });
-          }} 
+          }}
         />
       </View>
 
@@ -99,7 +98,7 @@ export default function LoginScreen() {
               Alert.alert('알림', '카카오 로그인 기능은 준비 중입니다.');
             }}
             activeOpacity={0.8}
-            className="w-full items-center overflow-hidden"
+            className="items-center w-full overflow-hidden"
           >
             <Image
               source={require('@/assets/kakaoLoginButton.png')}
@@ -114,9 +113,9 @@ export default function LoginScreen() {
               Alert.alert('알림', '네이버 로그인 기능은 준비 중입니다.');
             }}
             activeOpacity={0.8}
-            className="w-full items-center overflow-hidden"
+            className="items-center w-full overflow-hidden"
           >
-            <Image 
+            <Image
               source={require('@/assets/naverLoginButton.png')}
               className="w-full"
               resizeMode="contain"

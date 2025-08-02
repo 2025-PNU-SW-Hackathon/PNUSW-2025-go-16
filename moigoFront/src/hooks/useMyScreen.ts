@@ -1,20 +1,38 @@
 import { useMyStore } from '@/store/myStore';
 import { useAuthStore } from '@/store/authStore';
+import { useNavigation } from '@react-navigation/native';
+import { useEffect } from 'react';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '@/types/RootStackParamList';
 
 export function useMyScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const {
     userProfile,
     settings,
     isLoading,
+    initializeUserProfile,
+    resetUserProfile,
     toggleNotifications,
     setLoading,
   } = useMyStore();
 
-  const { logout: authLogout } = useAuthStore();
+  const { user: authUser, logout: authLogout } = useAuthStore();
+  // authStore의 사용자 정보가 있으면 myStore의 사용자 정보 초기화
+  useEffect(() => {
+    if (authUser && !userProfile) {
+      initializeUserProfile({
+        id: authUser.id,
+        email: authUser.email,
+      });
+    }
+  }, [authUser, userProfile, initializeUserProfile]);
 
   // 로그아웃 처리
   const handleLogout = () => {
     setLoading(true);
+    // myStore의 사용자 정보 초기화
+    resetUserProfile();
     // 실제 로그아웃 로직
     authLogout();
     setLoading(false);
@@ -35,7 +53,7 @@ export function useMyScreen() {
   // 참여한 매칭 이력
   const handleViewMatchHistory = () => {
     // 매칭 이력 페이지로 이동
-    console.log('매칭 이력 보기');
+    navigation.navigate('ParticipatedMatches');
   };
 
   // 즐겨찾는 장소
@@ -55,7 +73,7 @@ export function useMyScreen() {
     userProfile,
     settings,
     isLoading,
-    
+
     // 액션
     toggleNotifications,
     handleLogout,
@@ -65,4 +83,4 @@ export function useMyScreen() {
     handleViewFavoritePlaces,
     handleContactCustomerService,
   };
-} 
+}

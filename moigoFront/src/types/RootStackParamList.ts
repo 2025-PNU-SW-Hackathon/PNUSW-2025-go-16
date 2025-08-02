@@ -1,12 +1,13 @@
 import { ChatRoom } from './ChatTypes';
 
 export type RootStackParamList = {
-    Onboarding: undefined;
-    Main: { screen?: string };
-    Login: undefined;
-    Signup: undefined;
-    ChatRoom: { chatRoom: ChatRoom };
-    MyInfoSetting: undefined;
-    Profile: undefined;
-    CreateMeeting: undefined;
-  };
+  Onboarding: undefined;
+  Login: undefined;
+  Signup: undefined;
+  Main: { screen?: string };
+  ChatRoom: undefined;
+  Profile: undefined;
+  MyInfoSetting: undefined;
+  CreateMeeting: undefined;
+  ParticipatedMatches: undefined;
+};

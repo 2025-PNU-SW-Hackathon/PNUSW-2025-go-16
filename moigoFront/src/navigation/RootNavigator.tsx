@@ -8,6 +8,7 @@ import SignupScreen from '@/screens/SignupScreen';
 import ChatRoomScreen from '@/screens/ChatRoomScreen';
 import Profile from '@/screens/Mypage/Profile';
 import MyInfoSetting from '@/screens/Mypage/MyInfoSetting';
+import ParticipatedMatchesScreen from '@/screens/ParticipatedMatches/ParticipatedMatchesScreen';
 import CustomHeader from '@/components/common/CustomHeader';
 import type {RootStackParamList} from '@/types/RootStackParamList';
 import { useAuthStore } from '@/store';
@@ -38,7 +39,15 @@ export default function RootNavigator() {
               headerShown: true,
               header: () => <CustomHeader title="프로필 관리" />,
             }}  />
-            <Stack.Screen name="CreateMeeting" component={CreateMeeting} options={{ headerShown: false }} />
+          <Stack.Screen name="CreateMeeting" component={CreateMeeting} options={{ headerShown: false }} />
+          <Stack.Screen 
+            name="ParticipatedMatches" 
+            component={ParticipatedMatchesScreen} 
+            options={{ 
+              headerShown: true,
+              header: () => <CustomHeader title="참여한 매칭 이력" />,
+            }} 
+          />
         </>
       ) : (
         <>
