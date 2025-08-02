@@ -1,0 +1,42 @@
+name: Auto Deploy to EAS
+
+on:
+  push:
+    branches:
+      - dev-front
+    paths:
+      - 'moigoFront/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: moigoFront/package-lock.json
+          
+      - name: Install EAS CLI
+        run: npm install -g @expo/cli eas-cli
+        
+      - name: Install dependencies
+        working-directory: moigoFront
+        run: npm ci
+        
+      - name: Build for iOS (Preview)
+        working-directory: moigoFront
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: eas build --platform ios --profile preview --non-interactive
+        
+      - name: Build for Android (Preview)
+        working-directory: moigoFront
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: eas build --platform android --profile preview --non-interactive 
