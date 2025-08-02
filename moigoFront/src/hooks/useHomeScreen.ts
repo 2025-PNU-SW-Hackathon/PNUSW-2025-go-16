@@ -4,7 +4,9 @@ import { useMyStore } from '@/store/myStore';
 
 export function useHomeScreen() {
   const { userProfile } = useMyStore();
-  const filterOptions = ['전체', ...(userProfile?.preferredSports || [])];
+  const defaultSports = ['축구', '야구', '농구', '격투기', '게임'];
+  const userPreferredSports = userProfile?.preferredSports || [];
+  const filterOptions = ['전체', ...defaultSports, ...userPreferredSports];
   const filterLocations = ['서울', '경기', '인천', '대전', '대구', '부산'];
 
   // 필터 관련 상태

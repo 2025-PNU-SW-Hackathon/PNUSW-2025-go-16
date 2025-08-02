@@ -27,10 +27,13 @@ export default function Header({ currentScreen = 'home' }: HeaderProps) {
   return (
     <SafeAreaView edges={['top']} className="bg-white">
       <View className="flex-row justify-between items-center px-4 py-3 bg-white border-b border-gray-200">
-        <Image
-          source={require('@/assets/moigoLogo.png')}
-          style={{ width: 35, height: 35, resizeMode: 'contain' }}
-        />
+        <TouchableOpacity onPress={() => navigation.navigate('Main', { screen: 'Home' })}>
+          <Image
+            source={require('@/assets/moigoLogo.png')}
+            style={{ width: 35, height: 35, resizeMode: 'contain' }}
+          />
+        </TouchableOpacity>
+        
         <TouchableOpacity 
           className="p-2 rounded-full bg-mainGray"
           onPress={handleRightButtonPress}
