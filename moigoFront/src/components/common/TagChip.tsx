@@ -1,5 +1,4 @@
 import { View, Text } from 'react-native';
-import { twMerge } from 'tailwind-merge';
 
 interface TagChipProps {
   label: string;
@@ -18,11 +17,11 @@ export default function TagChip({
 }: TagChipProps) {
   return (
     <View 
-      className={twMerge("self-start px-2 py-1 mr-1 mb-1 rounded-full", classNameView)}
+      className={`self-start px-2 py-1 mr-1 mb-1 rounded-full ${classNameView}`}
       style={{ backgroundColor: color }}
     >
       <Text 
-        className={twMerge("text-xs font-medium", classNameText)}
+        className={`text-xs font-medium ${classNameText}`}
         style={{ color: textColor }}
       >
         {label}

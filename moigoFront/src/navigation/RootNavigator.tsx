@@ -5,6 +5,7 @@ import MainTabNavigator from './MainTabNavigator';
 import OnboardingScreen from '@/screens/OnboardingScreen';
 import LoginScreen from '@/screens/LoginScreen';
 import SignupScreen from '@/screens/SignupScreen';
+import ChatRoomScreen from '@/screens/ChatRoomScreen';
 import Profile from '@/screens/Mypage/Profile';
 import MyInfoSetting from '@/screens/Mypage/MyInfoSetting';
 import CustomHeader from '@/components/common/CustomHeader';
@@ -24,6 +25,7 @@ export default function RootNavigator() {
           <Stack.Screen name="Main" options={{ headerShown: false }}>
             {() => <MainTabNavigator />}
           </Stack.Screen>
+          <Stack.Screen name="ChatRoom" component={ChatRoomScreen} options={{ headerShown: false }} />
           <Stack.Screen 
             name="MyInfoSetting" 
             component={MyInfoSetting} 

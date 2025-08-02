@@ -99,6 +99,8 @@ export default function ComponentsTest() {
           <View style={{width:'50%'}}><PrimaryButton title="수정" color='#DDDDDD'/></View>
           <View style={{width:'50%'}}><PrimaryButton title="확인"/></View>
         </View>
+
+
       </ScrollView>
     </View>
   );

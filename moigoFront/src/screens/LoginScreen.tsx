@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/types/RootStackParamList';
@@ -17,12 +17,16 @@ export default function LoginScreen() {
     <View className="flex-1 bg-white justify-center items-center px-8">
       {/* 로고 */}
       <View className="mb-12">
-        <Text className="text-6xl font-bold text-mainOrange">S</Text>
+        <Image 
+          source={require('@/assets/moigoLogo.png')}
+          className="w-20 h-20"
+          resizeMode="contain"
+        />
       </View>
 
       {/* 입력 필드들 */}
-      <View className="w-full mb-8 space-y-4">
-        <View className="bg-white rounded-lg border border-gray-200 p-4">
+      <View className="w-full mb-5 space-y-4">
+        <View className="bg-white rounded-lg border border-gray-200 mb-3 px-4 py-2">
           <TextInput
             placeholder="이메일"
             value={email}
@@ -32,7 +36,7 @@ export default function LoginScreen() {
             keyboardType="email-address"
           />
         </View>
-        <View className="bg-white rounded-lg border border-gray-200 p-4">
+        <View className="bg-white rounded-lg border border-gray-200 px-4 py-2 mb-3">
           <TextInput
             placeholder="비밀번호"
             value={password}
@@ -44,7 +48,7 @@ export default function LoginScreen() {
       </View>
 
       {/* 로그인 버튼 */}
-      <View className="w-full mb-8">
+      <View className="w-full mb-5">
         <PrimaryButton 
           title="로그인" 
           color={COLORS.mainOrange}
@@ -81,7 +85,7 @@ export default function LoginScreen() {
       </View>
 
       {/* 구분선 */}
-      <View className="flex-row items-center w-full mb-8">
+      <View className="flex-row items-center w-full mb-3">
         <View className="flex-1 h-px bg-gray-200" />
         <Text className="mx-4 text-mainGrayText">간편 로그인</Text>
         <View className="flex-1 h-px bg-gray-200" />
@@ -89,22 +93,36 @@ export default function LoginScreen() {
 
       {/* 소셜 로그인 버튼들 */}
       <View className="w-full space-y-3">
-        <PrimaryButton 
-          title="카카오로 시작하기" 
-          color={COLORS.kakaoYellow}
-          icon="💬"
-          onPress={() => {
-            Alert.alert('알림', '카카오 로그인 기능은 준비 중입니다.');
-          }} 
-        />
-        <PrimaryButton 
-          title="네이버로 시작하기" 
-          color={COLORS.naverGreen}
-          icon="N"
-          onPress={() => {
-            Alert.alert('알림', '네이버 로그인 기능은 준비 중입니다.');
-          }} 
-        />
+        <View className="my-2">
+          <TouchableOpacity
+            onPress={() => {
+              Alert.alert('알림', '카카오 로그인 기능은 준비 중입니다.');
+            }}
+            activeOpacity={0.8}
+            className="w-full items-center overflow-hidden"
+          >
+            <Image
+              source={require('@/assets/kakaoLoginButton.png')}
+              className="w-full"
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+        </View>
+        <View className="my-2">
+          <TouchableOpacity
+            onPress={() => {
+              Alert.alert('알림', '네이버 로그인 기능은 준비 중입니다.');
+            }}
+            activeOpacity={0.8}
+            className="w-full items-center overflow-hidden"
+          >
+            <Image 
+              source={require('@/assets/naverLoginButton.png')}
+              className="w-full"
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );

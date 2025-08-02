@@ -24,6 +24,8 @@ module.exports = {
       chatBg: '#EF4444',
       payInfoBg: '#FFF7ED',
       requiredStar: '#EF4444',
+      gray150: '#E5E7EB', // gray-100과 gray-200 사이 색상
+      gray125: '#F1F3F4', // gray-100과 gray150 사이 색상
     },
   },
   },
