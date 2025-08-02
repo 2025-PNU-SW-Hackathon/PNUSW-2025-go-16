@@ -4,7 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import HomeScreen from '@/screens/Home/HomeScreen';
 import MeetingScreen from '@/screens/Meeting/MeetingScreen';
 import ChatScreen from '@/screens/ChatScreen';
-import MyScreen from '@/screens/MyScreen';
+import MyScreen from '@/screens/Mypage/MyScreen';
 import Header from '@/layout/Header';
 import Feather from 'react-native-vector-icons/Feather';
 import { COLORS } from '@/constants/colors';
@@ -21,8 +21,8 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 export default function MainTabNavigator() {
   return (
     <Tab.Navigator
-      screenOptions={{
-        header: () => <Header />,
+      screenOptions={({ route }) => ({
+        header: () => <Header currentScreen={route.name.toLowerCase() as any} />,
         tabBarActiveTintColor: COLORS.mainOrange,
         tabBarInactiveTintColor: COLORS.mainDarkGray,
         tabBarStyle: {
@@ -33,7 +33,7 @@ export default function MainTabNavigator() {
           paddingTop: 5,
           height: 70,
         },
-      }}
+      })}
     >
       <Tab.Screen
         name="Home"

@@ -25,34 +25,40 @@ function FilterModal({
   resetFilters 
 }: FilterModalProps) {
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <TouchableOpacity
-        className="items-end justify-end flex-1 bg-black/50"
-        activeOpacity={1}
-        onPress={onClose}
-      >
+    <Modal 
+      visible={visible} 
+      transparent 
+      animationType="fade"
+      statusBarTranslucent={true}
+    >
+      <View className="flex-1 bg-black/50">
         <TouchableOpacity
-          className="w-full p-6 pb-16 bg-white rounded-t-3xl"
+          className="flex-1"
+          activeOpacity={1}
+          onPress={onClose}
+        />
+        <TouchableOpacity
+          className="p-6 pb-16 w-full bg-white rounded-t-3xl"
           activeOpacity={1}
           onPress={(e) => e.stopPropagation()}
         >
-          <View className="flex-row items-center justify-between mb-4">
-            <Text className="items-center justify-center text-xl font-bold">필터 설정</Text>
+          <View className="flex-row justify-between items-center mb-4">
+            <Text className="text-xl font-bold">필터 설정</Text>
             <TouchableOpacity onPress={onClose}>
               <Feather name="x" size={20} color="black" />
             </TouchableOpacity>
           </View>
-          <View className="">
+          <View>
             <View className="mb-4">
               <Text className="mb-2 text-lg font-bold">카테고리</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View className="flex-row gap-2">
-                  {filterOptions.map((filter) => (
+                <View className="flex-row">
+                  {filterOptions.map((filter, index) => (
                     <TouchableOpacity
                       key={filter}
                       className={`px-4 py-2 rounded-full ${
                         selectedFilter === filter ? 'bg-mainOrange' : 'bg-gray-200'
-                      }`}
+                      } ${index > 0 ? 'ml-2' : ''}`}
                       onPress={() => setSelectedFilter(filter)}
                     >
                       <Text
@@ -70,8 +76,8 @@ function FilterModal({
             <View className="mb-8">
               <Text className="mb-2 text-lg font-bold">위치</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View className="flex-row gap-2">
-                  {['전체', ...filterLocations].map((location) => (
+                <View className="flex-row">
+                  {['전체', ...filterLocations].map((location, index) => (
                     <TouchableOpacity
                       key={location}
                       className={`px-4 py-2 rounded-full ${
@@ -82,7 +88,7 @@ function FilterModal({
                           : selectedLocations.includes(location)
                             ? 'bg-mainOrange'
                             : 'bg-gray-200'
-                      }`}
+                      } ${index > 0 ? 'ml-2' : ''}`}
                       onPress={() => toggleLocation(location)}
                     >
                       <Text
@@ -103,7 +109,7 @@ function FilterModal({
                 </View>
               </ScrollView>
             </View>
-            <View className="flex-row items-center justify-between gap-2">
+            <View className="flex-row justify-between items-center">
               <TouchableOpacity
                 className="flex-1 px-4 py-3 bg-gray-200 rounded-lg"
                 onPress={resetFilters}
@@ -116,7 +122,7 @@ function FilterModal({
             </View>
           </View>
         </TouchableOpacity>
-      </TouchableOpacity>
+      </View>
     </Modal>
   );
 }

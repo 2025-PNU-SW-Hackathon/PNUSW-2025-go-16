@@ -6,13 +6,16 @@ import OnboardingScreen from '@/screens/OnboardingScreen';
 import LoginScreen from '@/screens/LoginScreen';
 import SignupScreen from '@/screens/SignupScreen';
 import ChatRoomScreen from '@/screens/ChatRoomScreen';
+import Profile from '@/screens/Mypage/Profile';
+import MyInfoSetting from '@/screens/Mypage/MyInfoSetting';
+import CustomHeader from '@/components/common/CustomHeader';
 import type {RootStackParamList} from '@/types/RootStackParamList';
 import { useAuthStore } from '@/store';
+import CreateMeeting from '@/screens/CreateMeeting/CreateMeeting/index';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootNavigator() {
-  // Zustand 스토어에서 로그인 상태 가져오기
   const { isLoggedIn } = useAuthStore();
 
   return (
@@ -23,14 +26,30 @@ export default function RootNavigator() {
             {() => <MainTabNavigator />}
           </Stack.Screen>
           <Stack.Screen name="ChatRoom" component={ChatRoomScreen} options={{ headerShown: false }} />
+          <Stack.Screen 
+            name="MyInfoSetting" 
+            component={MyInfoSetting} 
+            options={{ 
+              headerShown: true,
+              header: () => <CustomHeader title="설정" />,
+            }} 
+          />
+          <Stack.Screen name="Profile" component={Profile} options={{ 
+              headerShown: true,
+              header: () => <CustomHeader title="프로필 관리" />,
+            }}  />
         </>
       ) : (
         <>
-          <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false }} />
+          <Stack.Screen
+            name="Onboarding"
+            component={OnboardingScreen}
+            options={{ headerShown: false }}
+          />
           <Stack.Screen name="Login" options={{ headerShown: false }}>
             {() => <LoginScreen />}
           </Stack.Screen>
-          <Stack.Screen name="Signup" component={SignupScreen} options={{ headerShown: false }}/>
+          <Stack.Screen name="Signup" component={SignupScreen} options={{ headerShown: false }} />
         </>
       )}
     </Stack.Navigator>
