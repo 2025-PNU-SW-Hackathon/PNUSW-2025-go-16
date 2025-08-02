@@ -10,11 +10,11 @@ import MyInfoSetting from '@/screens/Mypage/MyInfoSetting';
 import CustomHeader from '@/components/common/CustomHeader';
 import type {RootStackParamList} from '@/types/RootStackParamList';
 import { useAuthStore } from '@/store';
+import CreateMeeting from '@/screens/CreateMeeting/CreateMeeting/index';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootNavigator() {
-  // Zustand 스토어에서 로그인 상태 가져오기
   const { isLoggedIn } = useAuthStore();
 
   return (
@@ -39,11 +39,15 @@ export default function RootNavigator() {
         </>
       ) : (
         <>
-          <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false }} />
+          <Stack.Screen
+            name="Onboarding"
+            component={OnboardingScreen}
+            options={{ headerShown: false }}
+          />
           <Stack.Screen name="Login" options={{ headerShown: false }}>
             {() => <LoginScreen />}
           </Stack.Screen>
-          <Stack.Screen name="Signup" component={SignupScreen} options={{ headerShown: false }}/>
+          <Stack.Screen name="Signup" component={SignupScreen} options={{ headerShown: false }} />
         </>
       )}
     </Stack.Navigator>

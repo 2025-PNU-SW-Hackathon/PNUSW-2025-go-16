@@ -44,9 +44,9 @@ export function useHomeScreen() {
   const handleParticipate = (event: any) => {
     // 모달 전환 중에는 다른 액션 방지
     if (isModalTransitioning) return;
-    
+
     setIsModalTransitioning(true);
-    
+
     // 필터 모달이 열려있다면 먼저 닫기
     if (isFilterModalVisible) {
       setIsFilterModalVisible(false);
@@ -67,7 +67,7 @@ export function useHomeScreen() {
   const closeFilterModal = () => {
     setIsFilterModalVisible(false);
   };
-  
+
   const closeEnterModal = () => {
     setIsEnterModalVisible(false);
     // 약간의 지연 후 selectedEvent 초기화
@@ -77,7 +77,7 @@ export function useHomeScreen() {
   };
 
   // 검색어와 필터에 따른 이벤트 필터링
-  const filteredEvents = mockEvents.filter((event) => {
+  const filteredEvents = events.filter((event) => {
     // 검색어 필터링
     const searchLower = searchText.toLowerCase();
     const matchesSearch =

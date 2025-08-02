@@ -8,7 +8,7 @@ interface FilterBtnProps {
 
 function FilterBtn({ filterOptions, selectedFilter, setSelectedFilter }: FilterBtnProps) {
   return (
-    <View className="px-4 py-3 bg-white">
+    <View className="px-4 py-1 bg-white">
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <View className="flex-row">
           {filterOptions.map((filter, index) => (
