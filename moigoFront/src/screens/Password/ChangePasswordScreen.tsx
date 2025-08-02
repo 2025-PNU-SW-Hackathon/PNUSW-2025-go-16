@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
 import PasswordInput from '@/components/password/PasswordInput';
 import PrimaryButton from '@/components/common/PrimaryButton';
+import Toast from '@/components/common/Toast';
 import { COLORS } from '@/constants/colors';
 
 export default function ChangePasswordScreen() {
@@ -15,6 +16,9 @@ export default function ChangePasswordScreen() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
   // 비밀번호 유효성 검사
   const validateForm = () => {
@@ -85,11 +89,23 @@ export default function ChangePasswordScreen() {
       });
       
       if (success) {
-        // 성공 시 이전 화면으로 이동
-        navigation.goBack();
+        // 성공 토스트 표시
+        setToastMessage('저장되었습니다');
+        setToastType('success');
+        setShowToast(true);
+        
+        // 1초 후 이전 화면으로 이동
+        setTimeout(() => {
+          navigation.goBack();
+        }, 1000);
       }
     } catch (error: any) {
       console.error('비밀번호 변경 실패:', error);
+      // 에러 토스트 표시
+      setToastMessage(error.message || '비밀번호 변경에 실패했습니다');
+      setToastType('error');
+      setShowToast(true);
+      
       // 현재 비밀번호 에러 처리
       if (error.message.includes('현재 비밀번호')) {
         setErrors(prev => ({ ...prev, currentPassword: error.message }));
@@ -183,6 +199,15 @@ export default function ChangePasswordScreen() {
           />
         </View>
       </ScrollView>
+
+      {/* 토스트 메시지 */}
+      <Toast
+        visible={showToast}
+        message={toastMessage}
+        type={toastType}
+        onHide={() => setShowToast(false)}
+        duration={2000}
+      />
     </SafeAreaView>
   );
 } 
