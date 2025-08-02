@@ -9,6 +9,7 @@ import ChatRoomScreen from '@/screens/ChatRoomScreen';
 import Profile from '@/screens/Mypage/Profile';
 import MyInfoSetting from '@/screens/Mypage/MyInfoSetting';
 import ParticipatedMatchesScreen from '@/screens/ParticipatedMatches/ParticipatedMatchesScreen';
+import ChangePasswordScreen from '@/screens/Password/ChangePasswordScreen';
 import CustomHeader from '@/components/common/CustomHeader';
 import type {RootStackParamList} from '@/types/RootStackParamList';
 import { useAuthStore } from '@/store';
@@ -48,6 +49,7 @@ export default function RootNavigator() {
               header: () => <CustomHeader title="참여한 매칭 이력" />,
             }} 
           />
+          <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ headerShown: false }} />
         </>
       ) : (
         <>

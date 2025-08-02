@@ -64,11 +64,12 @@ export default function LoginScreen() {
             }
 
             // 로그인 성공 시 사용자 정보로 로그인
+            const mockToken = 'mock-jwt-token-' + Date.now(); // 실제로는 서버에서 받은 토큰
             login({
               id: Date.now().toString(), // 고유 ID 생성
               email: email.trim(),
               userType: 'sports_fan',
-            });
+            }, mockToken);
           }}
         />
       </View>

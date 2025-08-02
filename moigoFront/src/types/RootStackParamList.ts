@@ -10,4 +10,5 @@ export type RootStackParamList = {
   MyInfoSetting: undefined;
   CreateMeeting: undefined;
   ParticipatedMatches: undefined;
+  ChangePassword: undefined;
 };

@@ -50,6 +50,12 @@ export function useMyScreen() {
     console.log('프로필 편집');
   };
 
+  // 비밀번호 편집
+  const handleEditPassword = () => {
+    // 비밀번호 편집 페이지로 이동
+    navigation.navigate('ChangePassword');
+  };
+
   // 참여한 매칭 이력
   const handleViewMatchHistory = () => {
     // 매칭 이력 페이지로 이동
@@ -82,5 +88,6 @@ export function useMyScreen() {
     handleViewMatchHistory,
     handleViewFavoritePlaces,
     handleContactCustomerService,
+    handleEditPassword,
   };
 }

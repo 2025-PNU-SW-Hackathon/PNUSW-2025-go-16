@@ -35,3 +35,15 @@ export interface ReviewFormData {
   rating: number;
   content: string;
 }
+
+// 비밀번호 변경 관련 타입들
+export interface PasswordChangeForm {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface PasswordValidation {
+  isValid: boolean;
+  errors: string[];
+}
