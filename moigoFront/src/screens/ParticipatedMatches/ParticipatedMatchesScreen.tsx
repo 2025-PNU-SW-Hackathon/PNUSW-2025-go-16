@@ -1,8 +1,10 @@
 import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { useParticipatedMatches } from '@/hooks/useParticipatedMatches';
+import { useReview } from '@/hooks/useReview';
 import FilterSection from '@/components/participatedMatches/FilterSection';
 import MatchCard from '@/components/participatedMatches/MatchCard';
+import ReviewModal from '@/components/review/ReviewModal';
 
 export default function ParticipatedMatchesScreen() {
   const {
@@ -13,6 +15,14 @@ export default function ParticipatedMatchesScreen() {
     handleSortChange,
     handleWriteReview,
   } = useParticipatedMatches();
+
+  const {
+    isReviewModalVisible,
+    selectedMatch,
+    openReviewModal,
+    closeReviewModal,
+    handleSubmitReview,
+  } = useReview();
 
   return (
     <View className="flex-1 bg-white">
@@ -36,13 +46,13 @@ export default function ParticipatedMatchesScreen() {
           {/* 매칭 목록 */}
           <View className="mb-4">
             {filteredAndSortedMatches.map((match) => (
-              <MatchCard key={match.id} match={match} onWriteReview={handleWriteReview} />
+              <MatchCard key={match.id} match={match} onWriteReview={openReviewModal} />
             ))}
           </View>
 
           {/* 빈 상태 */}
           {filteredAndSortedMatches.length === 0 && (
-            <View className="flex-1 justify-center items-center py-20">
+            <View className="items-center justify-center flex-1 py-20">
               <Text className="mt-4 text-lg font-medium text-mainGrayText">
                 참여한 매칭이 없습니다
               </Text>
@@ -51,6 +61,14 @@ export default function ParticipatedMatchesScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* 리뷰 모달 */}
+      <ReviewModal
+        visible={isReviewModalVisible}
+        match={selectedMatch}
+        onClose={closeReviewModal}
+        onSubmit={handleSubmitReview}
+      />
     </View>
   );
 }
