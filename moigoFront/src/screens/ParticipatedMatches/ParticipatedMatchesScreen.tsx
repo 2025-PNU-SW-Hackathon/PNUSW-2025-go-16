@@ -18,7 +18,7 @@ export default function ParticipatedMatchesScreen() {
     <View className="flex-1 bg-white">
       <ScrollView className="flex-1">
         {/* 설명 텍스트 */}
-        <View className="bg-mainGray ">
+        <View className="bg-mainGray">
           <Text className="m-4 text-base text-mainGrayText">
             참여했던 경기 모임들을 다시 확인할 수 있어요.
           </Text>
@@ -42,7 +42,7 @@ export default function ParticipatedMatchesScreen() {
 
           {/* 빈 상태 */}
           {filteredAndSortedMatches.length === 0 && (
-            <View className="items-center justify-center flex-1 py-20">
+            <View className="flex-1 justify-center items-center py-20">
               <Text className="mt-4 text-lg font-medium text-mainGrayText">
                 참여한 매칭이 없습니다
               </Text>
