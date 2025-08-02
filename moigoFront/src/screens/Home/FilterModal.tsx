@@ -27,17 +27,17 @@ function FilterModal({
   return (
     <Modal visible={visible} transparent animationType="fade">
       <TouchableOpacity
-        className="items-end justify-end flex-1 bg-black/50"
+        className="flex-1 justify-end items-end bg-black/50"
         activeOpacity={1}
         onPress={onClose}
       >
         <TouchableOpacity
-          className="w-full p-6 pb-16 bg-white rounded-t-3xl"
+          className="p-6 pb-16 w-full bg-white rounded-t-3xl"
           activeOpacity={1}
           onPress={(e) => e.stopPropagation()}
         >
-          <View className="flex-row items-center justify-between mb-4">
-            <Text className="items-center justify-center text-xl font-bold">필터 설정</Text>
+          <View className="flex-row justify-between items-center mb-4">
+            <Text className="justify-center items-center text-xl font-bold">필터 설정</Text>
             <TouchableOpacity onPress={onClose}>
               <Feather name="x" size={20} color="black" />
             </TouchableOpacity>
@@ -103,7 +103,7 @@ function FilterModal({
                 </View>
               </ScrollView>
             </View>
-            <View className="flex-row items-center justify-between gap-2">
+            <View className="flex-row gap-2 justify-between items-center">
               <TouchableOpacity
                 className="flex-1 px-4 py-3 bg-gray-200 rounded-lg"
                 onPress={resetFilters}
