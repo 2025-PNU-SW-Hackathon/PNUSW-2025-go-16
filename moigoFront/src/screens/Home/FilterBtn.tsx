@@ -10,13 +10,13 @@ function FilterBtn({ filterOptions, selectedFilter, setSelectedFilter }: FilterB
   return (
     <View className="px-4 py-1 bg-white">
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View className="flex-row gap-4">
-          {filterOptions.map((filter) => (
+        <View className="flex-row">
+          {filterOptions.map((filter, index) => (
             <TouchableOpacity
               key={filter}
               className={`px-4 py-2 rounded-full ${
                 selectedFilter === filter ? 'bg-mainOrange' : 'bg-gray-200'
-              }`}
+              } ${index > 0 ? 'ml-4' : ''}`}
               onPress={() => setSelectedFilter(filter)}
             >
               <Text

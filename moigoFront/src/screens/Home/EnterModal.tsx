@@ -23,9 +23,9 @@ function EnterModal({ visible, onClose, event }: EnterModalProps) {
         {/* 이벤트 정보 */}
         <View className="mb-6">
           <Text className="mb-4 text-lg font-semibold text-gray-800">{event.title}</Text>
-          <View className="gap-2 space-y-2">
-            <Text className="text-gray-600">시간: {event.time}</Text>
-            <Text className="text-gray-600">장소: {event.location}</Text>
+          <View>
+            <Text className="text-gray-600 mb-2">시간: {event.time}</Text>
+            <Text className="text-gray-600 mb-2">장소: {event.location}</Text>
             <Text className="text-gray-600">현재 참여: {event.participants}</Text>
           </View>
         </View>
@@ -45,12 +45,12 @@ function EnterModal({ visible, onClose, event }: EnterModalProps) {
         </View>
 
         {/* 버튼들 */}
-        <View className="flex-row gap-3">
+        <View className="flex-row">
           <PrimaryButton
             title="참여 확정"
             onPress={() => handleConfirm(event, onClose)}
             color={COLORS.mainOrange}
-            className="flex-1"
+            className="flex-1 mr-3"
           />
           <PrimaryButton
             title="취소"

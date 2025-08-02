@@ -1,0 +1,112 @@
+CREATE DATABASE `spotple` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+
+CREATE TABLE `gathering_table` (
+  `gathering_id` int NOT NULL,
+  `store_id` varchar(45) DEFAULT NULL,
+  `reservation_id` int DEFAULT NULL,
+  `gathering_match` varchar(45) DEFAULT NULL,
+  `gathering_bio` varchar(300) NOT NULL,
+  `gathering_start_time` datetime NOT NULL,
+  `gathering_end_time` datetime NOT NULL,
+  `gathering_min_participant_cnt` int DEFAULT NULL,
+  `gathering_max_participant_cnt` int DEFAULT NULL,
+  `gathering_money` int NOT NULL,
+  `gathering_participant_cnt` int DEFAULT NULL,
+  `gathering_participant` varchar(550) DEFAULT NULL,
+  `gathering_status` int NOT NULL,
+  `gathering_created_time` datetime NOT NULL,
+  `gathering_ex1` varchar(45) DEFAULT NULL,
+  `gathering_ex2` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`gathering_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `reservation_participant_table` (
+  `user_id` varchar(45) NOT NULL,
+  `reservation_id` int NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `reservation_table` (
+  `reservation_id` int NOT NULL,
+  `user_id` varchar(45) NOT NULL,
+  `store_id` varchar(45) DEFAULT NULL,
+  `reservation_start_time` datetime NOT NULL,
+  `reservation_participant_cnt` int NOT NULL,
+  `reservation_participant_id` varchar(450) NOT NULL,
+  `reservation_match` varchar(45) NOT NULL,
+  `reservation_status` int NOT NULL,
+  `reservation_bio` varchar(300) NOT NULL,
+  `reservation_max_participant_cnt` int NOT NULL,
+  `reservation_ex1` varchar(45) DEFAULT NULL,
+  `reservation_ex2` varchar(45) DEFAULT NULL,
+  `reservation_ex3` varchar(45) DEFAULT NULL,
+  `reservation_ex4` varchar(45) DEFAULT NULL,
+  `reservation_created_time` datetime DEFAULT NULL,
+  `reservation_end_time` datetime DEFAULT NULL,
+  `reservation_match_category` int NOT NULL,
+  `reservation_user_name` varchar(45) NOT NULL,
+  `reservation_store_name` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`reservation_id`),
+  UNIQUE KEY `reservation_id_UNIQUE` (`reservation_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+CREATE TABLE `review_table` (
+  `review_id` int NOT NULL,
+  `review_text` varchar(300) NOT NULL,
+  `store_id` varchar(45) NOT NULL,
+  `user_id` varchar(45) NOT NULL,
+  `review_rating` int NOT NULL,
+  `review_visited_time` datetime NOT NULL,
+  `review_created_time` datetime NOT NULL,
+  `review_img1` varchar(255) DEFAULT NULL,
+  `review_img2` varchar(255) DEFAULT NULL,
+  `review_img3` varchar(255) DEFAULT NULL,
+  `review_img4` varchar(255) DEFAULT NULL,
+  `review_img5` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`review_id`),
+  UNIQUE KEY `review_id_UNIQUE` (`review_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+CREATE TABLE `store_table` (
+  `store_id` varchar(64) NOT NULL,
+  `store_pwd` varchar(64) NOT NULL,
+  `store_address` varchar(64) NOT NULL,
+  `store_bio` varchar(45) NOT NULL,
+  `store_open_hour` int NOT NULL,
+  `store_close_hour` int NOT NULL,
+  `ex1` varchar(45) NOT NULL,
+  `ex2` varchar(45) NOT NULL,
+  `store_max_people_cnt` int NOT NULL,
+  `store_max_table_cnt` int NOT NULL,
+  `store_max_parking_cnt` int NOT NULL,
+  `store_max_screen_cnt` int NOT NULL,
+  `store_phonenumber` varchar(45) NOT NULL,
+  `store_holiday` varchar(45) NOT NULL,
+  `store_thumbnail` varchar(256) DEFAULT NULL,
+  `store_review_cnt` int NOT NULL,
+  `store_rating` int NOT NULL,
+  `store_name` varchar(45) NOT NULL,
+  PRIMARY KEY (`store_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+CREATE TABLE `user_table` (
+  `user_id` varchar(64) NOT NULL,
+  `user_pwd` varchar(64) NOT NULL,
+  `user_email` varchar(64) NOT NULL,
+  `user_name` varchar(64) NOT NULL,
+  `user_region` varchar(256) NOT NULL,
+  `user_phone_number` varchar(45) NOT NULL,
+  `user_updated_time` varchar(45) NOT NULL,
+  `user_gender` int NOT NULL,
+  `ex1` varchar(45) DEFAULT NULL,
+  `ex2` varchar(45) DEFAULT NULL,
+  `ex3` varchar(45) DEFAULT NULL,
+  `ex4` varchar(45) DEFAULT NULL,
+  `user_thumbnail` varchar(256) DEFAULT NULL,
+  PRIMARY KEY (`user_id`),
+  UNIQUE KEY `iduser_table_UNIQUE` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+

@@ -68,9 +68,9 @@ export default function HomeScreen() {
         {/* 선택된 위치 표시 */}
         {selectedLocations.length > 0 && (
           <View className="px-4 py-2 bg-white border-b border-gray-200">
-            <View className="flex-row gap-2 items-center">
-              {selectedLocations.map((location) => (
-                <TouchableOpacity key={location} onPress={() => toggleLocation(location)}>
+            <View className="flex-row items-center">
+              {selectedLocations.map((location, index) => (
+                <TouchableOpacity key={location} onPress={() => toggleLocation(location)} className={index > 0 ? "ml-2" : ""}>
                   <TagChip
                     label={`${location}   x`}
                     color={`${COLORS.mainOrange}20`}
@@ -87,7 +87,7 @@ export default function HomeScreen() {
         {/* 매칭 목록 헤더 */}
         <View className="flex-row justify-between items-center px-4 py-3 bg-white">
           <Text className="text-2xl font-bold text-gray-800">매칭 목록</Text>
-          <Text className="text-gray-600 text-md">총 {filteredEvents.length}개</Text>
+          <Text className="text-gray-600 text-sm">총 {filteredEvents.length}개</Text>
         </View>
 
         {/* 매칭 목록 */}
