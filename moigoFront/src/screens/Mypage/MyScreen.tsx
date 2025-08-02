@@ -23,6 +23,7 @@ export default function MyScreen() {
     handleViewFavoritePlaces,
     handleContactCustomerService,
     toggleNotifications,
+    handleEditPassword,
   } = useMyScreen();
 
   const handleLogoutPress = () => {
@@ -34,7 +35,7 @@ export default function MyScreen() {
 
   if (isLoading) {
     return (
-      <View className="items-center justify-center flex-1 bg-gray-100">
+      <View className="flex-1 justify-center items-center bg-gray-100">
         <Text>로딩 중...</Text>
       </View>
     );
@@ -43,7 +44,7 @@ export default function MyScreen() {
   // 사용자 정보가 없으면 로딩 화면 표시
   if (!userProfile) {
     return (
-      <View className="items-center justify-center flex-1 bg-gray-100">
+      <View className="flex-1 justify-center items-center bg-gray-100">
         <Text>사용자 정보를 불러오는 중...</Text>
       </View>
     );
@@ -93,7 +94,7 @@ export default function MyScreen() {
             icon="clock"
             iconColor="#3B82F6"
             onPress={handleViewMatchHistory}
-            className="mb-0 border-2 rounded-t-2xl border-mainGray"
+            className="mb-0 rounded-t-2xl border-2 border-mainGray"
           />
 
           <MenuItem
@@ -101,7 +102,7 @@ export default function MyScreen() {
             icon="heart"
             iconColor="#EF4444"
             onPress={handleViewFavoritePlaces}
-            className="mb-4 border-2 border-t-0 rounded-b-2xl border-mainGray"
+            className="mb-4 rounded-b-2xl border-2 border-t-0 border-mainGray"
           />
 
           <MenuItem
@@ -109,18 +110,18 @@ export default function MyScreen() {
             icon="bell"
             iconColor="#3B82F6"
             onPress={() => {}}
-            className="mb-0 border-2 rounded-t-2xl border-mainGray"
+            className="mb-0 rounded-t-2xl border-2 border-mainGray"
             rightComponent={
               <ToggleSwitch value={settings.notifications} onValueChange={toggleNotifications} />
             }
           />
 
           <MenuItem
-            title="개인정보 수정"
+            title="비밀번호 수정"
             icon="user"
             iconColor="#6B7280"
-            onPress={handleEditProfile}
-            className="mb-4 border-2 border-t-0 rounded-b-2xl border-mainGray"
+            onPress={handleEditPassword}
+            className="mb-4 rounded-b-2xl border-2 border-t-0 border-mainGray"
           />
 
           <MenuItem
@@ -128,7 +129,7 @@ export default function MyScreen() {
             icon="headphones"
             iconColor="#10B981"
             onPress={handleContactCustomerService}
-            className="mb-0 border-2 rounded-t-2xl border-mainGray"
+            className="mb-0 rounded-t-2xl border-2 border-mainGray"
           />
 
           <MenuItem
@@ -136,7 +137,7 @@ export default function MyScreen() {
             icon="info"
             iconColor="#6B7280"
             onPress={() => {}}
-            className="mb-4 border-2 border-t-0 rounded-b-2xl border-mainGray"
+            className="mb-4 rounded-b-2xl border-2 border-t-0 border-mainGray"
             rightComponent={
               <Text className="font-medium text-gray-500">{settings.appVersion}</Text>
             }
