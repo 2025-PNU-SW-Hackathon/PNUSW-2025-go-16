@@ -4,6 +4,7 @@ import { COLORS } from '@/constants/colors';
 
 import TagChip from '@/components/common/TagChip';
 import SearchBar from '@/components/common/SearchBar';
+import Toast from '@/components/common/Toast';
 
 import EventCard from '@/screens/Home/EventCard';
 import FilterModal from '@/screens/Home/FilterModal';
@@ -32,6 +33,12 @@ export default function HomeScreen() {
     setIsFilterModalVisible,
     closeFilterModal,
     closeEnterModal,
+    showToast,
+    toastMessage,
+    toastType,
+    hideToast,
+    showSuccessToast,
+    showErrorToast,
   } = useHomeScreen();
 
   return (
@@ -48,7 +55,21 @@ export default function HomeScreen() {
         toggleLocation={toggleLocation}
         resetFilters={resetFilters}
       />
-      <EnterModal visible={isEnterModalVisible} onClose={closeEnterModal} event={selectedEvent} />
+      <EnterModal 
+        visible={isEnterModalVisible} 
+        onClose={closeEnterModal} 
+        event={selectedEvent}
+        showSuccessToast={showSuccessToast}
+        showErrorToast={showErrorToast}
+      />
+      
+      {/* 토스트 메시지 */}
+      <Toast
+        visible={showToast}
+        message={toastMessage}
+        type={toastType}
+        onHide={hideToast}
+      />
 
       <ScrollView className="flex-3">
         {/* 검색바 */}
@@ -87,14 +108,14 @@ export default function HomeScreen() {
         {/* 매칭 목록 헤더 */}
         <View className="flex-row justify-between items-center px-4 py-3 bg-white">
           <Text className="text-2xl font-bold text-gray-800">매칭 목록</Text>
-          <Text className="text-gray-600 text-sm">총 {filteredEvents.length}개</Text>
+          <Text className="text-sm text-gray-600">총 {filteredEvents.length}개</Text>
         </View>
 
         {/* 매칭 목록 */}
         <View className="px-4 pb-20">
-          {filteredEvents.map((event) => (
+          {filteredEvents.map((event: any, index) => (
             <EventCard
-              key={event.id}
+              key={event.id || event.reservation_id || index}
               event={event}
               onParticipate={() => handleParticipate(event)}
             />

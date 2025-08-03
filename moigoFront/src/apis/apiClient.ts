@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { AxiosResponse } from 'axios';
 
-const BASE_URL = 'http://localhost:3000/api/v1/';
+const BASE_URL = 'http://localhost:3001/api/v1/';
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -16,10 +16,16 @@ export function setAccessToken(token: string | null) {
   accessToken = token;
 }
 
+// 임시 토큰 설정 (개발용)
+setAccessToken('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidXNlcjEiLCJpYXQiOjE3NTQyMjQ0OTIsImV4cCI6MTc1NDIzMTY5Mn0.904vSgqT2jNEqKNIV8KdnIlDTpcXS4xJSyeQ_U562PE');
+
 apiClient.interceptors.request.use(
   (config) => {
     if (accessToken) {
-      config.headers.Authorization = accessToken;
+      config.headers.Authorization = `Bearer ${accessToken}`;
+      console.log('요청 헤더:', config.headers);
+    } else {
+      console.log('토큰이 없습니다!');
     }
     return config;
   },

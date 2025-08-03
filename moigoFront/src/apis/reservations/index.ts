@@ -25,6 +25,12 @@ export const createReservation = async (
 export const joinReservation = async (
   reservationId: number
 ): Promise<JoinReservationResponseDTO> => {
+  console.log('API 호출:', {
+    url: `/reservations/${reservationId}/join`,
+    method: 'POST',
+    headers: apiClient.defaults.headers
+  });
+  
   const response = await apiClient.post<JoinReservationResponseDTO>(
     `/reservations/${reservationId}/join`
   );
