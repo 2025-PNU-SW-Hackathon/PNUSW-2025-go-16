@@ -23,8 +23,15 @@ export interface LoginRequestDTO {
 export interface LoginResponseDTO {
   success: boolean;
   access_token: string;
-  user_id: string;
-  user_name: string;
+  data: {
+    user_id: string;
+    user_name: string;
+    user_email: string;
+    user_region: string;
+    user_gender: number;
+    user_phone_number: string;
+    user_thumbnail: string | null;
+  };
 }
 
 // 인증 에러 응답 DTO

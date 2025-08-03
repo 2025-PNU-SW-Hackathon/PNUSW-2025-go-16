@@ -40,13 +40,13 @@ export default function Profile() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-white" edges={['left', 'right', 'bottom']}>
       <CheckModal visible={isModalOpen} title={''} onClose={handleModalClick}>
-        <View className="flex-col items-center gap-4 mb-8">
-          <View className="items-center justify-center w-20 h-20 rounded-full bg-mainOrange">
+        <View className="flex-col gap-4 items-center mb-8">
+          <View className="justify-center items-center w-20 h-20 rounded-full bg-mainOrange">
             <Feather name="check" size={30} color="white" />
           </View>
-          <Text className="text-2xl font-bold ">저장완료</Text>
+          <Text className="text-2xl font-bold">저장완료</Text>
           <Text className="text-mainDarkGray">개인정보가 성공적으로 수정되었습니다.</Text>
         </View>
         <PrimaryButton
@@ -55,7 +55,7 @@ export default function Profile() {
           disabled={isLoading || !isFormValid}
         />
       </CheckModal>
-      <ScrollView className="flex-1">
+      <ScrollView className="flex-1 pt-8">
         {/* 프로필 이미지 */}
         <ProfileImage imageUri={profileData.profileImage} onImageChange={handleImagePress} />
 

@@ -1,139 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { View, Text, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
-import { useAuthStore } from '@/store/authStore';
 import PasswordInput from '@/components/password/PasswordInput';
 import PrimaryButton from '@/components/common/PrimaryButton';
 import Toast from '@/components/common/Toast';
 import { COLORS } from '@/constants/colors';
+import { useChangePassword } from '@/hooks/useChangePassword';
 
 export default function ChangePasswordScreen() {
   const navigation = useNavigation();
-  const { changePassword, validatePassword, isLoading } = useAuthStore();
-  
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  const {
+    form,
+    errors,
+    showToast,
+    toastMessage,
+    toastType,
+    isLoading,
+    handleInputChange,
+    handleSubmit,
+    isFormValid,
+    setShowToast,
+  } = useChangePassword();
 
-  // 비밀번호 유효성 검사
-  const validateForm = () => {
-    const newErrors: { [key: string]: string } = {};
-    
-    if (!currentPassword) {
-      newErrors.currentPassword = '현재 비밀번호를 입력해주세요.';
-    }
-    
-    if (!newPassword) {
-      newErrors.newPassword = '새 비밀번호를 입력해주세요.';
-    } else {
-      const validation = validatePassword(newPassword);
-      if (!validation.isValid) {
-        newErrors.newPassword = validation.errors[0];
-      }
-    }
-    
-    if (!confirmPassword) {
-      newErrors.confirmPassword = '새 비밀번호 확인을 입력해주세요.';
-    } else if (newPassword !== confirmPassword) {
-      newErrors.confirmPassword = '비밀번호가 일치하지 않습니다.';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  // 성공 시 이전 화면으로 이동
+  const handleSuccess = () => {
+    setTimeout(() => {
+      navigation.goBack();
+    }, 1000);
   };
 
-  // 폼이 유효한지 확인
-  const isFormValid = () => {
-    // 실시간으로 유효성 검사
-    const newErrors: { [key: string]: string } = {};
-    
-    if (!currentPassword) {
-      newErrors.currentPassword = '현재 비밀번호를 입력해주세요.';
-    }
-    
-    if (!newPassword) {
-      newErrors.newPassword = '새 비밀번호를 입력해주세요.';
-    } else {
-      const validation = validatePassword(newPassword);
-      if (!validation.isValid) {
-        newErrors.newPassword = validation.errors[0];
-      }
-    }
-    
-    if (!confirmPassword) {
-      newErrors.confirmPassword = '새 비밀번호 확인을 입력해주세요.';
-    } else if (newPassword !== confirmPassword) {
-      newErrors.confirmPassword = '비밀번호가 일치하지 않습니다.';
-    }
-    
-    return currentPassword.length > 0 && 
-           newPassword.length > 0 && 
-           confirmPassword.length > 0 && 
-           Object.keys(newErrors).length === 0;
-  };
-
-  // 비밀번호 변경 제출
-  const handleSubmit = async () => {
-    if (!validateForm()) return;
-    
-    try {
-      const success = await changePassword({
-        currentPassword,
-        newPassword,
-        confirmPassword,
-      });
-      
-      if (success) {
-        // 성공 토스트 표시
-        setToastMessage('저장되었습니다');
-        setToastType('success');
-        setShowToast(true);
-        
-        // 1초 후 이전 화면으로 이동
-        setTimeout(() => {
-          navigation.goBack();
-        }, 1000);
-      }
-    } catch (error: any) {
-      console.error('비밀번호 변경 실패:', error);
-      // 에러 토스트 표시
-      setToastMessage(error.message || '비밀번호 변경에 실패했습니다');
-      setToastType('error');
-      setShowToast(true);
-      
-      // 현재 비밀번호 에러 처리
-      if (error.message.includes('현재 비밀번호')) {
-        setErrors(prev => ({ ...prev, currentPassword: error.message }));
-      }
+  // 제출 핸들러
+  const onSubmit = async () => {
+    const result = await handleSubmit();
+    if (result?.success) {
+      handleSuccess();
     }
   };
-
-  // 입력값 변경 시 실시간 유효성 검사
-  useEffect(() => {
-    const newErrors: { [key: string]: string } = {};
-    
-    if (currentPassword && !currentPassword.trim()) {
-      newErrors.currentPassword = '현재 비밀번호를 입력해주세요.';
-    }
-    
-    if (newPassword) {
-      const validation = validatePassword(newPassword);
-      if (!validation.isValid) {
-        newErrors.newPassword = validation.errors[0];
-      }
-    }
-    
-    if (confirmPassword && newPassword !== confirmPassword) {
-      newErrors.confirmPassword = '비밀번호가 일치하지 않습니다.';
-    }
-    
-    setErrors(newErrors);
-  }, [currentPassword, newPassword, confirmPassword]);
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -154,8 +57,8 @@ export default function ChangePasswordScreen() {
         {/* 현재 비밀번호 */}
         <PasswordInput
           label="현재 비밀번호"
-          value={currentPassword}
-          onChangeText={setCurrentPassword}
+          value={form.currentPassword}
+          onChangeText={(value) => handleInputChange('currentPassword', value)}
           placeholder="현재 비밀번호를 입력해주세요"
           error={errors.currentPassword}
         />
@@ -163,8 +66,8 @@ export default function ChangePasswordScreen() {
         {/* 새 비밀번호 */}
         <PasswordInput
           label="새 비밀번호"
-          value={newPassword}
-          onChangeText={setNewPassword}
+          value={form.newPassword}
+          onChangeText={(value) => handleInputChange('newPassword', value)}
           placeholder="새 비밀번호를 입력해주세요"
           error={errors.newPassword}
         />
@@ -184,8 +87,8 @@ export default function ChangePasswordScreen() {
         {/* 새 비밀번호 확인 */}
         <PasswordInput
           label="새 비밀번호 확인"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
+          value={form.confirmPassword}
+          onChangeText={(value) => handleInputChange('confirmPassword', value)}
           placeholder="새 비밀번호를 다시 입력해주세요"
           error={errors.confirmPassword}
         />
@@ -194,7 +97,7 @@ export default function ChangePasswordScreen() {
         <View className="mt-8 mb-4">
           <PrimaryButton
             title="변경 완료"
-            onPress={handleSubmit}
+            onPress={onSubmit}
             disabled={!isFormValid() || isLoading}
           />
         </View>

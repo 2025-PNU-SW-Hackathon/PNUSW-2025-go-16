@@ -10,6 +10,18 @@ interface MatchCardProps {
 }
 
 export default function MatchCard({ match, onWriteReview }: MatchCardProps) {
+  // 날짜를 문자열로 변환
+  const formatDate = (date: string | Date) => {
+    if (date instanceof Date) {
+      return date.toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    }
+    return date;
+  };
+
   return (
     <View className="p-4 mb-4 bg-white rounded-xl border border-gray-100 shadow-sm">
       {/* 제목 */}
@@ -19,7 +31,7 @@ export default function MatchCard({ match, onWriteReview }: MatchCardProps) {
       
       {/* 날짜와 시간 */}
       <Text className="mb-1 text-sm text-mainGrayText">
-        {match.date} {match.time}
+        {formatDate(match.date)} {match.time}
       </Text>
       
       {/* 위치 */}
