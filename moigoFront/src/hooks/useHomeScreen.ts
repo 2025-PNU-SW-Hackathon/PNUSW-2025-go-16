@@ -116,10 +116,12 @@ export function useHomeScreen() {
       event.title?.toLowerCase().includes(searchLower) ||
       event.location?.toLowerCase().includes(searchLower) ||
       event.sportType?.toLowerCase().includes(searchLower) ||
-      event.reservation_bio?.toLowerCase().includes(searchLower);
+      event.reservation_bio?.toLowerCase().includes(searchLower) ||
+      event.reservation_match?.toLowerCase().includes(searchLower) ||
+      event.reservation_ex1?.toLowerCase().includes(searchLower);
 
-    // 카테고리 필터링
-    const matchesCategory = selectedFilter === '전체' || event.sportType === selectedFilter;
+    // 카테고리 필터링 (reservation_ex1 사용)
+    const matchesCategory = selectedFilter === '전체' || event.reservation_ex1 === selectedFilter;
 
     // 위치 필터링 (복수 선택)
     const matchesLocation =

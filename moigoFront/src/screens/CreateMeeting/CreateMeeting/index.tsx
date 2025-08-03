@@ -52,9 +52,6 @@ export default function CreateMeeting() {
   const maxPeople = watch('maxPeople');
   const description = watch('description');
 
-  // 선택된 경기 정보
-  const selectedEvent = events.find((event) => event.id === selectedEventId);
-
   // 등록 확인 핸들러
   const handleConfirmRegistration = () => {
     console.log('모임 등록 확인:', { selectedEventId, meetingName, maxPeople, description });
@@ -154,7 +151,7 @@ export default function CreateMeeting() {
       </ScrollView>
 
       {/* 고정된 등록하기 버튼 */}
-      <View className="absolute bottom-0 left-0 right-0 p-4 pb-10 bg-white border-t border-gray-200">
+      <View className="absolute right-0 bottom-0 left-0 p-4 pb-10 bg-white border-t border-gray-200">
         <PrimaryButton
           title="등록하기"
           onPress={() => setIsConfirmModalVisible(true)}
