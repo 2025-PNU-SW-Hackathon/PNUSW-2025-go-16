@@ -4,8 +4,9 @@ const { connectDB } = require('./config/db_config');
 const jwt = require('jsonwebtoken');
 const reservationRoutes = require('./routes/reservation_routes');
 const reviewRoutes = require('./routes/review_routes');
-const userRoutes = require('./routes/review_routes');
+const userRoutes = require('./routes/user_routes');
 const chatRoutes = require('./routes/chat_routes');
+const storeRoutes = require('./routes/store_routes');
 const { Server } = require('socket.io');
 const handleSocket = require('./controllers/socket_controller');
 const http = require('http');
@@ -29,6 +30,7 @@ app.use('/api/v1/reservations', reservationRoutes);
 app.use('/api/v1/reviews', reviewRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/chats', chatRoutes);
+app.use('/api/v1/stores', storeRoutes);
 
 // 404 및 에러 핸들러 등록
 //app.use(notFound);
@@ -58,7 +60,7 @@ const test_token = jwt.sign(
     { expiresIn: process.env.JWT_EXPIRES_IN || '2h' }
   );
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
