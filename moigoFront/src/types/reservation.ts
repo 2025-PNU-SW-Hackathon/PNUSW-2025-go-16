@@ -11,11 +11,13 @@ export interface Reservation {
 export interface ParticipatedMatch {
   id: string;
   title: string;
-  date: string;
-  time: string;
+  date: string | Date;
+  time?: string;
   location: string;
   participants: number;
+  maxParticipants: number;
   category: '축구' | '야구' | '농구' | '격투기' | '게임';
+  status: string;
   hasReview: boolean;
 }
 

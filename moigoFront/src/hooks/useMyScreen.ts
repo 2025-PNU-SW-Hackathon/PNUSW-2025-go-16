@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useEffect } from 'react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types/RootStackParamList';
+import { useGetMyInfo } from '@/hooks/queries/useUserQueries';
 
 export function useMyScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -12,21 +13,47 @@ export function useMyScreen() {
     settings,
     isLoading,
     initializeUserProfile,
+    updateUserProfile,
     resetUserProfile,
     toggleNotifications,
     setLoading,
   } = useMyStore();
 
   const { user: authUser, logout: authLogout } = useAuthStore();
-  // authStore의 사용자 정보가 있으면 myStore의 사용자 정보 초기화
+  
+  // users/me API 호출
+  const { data: myInfo, isLoading: isMyInfoLoading, error: myInfoError } = useGetMyInfo();
+  
+  // 디버깅 로그
+  console.log('useMyScreen API 상태:', {
+    myInfo,
+    isMyInfoLoading,
+    myInfoError,
+    userProfile,
+    authUser
+  });
+  
+  // API 데이터가 있으면 store에 저장
   useEffect(() => {
-    if (authUser && !userProfile) {
-      initializeUserProfile({
-        id: authUser.id,
-        email: authUser.email,
-      });
+    if (myInfo?.data) {
+      console.log('사용자 정보 저장:', myInfo.data);
+      const userProfile = {
+        id: myInfo.data.user_id,
+        name: myInfo.data.user_name,
+        email: myInfo.data.user_email,
+        gender: (myInfo.data.user_gender === 1 ? 'male' : 'female') as 'male' | 'female',
+        profileImage: myInfo.data.user_thumbnail || undefined,
+        grade: 'BRONZE' as const,
+        progressToNextGrade: 0,
+        coupons: 0,
+        participatedMatches: 0,
+        writtenReviews: 0,
+        preferredSports: [],
+      };
+      console.log('완전한 userProfile:', userProfile);
+      updateUserProfile(userProfile);
     }
-  }, [authUser, userProfile, initializeUserProfile]);
+  }, [myInfo, updateUserProfile]);
 
   // 로그아웃 처리
   const handleLogout = () => {
@@ -78,7 +105,7 @@ export function useMyScreen() {
     // 상태
     userProfile,
     settings,
-    isLoading,
+    isLoading: isLoading || isMyInfoLoading,
 
     // 액션
     toggleNotifications,

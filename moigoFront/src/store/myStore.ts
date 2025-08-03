@@ -9,6 +9,11 @@ interface UserProfile {
   id: string;
   name: string;
   email: string;
+  gender: 'male' | 'female';
+  phone?: string;
+  birthDate?: string;
+  bio?: string;
+  region?: string;
   profileImage?: string;
   grade: UserGrade;
   progressToNextGrade: number;
@@ -33,6 +38,7 @@ interface MyState {
 
   // 액션
   updateUserProfile: (profile: Partial<UserProfile>) => void;
+  updateProfileImage: (imageUri: string) => void;
   initializeUserProfile: (authUser: { id: string; email: string }) => void;
   resetUserProfile: () => void;
   toggleNotifications: () => void;
@@ -54,6 +60,7 @@ const createUserProfileFromAuth = (authUser: { id: string; email: string }): Use
     id: authUser.id,
     name: name,
     email: authUser.email,
+    gender: 'male', // 기본값
     profileImage: undefined,
     grade: 'BRONZE',
     progressToNextGrade: 0,
@@ -74,7 +81,14 @@ export const useMyStore = create<MyState>((set, get) => ({
   // 사용자 프로필 업데이트
   updateUserProfile: (profile: Partial<UserProfile>) => {
     set((state) => ({
-      userProfile: state.userProfile ? { ...state.userProfile, ...profile } : null,
+      userProfile: state.userProfile ? { ...state.userProfile, ...profile } : profile as UserProfile,
+    }));
+  },
+
+  // 프로필 이미지 업데이트
+  updateProfileImage: (imageUri: string) => {
+    set((state) => ({
+      userProfile: state.userProfile ? { ...state.userProfile, profileImage: imageUri } : null,
     }));
   },
 

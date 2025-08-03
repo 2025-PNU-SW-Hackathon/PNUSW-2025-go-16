@@ -52,7 +52,7 @@ export default function ParticipatedMatchesScreen() {
 
           {/* 빈 상태 */}
           {filteredAndSortedMatches.length === 0 && (
-            <View className="items-center justify-center flex-1 py-20">
+            <View className="flex-1 justify-center items-center py-20">
               <Text className="mt-4 text-lg font-medium text-mainGrayText">
                 참여한 매칭이 없습니다
               </Text>

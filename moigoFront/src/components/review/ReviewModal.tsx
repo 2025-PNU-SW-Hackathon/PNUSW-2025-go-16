@@ -19,6 +19,19 @@ export default function ReviewModal({ visible, match, onClose, onSubmit }: Revie
   const [content, setContent] = useState('');
   const maxLength = 500;
 
+  // 날짜를 문자열로 변환
+  const formatDate = (date: string | Date | undefined) => {
+    if (!date) return '';
+    if (date instanceof Date) {
+      return date.toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    }
+    return date;
+  };
+
   const handleSubmit = () => {
     if (rating === 0) {
       // 별점을 선택하지 않은 경우 처리
@@ -49,7 +62,7 @@ export default function ReviewModal({ visible, match, onClose, onSubmit }: Revie
           <View className="flex-row items-center">
             <Feather name="calendar" size={16} color={COLORS.mainGrayText} />
             <Text className="ml-2 text-sm text-mainGrayText">
-              {match?.date} {match?.time}
+              {formatDate(match?.date)} {match?.time}
             </Text>
           </View>
         </View>
