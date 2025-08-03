@@ -6,18 +6,39 @@ import {
   getMatchingHistory,
   updateUserSettings,
   getUserProfile,
-} from '../apis/users';
+} from '../../apis/users';
 import type {
   UpdateProfileRequestDTO,
   ChangePasswordRequestDTO,
   UpdateUserSettingsRequestDTO,
-} from '../types/DTO/users';
+} from '../../types/DTO/users';
 
 // GET /users/me - 마이페이지 정보 조회 훅
 export const useGetMyInfo = () => {
   return useQuery({
     queryKey: ['my-info'],
     queryFn: () => getMyInfo(),
+    staleTime: 5 * 60 * 1000, // 5분
+    gcTime: 15 * 60 * 1000, // 15분
+  });
+};
+
+// GET /users/me/matchings - 참여한 매칭 이력 조회 훅
+export const useGetMatchingHistory = () => {
+  return useQuery({
+    queryKey: ['matching-history'],
+    queryFn: () => getMatchingHistory(),
+    staleTime: 10 * 60 * 1000, // 10분
+    gcTime: 30 * 60 * 1000, // 30분
+  });
+};
+
+// GET /users/{userId}/profile - 유저 정보 조회 훅
+export const useGetUserProfile = (userId: string) => {
+  return useQuery({
+    queryKey: ['user-profile', userId],
+    queryFn: () => getUserProfile(userId),
+    enabled: !!userId,
     staleTime: 5 * 60 * 1000, // 5분
     gcTime: 15 * 60 * 1000, // 15분
   });
@@ -49,16 +70,6 @@ export const useChangePassword = () => {
   });
 };
 
-// GET /users/me/matchings - 참여한 매칭 이력 조회 훅
-export const useGetMatchingHistory = () => {
-  return useQuery({
-    queryKey: ['matching-history'],
-    queryFn: () => getMatchingHistory(),
-    staleTime: 10 * 60 * 1000, // 10분
-    gcTime: 30 * 60 * 1000, // 30분
-  });
-};
-
 // PATCH /users/me - 사용자 설정 변경 훅
 export const useUpdateUserSettings = () => {
   const queryClient = useQueryClient();
@@ -72,16 +83,5 @@ export const useUpdateUserSettings = () => {
     onError: (error) => {
       console.error('사용자 설정 변경 실패:', error);
     },
-  });
-};
-
-// GET /users/{userId}/profile - 유저 정보 조회 훅
-export const useGetUserProfile = (userId: string) => {
-  return useQuery({
-    queryKey: ['user-profile', userId],
-    queryFn: () => getUserProfile(userId),
-    enabled: !!userId,
-    staleTime: 5 * 60 * 1000, // 5분
-    gcTime: 15 * 60 * 1000, // 15분
   });
 }; 

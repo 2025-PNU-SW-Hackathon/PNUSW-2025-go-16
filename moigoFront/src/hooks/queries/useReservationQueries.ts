@@ -5,11 +5,11 @@ import {
   getReservations,
   cancelReservation,
   getReservationDetail,
-} from '../apis/reservations';
+} from '../../apis/reservations';
 import type {
   CreateReservationRequestDTO,
   GetReservationsQueryDTO,
-} from '../types/DTO/reservations';
+} from '../../types/DTO/reservations';
 
 // GET /reservations - 모임 조회 훅
 export const useGetReservations = (queryParams?: GetReservationsQueryDTO) => {

@@ -1,11 +1,23 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, TextInput, ScrollView } from 'react-native';
-import { useGetReservations, useCreateReservation, useJoinReservation, useCancelReservation, useGetReservationDetail } from '../../hooks/useReservations';
-import { useLogin, useSignup } from '../../hooks/useAuth';
-import { useGetMyInfo, useUpdateProfile, useGetMatchingHistory } from '../../hooks/useUsers';
-import { useGetChatRooms, useEnterChatRoom } from '../../hooks/useChat';
-import { useGetPaymentStatus, useRequestPayment } from '../../hooks/usePayments';
-import { useCreateReview, useGetMyReviews } from '../../hooks/useReviews';
+import { 
+  useCreateReservation, 
+  useJoinReservation, 
+  useCancelReservation,
+  useGetReservations, 
+  useGetReservationDetail,
+  useLogin, 
+  useSignup,
+  useUpdateProfile,
+  useGetMyInfo, 
+  useGetMatchingHistory,
+  useEnterChatRoom,
+  useGetChatRooms,
+  useRequestPayment,
+  useGetPaymentStatus,
+  useCreateReview,
+  useGetMyReviews
+} from '../../hooks/queries';
 import type { CreateReservationRequestDTO } from '../../types/DTO/reservations';
 import type { SignupRequestDTO, LoginRequestDTO } from '../../types/DTO/auth';
 import type { UpdateProfileRequestDTO } from '../../types/DTO/users';

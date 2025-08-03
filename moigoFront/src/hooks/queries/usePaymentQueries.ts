@@ -6,13 +6,13 @@ import {
   approveReservation,
   getPaymentStatus,
   kickParticipant,
-} from '../apis/payments';
+} from '../../apis/payments';
 import type {
   RequestPaymentRequestDTO,
   InitiatePaymentRequestDTO,
   PaymentCallbackRequestDTO,
   ReservationApprovalRequestDTO,
-} from '../types/DTO/payments';
+} from '../../types/DTO/payments';
 
 // GET /chat/rooms/{roomId}/payments/status - 결제 현황 조회 훅
 export const useGetPaymentStatus = (roomId: number) => {

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { createReview, getMyReviews } from '../apis/reviews';
-import type { CreateReviewRequestDTO } from '../types/DTO/reviews';
+import { createReview, getMyReviews } from '../../apis/reviews';
+import type { CreateReviewRequestDTO } from '../../types/DTO/reviews';
 
 // GET /users/me/reviews - 내 리뷰 목록 조회 훅
 export const useGetMyReviews = () => {

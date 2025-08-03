@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
-import { signup, login, logout } from '../apis/auth';
-import type { SignupRequestDTO, LoginRequestDTO } from '../types/DTO/auth';
-import { setAccessToken } from '../apis/apiClient';
+import { signup, login, logout } from '../../apis/auth';
+import type { SignupRequestDTO, LoginRequestDTO } from '../../types/DTO/auth';
+import { setAccessToken } from '../../apis/apiClient';
 
 // POST /auth/signup - 회원가입 훅
 export const useSignup = () => {

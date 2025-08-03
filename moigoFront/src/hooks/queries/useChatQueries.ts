@@ -6,8 +6,8 @@ import {
   kickUserFromChatRoom,
   getChatMessages,
   enterChatRoom,
-} from '../apis/chat';
-import type { UpdateChatRoomStatusRequestDTO, EnterChatRoomRequestDTO } from '../types/DTO/chat';
+} from '../../apis/chat';
+import type { UpdateChatRoomStatusRequestDTO, EnterChatRoomRequestDTO } from '../../types/DTO/chat';
 
 // GET /chat/rooms - 채팅방 목록 조회 훅
 export const useGetChatRooms = () => {
