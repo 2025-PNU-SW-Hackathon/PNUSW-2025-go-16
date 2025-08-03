@@ -4,7 +4,7 @@ import type { ProfileFormData } from '@/types/profile';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/types/RootStackParamList';
-import { updateProfile } from '@/apis/users';
+import { useUpdateProfile } from '@/hooks/queries/useUserQueries';
 
 export function useProfile() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -19,6 +19,9 @@ export function useProfile() {
     bio: '',
   });
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+
+  // React Query mutation
+  const updateProfileMutation = useUpdateProfile();
 
   // userProfile 데이터가 변경될 때 formData 업데이트
   useEffect(() => {
@@ -68,7 +71,7 @@ export function useProfile() {
 
     setLoading(true);
     try {
-      // API 호출
+      // API 호출 (React Query mutation 사용)
       const updateData = {
         user_name: formData.name,
         user_region: userProfile.region || '서울',
@@ -77,7 +80,7 @@ export function useProfile() {
       };
 
       console.log('프로필 업데이트 요청:', updateData);
-      await updateProfile(updateData);
+      await updateProfileMutation.mutateAsync(updateData);
 
       // myStore 업데이트
       updateUserProfile({

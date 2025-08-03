@@ -45,6 +45,10 @@ export default function CreateMeeting() {
     setValue,
     errors,
     isFormValid,
+    // API 관련
+    isCreating,
+    createError,
+    onSubmit,
   } = useCreateMeeting();
 
   // 폼 값들
@@ -53,12 +57,36 @@ export default function CreateMeeting() {
   const description = watch('description');
 
   // 등록 확인 핸들러
-  const handleConfirmRegistration = () => {
-    console.log('모임 등록 확인:', { selectedEventId, meetingName, maxPeople, description });
-    setIsConfirmModalVisible(false);
-    // TODO: 실제 등록 로직 구현 후 홈으로 이동
-    navigation.goBack();
+  const handleConfirmRegistration = async () => {
+    try {
+      console.log('모임 등록 확인:', { selectedEventId, meetingName, maxPeople, description });
+      
+      const formData = {
+        meetingName,
+        maxPeople,
+        description,
+      };
+      
+      await onSubmit(formData);
+      
+      // 성공 시 모달 닫고 홈으로 이동
+      setIsConfirmModalVisible(false);
+      navigation.goBack();
+    } catch (error) {
+      console.error('모임 등록 실패:', error);
+      // TODO: 에러 처리 (토스트 메시지 등)
+    }
   };
+
+  // 디버깅 로그
+  console.log('CreateMeeting 상태:', {
+    selectedEventId,
+    eventsLength: events.length,
+    isConfirmModalVisible,
+    isFormValid,
+    isCreating,
+    createError,
+  });
 
   // 3개씩 그룹으로 데이터 분할
   const groupedEvents = [];
@@ -105,6 +133,8 @@ export default function CreateMeeting() {
           meetingName={meetingName}
           description={description}
           handleConfirmRegistration={handleConfirmRegistration}
+          events={events}
+          isLoading={isCreating}
         />
       )}
 

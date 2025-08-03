@@ -51,8 +51,11 @@ export const useUpdateProfile = () => {
   return useMutation({
     mutationFn: (data: UpdateProfileRequestDTO) => updateProfile(data),
     onSuccess: () => {
-      // 프로필 수정 성공 시 마이페이지 정보 캐시 무효화
+      // 프로필 수정 성공 시 관련된 모든 캐시 무효화
       queryClient.invalidateQueries({ queryKey: ['my-info'] });
+      queryClient.invalidateQueries({ queryKey: ['user-profile'] });
+      queryClient.invalidateQueries({ queryKey: ['matching-history'] });
+      // console.log('프로필 수정 후 쿼리 무효화 완료');
     },
     onError: (error) => {
       console.error('프로필 수정 실패:', error);
