@@ -3,14 +3,41 @@ import { useMeetingForm } from './useMeetingForm';
 import { useEventSelection } from './useEventSelection';
 import { useEventFilter } from './useEventFilter';
 import { useEventPagination } from './useEventPagination';
+import { useGetReservations } from '@/hooks/queries/useReservationQueries';
 import type { CreateMeetingForm } from './useMeetingForm';
 
 // 메인 훅 - 모든 기능을 조합
 export function useCreateMeeting() {
   const form = useMeetingForm();
   const eventSelection = useEventSelection();
-  const eventFilter = useEventFilter();
+  
+  // API로 모임 데이터 가져오기 (홈과 동일한 방식)
+  const { data: reservations, isLoading, error } = useGetReservations();
+
+  // API 데이터가 있으면 사용, 없으면 mock 데이터 사용 (홈과 동일)
+  const eventsToShow = reservations?.data || events;
+  
+  // 디버깅 로그
+  console.log('CreateMeeting API 응답:', {
+    reservations,
+    isLoading,
+    error,
+    eventsToShow: eventsToShow.length,
+    mockEvents: events.length
+  });
+  
+  // API 데이터를 필터 훅에 전달
+  const eventFilter = useEventFilter(eventsToShow);
   const eventPagination = useEventPagination();
+  
+  // 디버깅 로그
+  console.log('CreateMeeting API 응답:', {
+    reservations,
+    isLoading,
+    error,
+    eventsToShow: eventsToShow.length,
+    mockEvents: events.length
+  });
 
   // 필수 입력값 체크 (경기 선택 + 폼 유효성)
   const isFormValid =
@@ -24,7 +51,7 @@ export function useCreateMeeting() {
 
   return {
     // 이벤트 관련
-    events,
+    events: eventsToShow,
     selectedEventId: eventSelection.selectedEventId,
     handleSelectEvent: (eventId: string) =>
       eventSelection.handleSelectEvent(eventId, form.setValue),
@@ -39,6 +66,10 @@ export function useCreateMeeting() {
     ...form,
     onSubmit,
     isFormValid,
+    
+    // API 상태
+    isLoading,
+    error,
   };
 }
 

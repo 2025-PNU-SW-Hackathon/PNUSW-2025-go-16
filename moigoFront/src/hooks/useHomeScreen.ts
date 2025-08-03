@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { events } from '@/mocks/events';
 import { useMyStore } from '@/store/myStore';
+import { useGetReservations } from '@/hooks/queries/useReservationQueries';
 
 export function useHomeScreen() {
   const { userProfile } = useMyStore();
@@ -14,11 +15,19 @@ export function useHomeScreen() {
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [searchText, setSearchText] = useState<string>('');
 
+  // API 데이터 가져오기
+  const { data: reservations, isLoading, error } = useGetReservations();
+
   // 모달 관련 상태
   const [isFilterModalVisible, setIsFilterModalVisible] = useState<boolean>(false);
   const [isEnterModalVisible, setIsEnterModalVisible] = useState<boolean>(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [isModalTransitioning, setIsModalTransitioning] = useState<boolean>(false);
+  
+  // 토스트 관련 상태
+  const [showToast, setShowToast] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string>('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
   // 위치 선택/해제 함수
   const toggleLocation = (location: string) => {
@@ -78,18 +87,41 @@ export function useHomeScreen() {
     }, 100);
   };
 
+  // 토스트 관련 함수들
+  const showSuccessToast = (message: string) => {
+    setToastMessage(message);
+    setToastType('success');
+    setShowToast(true);
+  };
+
+  const showErrorToast = (message: string) => {
+    setToastMessage(message);
+    setToastType('error');
+    setShowToast(true);
+  };
+
+  const hideToast = () => {
+    setShowToast(false);
+  };
+
+  // API 데이터와 필터링된 이벤트
+  const eventsToShow = reservations?.data || events; // API 데이터가 있으면 사용, 없으면 mock 데이터
+
   // 검색어와 필터에 따른 이벤트 필터링
-  const filteredEvents = events.filter((event) => {
+  const filteredEvents = eventsToShow.filter((event: any) => {
     // 검색어 필터링
     const searchLower = searchText.toLowerCase();
     const matchesSearch =
       searchText === '' ||
-      event.title.toLowerCase().includes(searchLower) ||
-      event.location.toLowerCase().includes(searchLower) ||
-      event.sportType.toLowerCase().includes(searchLower);
+      event.title?.toLowerCase().includes(searchLower) ||
+      event.location?.toLowerCase().includes(searchLower) ||
+      event.sportType?.toLowerCase().includes(searchLower) ||
+      event.reservation_bio?.toLowerCase().includes(searchLower) ||
+      event.reservation_match?.toLowerCase().includes(searchLower) ||
+      event.reservation_ex1?.toLowerCase().includes(searchLower);
 
-    // 카테고리 필터링
-    const matchesCategory = selectedFilter === '전체' || event.sportType === selectedFilter;
+    // 카테고리 필터링 (reservation_ex1 사용)
+    const matchesCategory = selectedFilter === '전체' || event.reservation_ex1 === selectedFilter;
 
     // 위치 필터링 (복수 선택)
     const matchesLocation =
@@ -110,6 +142,13 @@ export function useHomeScreen() {
     isEnterModalVisible,
     selectedEvent,
     filteredEvents,
+    isLoading,
+    error,
+
+    // 토스트 상태
+    showToast,
+    toastMessage,
+    toastType,
 
     // 액션
     setSelectedFilter,
@@ -120,5 +159,8 @@ export function useHomeScreen() {
     setIsFilterModalVisible,
     closeFilterModal,
     closeEnterModal,
+    showSuccessToast,
+    showErrorToast,
+    hideToast,
   };
 }

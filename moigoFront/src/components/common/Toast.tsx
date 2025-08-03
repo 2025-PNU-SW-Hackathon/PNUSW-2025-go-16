@@ -97,7 +97,7 @@ export default function Toast({
         opacity: fadeAnim,
         transform: [{ translateY: slideAnim }],
       }}
-      className={`absolute top-16 left-4 right-4 z-50 ${getToastStyle()} rounded-lg p-4 shadow-lg`}
+      className={`absolute right-4 left-4 bottom-8 z-50 p-4 rounded-lg shadow-lg ${getToastStyle()}`}
     >
       <View className="flex-row items-center">
         <Feather 
@@ -106,7 +106,7 @@ export default function Toast({
           color="white" 
           className="mr-3"
         />
-        <Text className="flex-1 text-white font-medium text-base">
+        <Text className="flex-1 text-base font-medium text-white">
           {message}
         </Text>
         <Feather 

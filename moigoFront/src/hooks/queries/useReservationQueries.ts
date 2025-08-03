@@ -16,8 +16,10 @@ export const useGetReservations = (queryParams?: GetReservationsQueryDTO) => {
   return useQuery({
     queryKey: ['reservations', queryParams],
     queryFn: () => getReservations(queryParams),
-    staleTime: 5 * 60 * 1000, // 5분
-    gcTime: 10 * 60 * 1000, // 10분
+    staleTime: 2 * 60 * 1000, // 2분간 신선하다고 간주
+    gcTime: 10 * 60 * 1000, // 10분간 캐시 유지
+    refetchOnMount: true, // 컴포넌트 마운트 시 새로고침 (캐시가 stale한 경우만)
+    refetchOnWindowFocus: true, // 화면 포커스 시 새로고침 (캐시가 stale한 경우만)
   });
 };
 
