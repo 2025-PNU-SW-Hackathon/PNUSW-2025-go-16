@@ -72,13 +72,11 @@ exports.joinReservation = async (user_id, reservation_id) => {
     `SELECT reservation_status FROM reservation_table WHERE reservation_id = ?`,
     [reservation_id]
   );
-  if (!reservation.length || reservation[0].reservation_status !== 0) {
-    if (reservation[0].reservation_status !== 0) {
-      const err = new Error("참여할 수 없는 모임입니다.");
+  if (reservation.length == 0 || reservation[0].reservation_status !== 0) {
+    const err = new Error("참여할 수 없는 모임입니다.");
       err.statusCode = 400;
       err.errorCode = "INVALID_ACTION";
       throw err;
-    }
   }
 
   // 참여 등록
