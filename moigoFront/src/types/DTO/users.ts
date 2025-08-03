@@ -54,7 +54,8 @@ export interface ChangePasswordRequestDTO {
 // 비밀번호 변경 응답 DTO
 export interface ChangePasswordResponseDTO {
   success: boolean;
-  message: string;
+  message?: string;
+  errorCode?: string;
 }
 
 // 매칭 이력 DTO

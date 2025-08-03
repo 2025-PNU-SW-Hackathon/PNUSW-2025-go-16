@@ -41,6 +41,7 @@ export function useMyScreen() {
         id: myInfo.data.user_id,
         name: myInfo.data.user_name,
         email: myInfo.data.user_email,
+        phone: myInfo.data.user_phone_number || '',
         gender: (myInfo.data.user_gender === 1 ? 'male' : 'female') as 'male' | 'female',
         profileImage: myInfo.data.user_thumbnail || undefined,
         grade: 'BRONZE' as const,
