@@ -1,9 +1,9 @@
 import React from 'react';
 import { Modal, TouchableOpacity, ScrollView } from 'react-native';
-import { events } from '@/mocks/events';
 import ModalHeader from './ModalHeader';
 import ReservationInfo from './ReservationInfo';
 import ModalButtons from './ModalButtons';
+import type { ReservationDTO } from '@/types/DTO/reservations';
 
 interface CreateModalProps {
   isConfirmModalVisible: boolean;
@@ -13,6 +13,8 @@ interface CreateModalProps {
   meetingName: string;
   description: string;
   handleConfirmRegistration: () => void;
+  events: ReservationDTO[];
+  isLoading?: boolean;
 }
 
 // 메인 모달 컴포넌트
@@ -24,8 +26,13 @@ export default function CreateModal({
   meetingName,
   description,
   handleConfirmRegistration,
+  events,
+  isLoading = false,
 }: CreateModalProps) {
-  const selectedEvent = events.find((event) => event.id === selectedEventId);
+  console.log('CreateModal 렌더링:', { selectedEventId, eventsLength: events.length, isConfirmModalVisible });
+  
+  const selectedEvent = events.find((event) => event.reservation_id.toString() === selectedEventId);
+  console.log('찾은 selectedEvent:', selectedEvent);
 
   const handleCancel = () => {
     setIsConfirmModalVisible(false);
@@ -38,7 +45,7 @@ export default function CreateModal({
   return (
     <Modal visible={isConfirmModalVisible} transparent animationType="fade">
       <TouchableOpacity
-        className="justify-end flex-1 bg-black/50"
+        className="flex-1 justify-end bg-black/50"
         activeOpacity={1}
         onPress={handleCancel}
       >
@@ -58,7 +65,7 @@ export default function CreateModal({
             )}
 
             {/* 버튼 영역 */}
-            <ModalButtons onCancel={handleCancel} onConfirm={handleConfirm} />
+            <ModalButtons onCancel={handleCancel} onConfirm={handleConfirm} isLoading={isLoading} />
           </ScrollView>
         </TouchableOpacity>
       </TouchableOpacity>

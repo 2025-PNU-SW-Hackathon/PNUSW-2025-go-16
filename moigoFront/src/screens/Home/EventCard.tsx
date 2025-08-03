@@ -22,7 +22,7 @@ export default function EventCard({ event, onParticipate }: EventCardProps) {
             classNameView="w-12 items-center justify-center"
             classNameText="text-sm"
           />
-          <Text className="my-2 text-lg font-semibold text-gray-800" numberOfLines={2}>
+          <Text className="my-2 text-lg font-semibold text-gray-800" numberOfLines={1}>
             {event.title || event.reservation_match || event.reservation_bio}
           </Text>
         </View>

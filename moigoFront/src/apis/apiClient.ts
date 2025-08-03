@@ -17,7 +17,7 @@ export function setAccessToken(token: string | null) {
 }
 
 // 임시 토큰 설정 (개발용)
-setAccessToken('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidXNlcjEiLCJpYXQiOjE3NTQyMzM3MjIsImV4cCI6MTc1NDI0MDkyMn0.r8pQolqTTF_HsHJWBZazysfpfAFBiVES4AeSOtzqqL8');
+setAccessToken('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidXNlcjEiLCJpYXQiOjE3NTQyNDAwNzUsImV4cCI6MTc1NDI0NzI3NX0.3QHzGC45zzOic2bcnauo8BKwe8p9IE8PtI93KO9yJxY');
 
 apiClient.interceptors.request.use(
   (config) => {

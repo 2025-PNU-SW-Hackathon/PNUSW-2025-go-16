@@ -1,29 +1,35 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { COLORS } from '@/constants/colors';
-import PrimaryButton from '@/components/common/PrimaryButton';
 
 interface ModalButtonsProps {
   onCancel: () => void;
   onConfirm: () => void;
+  isLoading?: boolean;
 }
 
-// 버튼 영역 컴포넌트
-export default function ModalButtons({ onCancel, onConfirm }: ModalButtonsProps) {
+// 모달 버튼 컴포넌트
+export default function ModalButtons({ onCancel, onConfirm, isLoading = false }: ModalButtonsProps) {
   return (
-    <View className="flex-row gap-3 mb-6">
-      <PrimaryButton
-        title="취소"
-        className="flex-1 px-4 py-3 rounded-lg bg-mainGray"
+    <View className="flex-row gap-3">
+      <TouchableOpacity
         onPress={onCancel}
-        color={COLORS.mainGray}
-      />
-      <PrimaryButton
-        title="등록하기"
-        className="flex-1 px-4 py-3 rounded-lg bg-mainGray"
+        disabled={isLoading}
+        className="flex-1 p-4 rounded-lg border border-gray-300"
+      >
+        <Text className="font-medium text-center text-gray-600">취소</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
         onPress={onConfirm}
-        color={COLORS.mainOrange}
-      />
+        disabled={isLoading}
+        className={`flex-1 p-4 rounded-lg ${
+          isLoading ? 'bg-gray-300' : 'bg-mainOrange'
+        }`}
+      >
+        <Text className="font-medium text-center text-white">
+          {isLoading ? '생성 중...' : '확인'}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
