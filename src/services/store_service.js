@@ -20,7 +20,7 @@ exports.getStoreList = async (filters) => {
   `;
   const params = [];
 
-  // 지역 필터
+  // 지역 필터 (store_address에서 검색)
   if (region) {
     query += ` AND s.store_address LIKE ?`;
     params.push(`%${region}%`);
@@ -36,7 +36,7 @@ exports.getStoreList = async (filters) => {
     params.push(date);
   }
 
-  // 카테고리 필터 (가게 카테고리나 예약 카테고리로 필터링)
+  // 카테고리 필터 (예약 카테고리로 필터링)
   if (category) {
     query += ` AND s.store_id IN (
       SELECT DISTINCT store_id 
@@ -46,12 +46,12 @@ exports.getStoreList = async (filters) => {
     params.push(category);
   }
 
-  // 키워드 검색 (가게명, 주소, 설명 등)
+  // 키워드 검색 (가게명, 주소, 소개 등)
   if (keyword) {
     query += ` AND (
       s.store_name LIKE ? OR 
       s.store_address LIKE ? OR
-      s.store_description LIKE ?
+      s.store_bio LIKE ?
     )`;
     params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
   }
