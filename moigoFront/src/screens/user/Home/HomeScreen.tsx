@@ -6,11 +6,11 @@ import TagChip from '@/components/common/TagChip';
 import SearchBar from '@/components/common/SearchBar';
 import Toast from '@/components/common/Toast';
 
-import EventCard from '@/screens/Home/EventCard';
-import FilterModal from '@/screens/Home/FilterModal';
-import EnterModal from '@/screens/Home/EnterModal';
-import FilterBtn from '@/screens/Home/FilterBtn';
-import PlusMeetingBtn from '@/screens/Home/PlusMeetingBtn';
+import EventCard from '@/screens/user/Home/EventCard';
+import FilterModal from '@/screens/user/Home/FilterModal';
+import EnterModal from '@/screens/user/Home/EnterModal';
+import FilterBtn from '@/screens/user/Home/FilterBtn';
+import PlusMeetingBtn from '@/screens/user/Home/PlusMeetingBtn';
 
 import { useHomeScreen } from '@/hooks/useHomeScreen';
 

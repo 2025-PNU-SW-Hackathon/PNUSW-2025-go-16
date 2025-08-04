@@ -6,14 +6,14 @@ import OnboardingScreen from '@/screens/OnboardingScreen';
 import LoginScreen from '@/screens/LoginScreen';
 import SignupScreen from '@/screens/SignupScreen';
 import ChatRoomScreen from '@/screens/ChatRoomScreen';
-import Profile from '@/screens/Mypage/Profile';
-import MyInfoSetting from '@/screens/Mypage/MyInfoSetting';
-import ParticipatedMatchesScreen from '@/screens/ParticipatedMatches/ParticipatedMatchesScreen';
-import ChangePasswordScreen from '@/screens/Password/ChangePasswordScreen';
+import Profile from '@/screens/user/Mypage/Profile';
+import MyInfoSetting from '@/screens/user/Mypage/MyInfoSetting';
+import ParticipatedMatchesScreen from '@/screens/user/ParticipatedMatches/ParticipatedMatchesScreen';
+import ChangePasswordScreen from '@/screens/user/Password/ChangePasswordScreen';
 import CustomHeader from '@/components/common/CustomHeader';
 import type {RootStackParamList} from '@/types/RootStackParamList';
 import { useAuthStore } from '@/store';
-import CreateMeeting from '@/screens/CreateMeeting/CreateMeeting/index';
+import CreateMeeting from '@/screens/user/CreateMeeting/CreateMeeting/index';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
