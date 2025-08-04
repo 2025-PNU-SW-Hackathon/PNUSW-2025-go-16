@@ -278,7 +278,7 @@ export default function ChatRoomScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
         {/* 헤더 */}
-        <View className="bg-white border-b border-gray-200 px-4 py-3 flex-row items-center">
+        <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-200">
           <TouchableOpacity 
             onPress={() => navigation.goBack()}
             className="mr-3"
@@ -340,18 +340,18 @@ export default function ChatRoomScreen() {
        </ScrollView>
 
       {/* 메시지 입력 영역 */}
-      <View className="bg-white border-t border-gray-200 px-4 py-3 flex-row items-center">
+      <View className="flex-row items-center px-4 py-3 bg-white border-t border-gray-200">
         {/* 왼쪽 상점 아이콘 버튼 */}
         <TouchableOpacity
           onPress={() => console.log('상점 버튼 클릭')}
-          className="w-10 h-10 rounded-full bg-mainOrange items-center justify-center mr-3"
+          className="justify-center items-center mr-3 w-10 h-10 rounded-full bg-mainOrange"
           activeOpacity={0.8}
         >
             <Feather name="home" size={15} color="#F5F5F5" />
         </TouchableOpacity>
         
         {/* 메시지 입력 필드 (전송 버튼 포함) */}
-        <View className="flex-1 bg-gray-100 rounded-full px-4 py-2 mr-3 flex-row items-center">
+        <View className="flex-row flex-1 items-center px-4 py-2 mr-3 bg-gray-100 rounded-full">
           <TextInput
             value={message}
             onChangeText={setMessage}

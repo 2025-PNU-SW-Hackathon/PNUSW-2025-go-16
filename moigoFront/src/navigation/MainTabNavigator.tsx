@@ -1,10 +1,10 @@
 // src/navigation/MainTabNavigator.tsx
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import HomeScreen from '@/screens/Home/HomeScreen';
-import MeetingScreen from '@/screens/Meeting/MeetingScreen';
+import HomeScreen from '@/screens/user/Home/HomeScreen';
+import MeetingScreen from '@/screens/user/Meeting/MeetingScreen';
 import ChatScreen from '@/screens/ChatScreen';
-import MyScreen from '@/screens/Mypage/MyScreen';
+import MyScreen from '@/screens/user/Mypage/MyScreen';
 import Header from '@/layout/Header';
 import Feather from 'react-native-vector-icons/Feather';
 import { COLORS } from '@/constants/colors';

@@ -6,8 +6,8 @@ import { useCreateMeeting } from '@/hooks/CreateMeeting/index';
 import PrimaryButton from '@/components/common/PrimaryButton';
 import { COLORS } from '@/constants/colors';
 
-import FilterModal from '@/screens/Home/FilterModal';
-import CreateModal from '@/screens/CreateMeeting/CreateModal/index';
+import FilterModal from '@/screens/user/Home/FilterModal';
+import CreateModal from '@/screens/user/CreateMeeting/CreateModal/index';
 
 import CreateMeetingHeader from './CreateMeetingHeader';
 import SearchAndFilter from './SearchAndFilter';

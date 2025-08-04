@@ -5,7 +5,7 @@ export type RootStackParamList = {
   Login: undefined;
   Signup: undefined;
   Main: { screen?: string };
-  ChatRoom: undefined;
+  ChatRoom: { chatRoom: ChatRoom };
   Profile: undefined;
   MyInfoSetting: undefined;
   CreateMeeting: undefined;
