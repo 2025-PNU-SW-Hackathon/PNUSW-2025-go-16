@@ -146,3 +146,27 @@ CREATE TABLE `chat_room_users` (
   `joined_at` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+CREATE TABLE `payment_request_table` (
+  `payment_request_id` int NOT NULL AUTO_INCREMENT,
+  `chat_room_id` int NOT NULL,
+  `requester_id` varchar(45) NOT NULL,
+  `amount` int NOT NULL,
+  `message` text,
+  `request_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `status` enum('pending','completed','cancelled') DEFAULT 'pending',
+  PRIMARY KEY (`payment_request_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+CREATE TABLE `payment_table` (
+  `payment_id` int NOT NULL AUTO_INCREMENT,
+  `chat_room_id` int NOT NULL,
+  `payer_id` varchar(45) NOT NULL,
+  `payment_amount` int NOT NULL,
+  `payment_method` enum('card','bank_transfer','cash','mobile_payment') NOT NULL,
+  `payment_status` enum('pending','completed','failed','refunded') DEFAULT 'pending',
+  `payment_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`payment_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
