@@ -323,7 +323,7 @@
 
 ---
 
-## 9. 📖 참여한 매칭 이력 조회 API
+## 9-1. 📖 참여 완료된 매칭 이력 조회 API
 
 ### GET `/users/me/matchings`
 
@@ -341,10 +341,47 @@
   "data": [
     {
       "reservation_id": 101,
-      "reservation_match": "맨유 vs 리버풀",
-      "reservation_start_time": "2025-07-20T18:00:00",
-      "store_name": "티비있는 포차",
-      "status": "참여완료"
+      "store_id": "store_123",
+      "store_name": "store_name",
+      "reservation_start_time": "2025-07-28T19:00:00",
+      "reservation_end_time": "2025-07-28T21:00:00",
+      "reservation_bio": "부산 서면 메가박스에서 영화 보고 밥까지!",
+      "reservation_match": "첼시 vs 맨시티",
+      "reservation_status": 0 or 1,
+      "reservation_participant_cnt": 4,
+      "reservation_max_participant_cnt": 6
+    }
+  ]
+}
+```
+
+## 9-2. 📖 참여중인 매칭 이력 조회 API
+
+### GET `/users/me/reservations`
+
+> 내가 참여중인 시작되지 않은 모임 이력을 조회합니다.
+
+#### Headers
+
+* Authorization: Bearer `<JWT>` ✅ 필수
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "reservation_id": 101,
+      "store_id": "store_123",
+      "store_name": "store_name",
+      "reservation_start_time": "2025-07-28T19:00:00",
+      "reservation_end_time": "2025-07-28T21:00:00",
+      "reservation_bio": "부산 서면 메가박스에서 영화 보고 밥까지!",
+      "reservation_match": "첼시 vs 맨시티",
+      "reservation_status": 0 or 1,
+      "reservation_participant_cnt": 4,
+      "reservation_max_participant_cnt": 6
     }
   ]
 }
