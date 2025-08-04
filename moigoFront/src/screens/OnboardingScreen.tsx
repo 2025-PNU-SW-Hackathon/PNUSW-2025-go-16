@@ -5,9 +5,11 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/types/RootStackParamList';
 import { COLORS } from '@/constants/colors';
 import PrimaryButton from '@/components/common/PrimaryButton';
+import { useAuthStore } from '@/store/authStore';
 
 export default function OnboardingScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { setUserType } = useAuthStore();
 
   return (
     <View className="flex-1 bg-white justify-center items-center px-8">
@@ -37,7 +39,10 @@ export default function OnboardingScreen() {
             title="스포츠 팬으로 시작하기" 
             color={COLORS.mainOrange}
             icon="👤"
-            onPress={() => navigation.navigate('Login')} 
+            onPress={() => {
+              setUserType('sports_fan');
+              navigation.navigate('Login');
+            }} 
           />
         </View>
         <View className="my-2">
@@ -45,7 +50,10 @@ export default function OnboardingScreen() {
             title="사업자로 시작하기" 
             color={COLORS.bizButton}
             icon="🏢"
-            onPress={() => navigation.navigate('Login')} 
+            onPress={() => {
+              setUserType('business');
+              navigation.navigate('Login');
+            }} 
           />
         </View>
       </View>
