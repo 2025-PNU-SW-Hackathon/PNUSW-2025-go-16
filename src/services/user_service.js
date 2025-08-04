@@ -1,6 +1,35 @@
 // src/services/user_service.js
 const { getConnection } = require('../config/db_config');
 
+// 👤 사용자 프로필 조회 서비스
+exports.getUserProfile = async (userId) => {
+  const conn = getConnection();
+  
+  try {
+    const [rows] = await conn.query(
+      `SELECT user_id, user_name, user_thumbnail 
+       FROM user_table 
+       WHERE user_id = ?`,
+      [userId]
+    );
+
+    if (rows.length === 0) {
+      const err = new Error('사용자를 찾을 수 없습니다.');
+      err.statusCode = 404;
+      err.errorCode = 'USER_NOT_FOUND';
+      throw err;
+    }
+
+    return rows[0];
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '사용자 프로필 조회 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
+
 exports.getMyReviews = async (user_id) => {
   const conn = getConnection();
   const [rows] = await conn.query(

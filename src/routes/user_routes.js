@@ -10,4 +10,7 @@ router.get('/me/matchings', authMiddleware, userController.getMyMatchings);
 router.put('/me', authMiddleware, userController.updateProfile);
 router.put('/me/password', authMiddleware, userController.updatePassword);
 
+// 사용자 프로필 조회 API
+router.get('/:userId/profile', authMiddleware, userController.getUserProfile);
+
 module.exports = router;

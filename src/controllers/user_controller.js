@@ -1,6 +1,26 @@
 // src/controllers/user_controller.js
 const userService = require('../services/user_service');
 
+// 👤 사용자 프로필 조회 컨트롤러
+exports.getUserProfile = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    
+    const userProfile = await userService.getUserProfile(userId);
+    
+    res.json({
+      success: true,
+      data: {
+        user_id: userProfile.user_id,
+        nickname: userProfile.user_name,
+        profile_image_url: userProfile.user_thumbnail || null
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getMyReviews = async (req, res, next) => {
   try {
     const user_id = req.user.user_id;
