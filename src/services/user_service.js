@@ -26,11 +26,42 @@ exports.getMyProfile = async (user_id) => {
 exports.getMyMatchings = async (user_id) => {
   const conn = getConnection();
   const [rows] = await conn.query(
-    `SELECT r.reservation_id, r.reservation_match, r.reservation_start_time, r.reservation_store_name as store_name,
-            '참여완료' as status
-     FROM reservation_participant_table p
-     JOIN reservation_table r ON p.reservation_id = r.reservation_id
-     WHERE p.user_id = ?`,
+    `SELECT r.reservation_id,
+            r.store_id AS store_id,
+            r.reservation_start_time,
+            r.reservation_end_time,
+            r.reservation_bio,
+            r.reservation_match,
+            r.reservation_status,
+            r.reservation_participant_cnt,
+            r.reservation_max_participant_cnt
+     FROM chat_room_users cru
+     JOIN chat_rooms cr ON cru.reservation_id = cr.reservation_id
+     JOIN reservation_table r ON cr.reservation_id = r.reservation_id
+     WHERE cru.user_id = ?
+       AND r.reservation_start_time < NOW()`,
+    [user_id]
+  );
+  return rows;
+};
+
+exports.getMyReservations = async (user_id) => {
+  const conn = getConnection();
+  const [rows] = await conn.query(
+    `SELECT r.reservation_id,
+            r.store_id AS store_id,
+            r.reservation_start_time,
+            r.reservation_end_time,
+            r.reservation_bio,
+            r.reservation_match,
+            r.reservation_status,
+            r.reservation_participant_cnt,
+            r.reservation_max_participant_cnt
+     FROM chat_room_users cru
+     JOIN chat_rooms cr ON cru.reservation_id = cr.reservation_id
+     JOIN reservation_table r ON cr.reservation_id = r.reservation_id
+     WHERE cru.user_id = ?
+       AND r.reservation_start_time > NOW()`,
     [user_id]
   );
   return rows;

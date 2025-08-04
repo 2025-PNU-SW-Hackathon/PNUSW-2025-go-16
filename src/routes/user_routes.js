@@ -7,6 +7,7 @@ const authMiddleware = require('../middlewares/authMiddleware');
 router.get('/me/reviews', authMiddleware, userController.getMyReviews);
 router.get('/me', authMiddleware, userController.getMyProfile);
 router.get('/me/matchings', authMiddleware, userController.getMyMatchings);
+router.get('/me/reservations', authMiddleware, userController.getMyReservations);
 router.put('/me', authMiddleware, userController.updateProfile);
 router.put('/me/password', authMiddleware, userController.updatePassword);
 

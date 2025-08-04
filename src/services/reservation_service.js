@@ -46,7 +46,7 @@ exports.createReservation = async (user_id, data) => {
 
   const create_chatRoom = await chatService.enterChatRoom(user_id, reservation_current_id);
   return {
-    reservation_id: result.insertId,
+    reservation_id: reservation_current_id,
     created_at: createdAt.toISOString(),
   };
 };
