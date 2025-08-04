@@ -9,12 +9,12 @@ import { useAuthStore } from '@/store';
 
 export default function LoginScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { login } = useAuthStore();
+  const { login, selectedUserType } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   return (
-    <View className="items-center justify-center flex-1 px-8 bg-white">
+    <View className="flex-1 justify-center items-center px-8 bg-white">
       {/* 로고 */}
       <View className="mb-12">
         <Image
@@ -25,8 +25,8 @@ export default function LoginScreen() {
       </View>
 
       {/* 입력 필드들 */}
-      <View className="w-full mb-5 space-y-4">
-        <View className="px-4 py-2 mb-3 bg-white border border-gray-200 rounded-lg">
+      <View className="mb-5 space-y-4 w-full">
+        <View className="px-4 py-2 mb-3 bg-white rounded-lg border border-gray-200">
           <TextInput
             placeholder="이메일"
             value={email}
@@ -36,7 +36,7 @@ export default function LoginScreen() {
             keyboardType="email-address"
           />
         </View>
-        <View className="px-4 py-2 mb-3 bg-white border border-gray-200 rounded-lg">
+        <View className="px-4 py-2 mb-3 bg-white rounded-lg border border-gray-200">
           <TextInput
             placeholder="비밀번호"
             value={password}
@@ -48,7 +48,7 @@ export default function LoginScreen() {
       </View>
 
       {/* 로그인 버튼 */}
-      <View className="w-full mb-5">
+      <View className="mb-5 w-full">
         <PrimaryButton
           title="로그인"
           color={COLORS.mainOrange}
@@ -68,14 +68,14 @@ export default function LoginScreen() {
             login({
               id: Date.now().toString(), // 고유 ID 생성
               email: email.trim(),
-              userType: 'sports_fan',
+              userType: selectedUserType || 'sports_fan', // Onboarding에서 선택한 사용자 타입 사용
             }, mockToken);
           }}
         />
       </View>
 
       {/* 링크들 */}
-      <View className="flex-row justify-between w-full mb-8">
+      <View className="flex-row justify-between mb-8 w-full">
         <TouchableOpacity>
           <Text className="text-mainGrayText">비밀번호 찾기</Text>
         </TouchableOpacity>
@@ -85,21 +85,21 @@ export default function LoginScreen() {
       </View>
 
       {/* 구분선 */}
-      <View className="flex-row items-center w-full mb-3">
+      <View className="flex-row items-center mb-3 w-full">
         <View className="flex-1 h-px bg-gray-200" />
         <Text className="mx-4 text-mainGrayText">간편 로그인</Text>
         <View className="flex-1 h-px bg-gray-200" />
       </View>
 
       {/* 소셜 로그인 버튼들 */}
-      <View className="w-full space-y-3">
+      <View className="space-y-3 w-full">
         <View className="my-2">
           <TouchableOpacity
             onPress={() => {
               Alert.alert('알림', '카카오 로그인 기능은 준비 중입니다.');
             }}
             activeOpacity={0.8}
-            className="items-center w-full overflow-hidden"
+            className="overflow-hidden items-center w-full"
           >
             <Image
               source={require('@/assets/kakaoLoginButton.png')}
@@ -114,7 +114,7 @@ export default function LoginScreen() {
               Alert.alert('알림', '네이버 로그인 기능은 준비 중입니다.');
             }}
             activeOpacity={0.8}
-            className="items-center w-full overflow-hidden"
+            className="overflow-hidden items-center w-full"
           >
             <Image
               source={require('@/assets/naverLoginButton.png')}

@@ -14,19 +14,25 @@ import CustomHeader from '@/components/common/CustomHeader';
 import type {RootStackParamList} from '@/types/RootStackParamList';
 import { useAuthStore } from '@/store';
 import CreateMeeting from '@/screens/user/CreateMeeting/CreateMeeting/index';
+import BusinessScreen from '@/screens/business/BusinessScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootNavigator() {
-  const { isLoggedIn } = useAuthStore();
+  const { isLoggedIn, user } = useAuthStore();
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {isLoggedIn ? (
         <>
-          <Stack.Screen name="Main" options={{ headerShown: false }}>
-            {() => <MainTabNavigator />}
-          </Stack.Screen>
+          {/* 사용자 타입에 따라 다른 메인 화면 표시 */}
+          {user?.userType === 'business' ? (
+            <Stack.Screen name="Business" component={BusinessScreen} options={{ headerShown: false }} />
+          ) : (
+            <Stack.Screen name="Main" options={{ headerShown: false }}>
+              {() => <MainTabNavigator />}
+            </Stack.Screen>
+          )}
           <Stack.Screen name="ChatRoom" component={ChatRoomScreen} options={{ headerShown: false }} />
           <Stack.Screen 
             name="MyInfoSetting" 
