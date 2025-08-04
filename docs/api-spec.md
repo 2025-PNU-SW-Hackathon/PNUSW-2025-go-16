@@ -340,15 +340,14 @@
   "success": true,
   "data": [
     {
-      "reservation_id": 101,
+      "reservation_id": 16,
       "store_id": "store_123",
-      "store_name": "store_name",
-      "reservation_start_time": "2025-07-28T19:00:00",
-      "reservation_end_time": "2025-07-28T21:00:00",
-      "reservation_bio": "부산 서면 메가박스에서 영화 보고 밥까지!",
-      "reservation_match": "첼시 vs 맨시티",
-      "reservation_status": 0 or 1,
-      "reservation_participant_cnt": 4,
+      "reservation_start_time": "2025-08-10T10:00:00.000Z",
+      "reservation_end_time": "2025-08-10T12:00:00.000Z",
+      "reservation_bio": "치킨에 맥주까지 마시면서 친해져요!",
+      "reservation_match": "맨시티 vs 첼시",
+      "reservation_status": 0,
+      "reservation_participant_cnt": 1,
       "reservation_max_participant_cnt": 6
     }
   ]
@@ -372,15 +371,14 @@
   "success": true,
   "data": [
     {
-      "reservation_id": 101,
+      "reservation_id": 16,
       "store_id": "store_123",
-      "store_name": "store_name",
-      "reservation_start_time": "2025-07-28T19:00:00",
-      "reservation_end_time": "2025-07-28T21:00:00",
-      "reservation_bio": "부산 서면 메가박스에서 영화 보고 밥까지!",
-      "reservation_match": "첼시 vs 맨시티",
-      "reservation_status": 0 or 1,
-      "reservation_participant_cnt": 4,
+      "reservation_start_time": "2025-08-10T10:00:00.000Z",
+      "reservation_end_time": "2025-08-10T12:00:00.000Z",
+      "reservation_bio": "치킨에 맥주까지 마시면서 친해져요!",
+      "reservation_match": "맨시티 vs 첼시",
+      "reservation_status": 0,
+      "reservation_participant_cnt": 1,
       "reservation_max_participant_cnt": 6
     }
   ]
