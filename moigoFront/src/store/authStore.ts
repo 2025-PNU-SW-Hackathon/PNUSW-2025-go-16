@@ -15,12 +15,14 @@ interface AuthState {
   user: AuthUser | null;
   isLoading: boolean;
   token: string | null;
+  selectedUserType: 'sports_fan' | 'business' | null; // Onboarding에서 선택한 사용자 타입
   
   // 액션
   login: (userData: AuthUser, token: string) => void;
   logout: () => void;
   setLoading: (loading: boolean) => void;
   updateUser: (userData: Partial<AuthUser>) => void;
+  setUserType: (userType: 'sports_fan' | 'business') => void; // 사용자 타입 설정
   changePassword: (passwordData: PasswordChangeForm) => Promise<boolean>;
   validatePassword: (password: string) => PasswordValidation;
 }
@@ -32,6 +34,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isLoading: false,
   token: null,
+  selectedUserType: null,
   
   // 로그인 액션
   login: (userData: AuthUser, token: string) => {
@@ -63,6 +66,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set((state) => ({
       user: state.user ? { ...state.user, ...userData } : null,
     }));
+  },
+
+  // 사용자 타입 설정 (Onboarding에서 사용)
+  setUserType: (userType: 'sports_fan' | 'business') => {
+    set({ selectedUserType: userType });
   },
   
   // 비밀번호 변경
