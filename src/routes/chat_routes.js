@@ -24,4 +24,17 @@ router.get('/:roomId/all-messages', authMiddleware, chatController.getAllMessage
 // 채팅방 생성 및 입장
 router.post('/enter', authMiddleware, chatController.enterChatRoom);
 
+// 💰 결제 관련 라우터
+// 방장의 예약금 결제 요청 (POST /chats/:roomId/payments/request)
+router.post('/:roomId/payments/request', authMiddleware, chatController.requestPayment);
+
+// 결제 상태 확인 (GET /chats/:roomId/payments/status)
+router.get('/:roomId/payments/status', authMiddleware, chatController.getPaymentStatus);
+
+// 결제 처리 (POST /chats/:roomId/payments/process)
+router.post('/:roomId/payments/process', authMiddleware, chatController.processPayment);
+
+// 결제 미완료 참가자 강퇴 (DELETE /chats/:roomId/participants/:userId)
+router.delete('/:roomId/participants/:userId', authMiddleware, chatController.kickUnpaidParticipant);
+
 module.exports = router;

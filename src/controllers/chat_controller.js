@@ -85,3 +85,94 @@ exports.enterChatRoom = async (req, res, next) => {
     next(err);
   }
 };
+
+// 💰 결제 관련 컨트롤러
+
+// 방장의 예약금 결제 요청
+exports.requestPayment = async (req, res, next) => {
+  try {
+    const { roomId } = req.params;
+    const userId = req.user.user_id;
+    const { amount, message } = req.body;
+
+    // 기본 유효성 검사
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: '올바른 결제 금액을 입력해주세요.'
+      });
+    }
+
+    const result = await chatService.requestPayment(roomId, userId, { amount, message });
+
+    res.json({
+      success: true,
+      message: '예약금 결제 요청 메시지가 발송되었습니다.',
+      data: result
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 결제 상태 확인
+exports.getPaymentStatus = async (req, res, next) => {
+  try {
+    const { roomId } = req.params;
+    const userId = req.user.user_id;
+
+    const paymentStatus = await chatService.getPaymentStatus(roomId, userId);
+
+    res.json({
+      success: true,
+      data: paymentStatus
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 결제 처리
+exports.processPayment = async (req, res, next) => {
+  try {
+    const { roomId } = req.params;
+    const userId = req.user.user_id;
+    const { payment_method, payment_amount } = req.body;
+
+    // 기본 유효성 검사
+    if (!payment_method || !payment_amount) {
+      return res.status(400).json({
+        success: false,
+        message: '결제 방법과 금액을 입력해주세요.'
+      });
+    }
+
+    const result = await chatService.processPayment(roomId, userId, { payment_method, payment_amount });
+
+    res.json({
+      success: true,
+      message: '결제가 완료되었습니다.',
+      data: result
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 결제 미완료 참가자 강퇴
+exports.kickUnpaidParticipant = async (req, res, next) => {
+  try {
+    const { roomId, userId } = req.params;
+    const requesterId = req.user.user_id;
+
+    const result = await chatService.kickUnpaidParticipant(roomId, userId, requesterId);
+
+    res.json({
+      success: true,
+      message: '참가자가 성공적으로 강퇴되었습니다.',
+      data: result
+    });
+  } catch (err) {
+    next(err);
+  }
+};
