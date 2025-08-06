@@ -9,6 +9,7 @@ const chatRoutes = require('./routes/chat_routes');
 const { Server } = require('socket.io');
 const handleSocket = require('./controllers/socket_controller');
 const http = require('http');
+const paymentRoutes = require('./routes/payment_routes');
 dotenv.config();
 
 const app = express();
@@ -38,6 +39,7 @@ app.use('/api/v1/reservations', reservationRoutes);
 app.use('/api/v1/reviews', reviewRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/chats', chatRoutes);
+app.use('/api/v1/payments', paymentRoutes);
 
 // 404 및 에러 핸들러 등록
 //app.use(notFound);
