@@ -14,7 +14,8 @@ import CustomHeader from '@/components/common/CustomHeader';
 import type {RootStackParamList} from '@/types/RootStackParamList';
 import { useAuthStore } from '@/store';
 import CreateMeeting from '@/screens/user/CreateMeeting/CreateMeeting/index';
-import BusinessScreen from '@/screens/business/BusinessScreen';
+import BusinessNavigator from './BusinessNavigator';
+import BusinessHomeScreen from '@/screens/business/Home/HomeScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -27,7 +28,10 @@ export default function RootNavigator() {
         <>
           {/* 사용자 타입에 따라 다른 메인 화면 표시 */}
           {user?.userType === 'business' ? (
-            <Stack.Screen name="Business" component={BusinessScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="Main" options={{ headerShown: false }}>
+              {() => <BusinessNavigator />}
+            </Stack.Screen>
+
           ) : (
             <Stack.Screen name="Main" options={{ headerShown: false }}>
               {() => <MainTabNavigator />}
