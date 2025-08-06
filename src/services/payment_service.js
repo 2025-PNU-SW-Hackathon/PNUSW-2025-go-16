@@ -144,15 +144,33 @@ exports.releasePayments = async (chat_room_id) => {
 
 exports.getPaymentStatus = async (chat_room_id) => {
   const conn = await getConnection();
+
+  // 1. 결제 요청 정보 (가장 최근 요청 1건)
   const [[request]] = await conn.query(
-    `SELECT * FROM payment_request_table WHERE chat_room_id = ? ORDER BY request_time DESC LIMIT 1`,
+    `SELECT payment_request_id, requester_id, amount, message, status, request_time
+     FROM payment_request_table
+     WHERE chat_room_id = ?
+     ORDER BY request_time DESC
+     LIMIT 1`,
     [chat_room_id]
   );
+
+  // 2. 참여자별 결제 상태 정보
   const [payments] = await conn.query(
-    `SELECT user_id AS payer_id, payment_amount, payment_status FROM chat_room_users WHERE chat_room_id = ?`,
+    `SELECT
+       user_id AS payer_id,
+       payment_amount,
+       payment_method,
+       payment_status
+     FROM chat_room_users
+     WHERE chat_room_id = ? AND is_kicked = 0`,
     [chat_room_id]
   );
-  return { payment_request: request, payments };
+
+  return {
+    payment_request: request || null,
+    payments
+  };
 };
 
 exports.cancelPayment = async ({ paymentKey, cancelReason }) => {
