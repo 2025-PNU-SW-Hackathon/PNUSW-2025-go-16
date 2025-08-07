@@ -180,3 +180,22 @@ ADD COLUMN payment_key VARCHAR(100),
 ADD COLUMN payment_amount INT;
 
 
+CREATE TABLE `bank_codes` (
+  `bank_code` varchar(10) NOT NULL,
+  `bank_name` varchar(50) NOT NULL,
+  PRIMARY KEY (`bank_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 주요 은행 코드 데이터
+INSERT INTO bank_codes (bank_code, bank_name) VALUES
+('001', '한국은행'),
+('002', '산업은행'),
+('003', '기업은행'),
+('004', '국민은행'),
+('005', '하나은행'),
+('006', '신한은행'),
+('007', '우리은행'),
+('008', '농협은행'),
+('009', '수협은행'),
+('010', '케이뱅크'),
+('011', '카카오뱅크');
