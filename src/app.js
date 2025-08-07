@@ -64,5 +64,6 @@ const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
+  console.log('[ENV] TOSS_SECRET_KEY:', process.env.TOSS_SECRET_KEY);
   console.log(test_token);
 });

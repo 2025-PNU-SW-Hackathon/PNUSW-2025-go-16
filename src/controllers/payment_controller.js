@@ -1,5 +1,5 @@
 // 📁 controllers/paymentController.js
-const paymentService = require('../services/paymentService');
+const paymentService = require('../services/payment_service');
 
 exports.createPaymentRequest = async (req, res) => {
   try {
@@ -20,12 +20,20 @@ exports.initiatePayment = async (req, res) => {
     const payer_id = req.user.user_id; // JWT에서 파싱된 user_id
     const result = await paymentService.initiatePayment({
       ...req.body,
-      payer_id
+      payer_id,
     });
-    res.status(200).json(result);
+
+    const statusCode = result.alreadyProcessed ? 201 : 200;
+
+    res.status(statusCode).json({
+      message: result.alreadyProcessed
+        ? '이미 처리된 결제입니다.'
+        : '결제가 성공적으로 완료되었습니다.',
+      ...result,
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: '결제 승인 실패' });
+    res.status(500).json({ message: '결제 승인 실패', error: err.message });
   }
 };
 
