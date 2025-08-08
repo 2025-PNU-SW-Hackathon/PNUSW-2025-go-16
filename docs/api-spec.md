@@ -989,4 +989,28 @@
   "message": "유효하지 않은 토큰입니다."
 ```
 
+
+### 14.5. 로그인 API
+
+**POST** `/auth/login`
+
+> 사용자가 이메일과 비밀번호로 로그인합니다.  
+> 비밀번호는 **bcrypt**로 암호화되어 저장되며, 로그인 시 입력 비밀번호를 bcrypt로 검증합니다.
+
+---
+
+#### Headers
+
+- `Content-Type: application/json` ✅ 필수
+
+---
+
+#### Request Body
+
+```json
+{
+  "email": "user@example.com",
+  "password": "plain_password"
+}
+
 ---
