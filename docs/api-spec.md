@@ -992,7 +992,7 @@
 
 ### 14.5. 로그인 API
 
-**POST** `/auth/login`
+**POST** `/user/login`
 
 > 사용자가 이메일과 비밀번호로 로그인합니다.  
 > 비밀번호는 **bcrypt**로 암호화되어 저장되며, 로그인 시 입력 비밀번호를 bcrypt로 검증합니다.
@@ -1009,7 +1009,7 @@
 
 ```json
 {
-  "email": "user@example.com",
+  "id": "",
   "password": "plain_password"
 }
 
