@@ -100,12 +100,41 @@ export default function LoginScreen() {
             }}
             activeOpacity={0.8}
             className="overflow-hidden items-center w-full"
+            style={{
+              height: 60,
+              backgroundColor: '#FEE500',
+              borderRadius: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingHorizontal: 30,
+            }}
           >
-            <Image
-              source={require('@/assets/kakaoLoginButton.png')}
-              className="w-full"
-              resizeMode="contain"
-            />
+                         {/* 카카오 아이콘 */}
+             <Image
+               source={require('@/assets/kakaoIcon.png')}
+               style={{
+                 width: 20,
+                 height: 20,
+                 marginRight: 15,
+               }}
+               resizeMode="contain"
+             />
+            
+            {/* 텍스트 */}
+            <Text
+              style={{
+                flex: 1,
+                fontSize: 20,
+                fontFamily: 'System',
+                color: 'rgba(0, 0, 0, 0.85)',
+                textAlign: 'center',
+              }}
+            >
+              카카오 로그인
+            </Text>
+            
+                         {/* 오른쪽 여백을 위한 빈 공간 */}
+             <View style={{ width: 15, height: 30 }} />
           </TouchableOpacity>
         </View>
         <View className="my-2">
@@ -115,12 +144,42 @@ export default function LoginScreen() {
             }}
             activeOpacity={0.8}
             className="overflow-hidden items-center w-full"
+            style={{
+              height: 60,
+              backgroundColor: '#03C75A',
+              borderRadius: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingHorizontal: 30,
+            }}
           >
-            <Image
-              source={require('@/assets/naverLoginButton.png')}
-              className="w-full"
-              resizeMode="contain"
-            />
+            {/* 네이버 로고 */}
+            <Text
+              style={{
+                fontSize: 20,
+                fontWeight: 'bold',
+                color: '#FFFFFF',
+                marginRight: 15,
+              }}
+            >
+              N
+            </Text>
+            
+            {/* 텍스트 */}
+            <Text
+              style={{
+                flex: 1,
+                fontSize: 20,
+                fontFamily: 'System',
+                color: '#FFFFFF',
+                textAlign: 'center',
+              }}
+            >
+              네이버 로그인
+            </Text>
+            
+            {/* 오른쪽 여백을 위한 빈 공간 */}
+            <View style={{ width: 15, height: 30 }} />
           </TouchableOpacity>
         </View>
       </View>
