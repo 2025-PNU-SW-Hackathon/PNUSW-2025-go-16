@@ -1012,5 +1012,17 @@
   "id": "",
   "password": "plain_password"
 }
+```
+#### Response (200)
 
+```json
+{
+    "success": true,
+    "message": "로그인 성공",
+    "user": {
+        "user_id": "yejun",
+        "user_name": "예준"
+    }
+}
+```
 ---
