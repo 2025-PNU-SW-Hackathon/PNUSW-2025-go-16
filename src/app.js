@@ -40,6 +40,8 @@ app.use('/api/v1/reviews', reviewRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/chats', chatRoutes);
 app.use('/api/v1/payments', paymentRoutes);
+app.use('/register', registerRoutes);      
+app.use('/auth', loginRoutes);          
 
 // 404 및 에러 핸들러 등록
 //app.use(notFound);
