@@ -1,41 +1,69 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView } from 'react-native';
-import { 
-  useCreateReservation, 
-  useJoinReservation, 
-  useCancelReservation,
-  useGetReservations, 
-  useGetReservationDetail,
-  useLogin, 
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import {
+  useGetReservations,
+  useCreateReservation,
+  useJoinReservation,
+  useGetMatches,
+  useGetMatchDetail,
+  useGetMatchReservations,
+} from '@/hooks/queries/useReservationQueries';
+import {
+  useLogin,
   useSignup,
+} from '@/hooks/queries/useAuthQueries';
+import {
+  useGetMyInfo,
   useUpdateProfile,
-  useGetMyInfo, 
+} from '@/hooks/queries/useUserQueries';
+import {
   useGetMatchingHistory,
-  useEnterChatRoom,
+} from '@/hooks/queries/useUserQueries';
+import {
   useGetChatRooms,
-  useRequestPayment,
+  useEnterChatRoom,
+} from '@/hooks/queries/useChatQueries';
+import {
   useGetPaymentStatus,
+  useRequestPayment,
+} from '@/hooks/queries/usePaymentQueries';
+import {
   useCreateReview,
-  useGetMyReviews
-} from '../../hooks/queries';
-import type { CreateReservationRequestDTO } from '../../types/DTO/reservations';
-import type { SignupRequestDTO, LoginRequestDTO } from '../../types/DTO/auth';
-import type { UpdateProfileRequestDTO } from '../../types/DTO/users';
-import type { CreateReviewRequestDTO } from '../../types/DTO/reviews';
+  useGetMyReviews,
+} from '@/hooks/queries/useReviewQueries';
+import type {
+  CreateReservationRequestDTO,
+} from '@/types/DTO/reservations';
+import type {
+  LoginRequestDTO,
+  SignupRequestDTO,
+} from '@/types/DTO/auth';
+import type {
+  UpdateProfileRequestDTO,
+} from '@/types/DTO/users';
+import type {
+  CreateReviewRequestDTO,
+} from '@/types/DTO/reviews';
 
 export const ReservationExample: React.FC = () => {
   const [queryParams, setQueryParams] = useState({
     region: '',
     date: '',
-    category: undefined as number | undefined,
+    category: undefined as string | undefined,
     keyword: '',
   });
 
-  // 훅 사용
+  // 예약 관련 훅
   const { data: reservations, isLoading, error } = useGetReservations(queryParams);
   const createReservationMutation = useCreateReservation();
   const joinReservationMutation = useJoinReservation();
-  const cancelReservationMutation = useCancelReservation();
+
+  // 경기 관련 훅
+  const { data: matches, isLoading: matchesLoading } = useGetMatches();
+  const { data: matchDetail, isLoading: matchDetailLoading } = useGetMatchDetail(123456);
+  const { data: matchReservations, isLoading: matchReservationsLoading } = useGetMatchReservations(123456);
+
+  // 인증 관련 훅
   const loginMutation = useLogin();
   const signupMutation = useSignup();
   const { data: myInfo } = useGetMyInfo();
@@ -51,13 +79,13 @@ export const ReservationExample: React.FC = () => {
   // POST /reservations - 모임 생성 예시
   const handleCreateReservation = () => {
     const newReservation: CreateReservationRequestDTO = {
-      store_id: 'store_123',
+      store_id: 1, // 숫자로 변경
       reservation_start_time: '2025-07-28T19:00:00',
       reservation_end_time: '2025-07-28T21:00:00',
       reservation_match: '맨시티 vs 첼시',
       reservation_bio: '맥주한잔하며 즐겁게 보실분들!',
       reservation_max_participant_cnt: 6,
-      reservation_match_category: 1,
+      reservation_match_category: 'sports', // 문자열로 변경
     };
 
     createReservationMutation.mutate(newReservation);
@@ -68,16 +96,11 @@ export const ReservationExample: React.FC = () => {
     joinReservationMutation.mutate(reservationId);
   };
 
-  // DELETE /reservations/{reservation_id} - 모임 취소 예시
-  const handleCancelReservation = (reservationId: number) => {
-    cancelReservationMutation.mutate(reservationId);
-  };
-
   // POST /auth/login - 로그인 예시
   const handleLogin = () => {
     const loginData: LoginRequestDTO = {
       user_id: 'user123',
-      user_password: 'password123',
+      user_pwd: 'password123',
     };
 
     loginMutation.mutate(loginData);
@@ -87,7 +110,7 @@ export const ReservationExample: React.FC = () => {
   const handleSignup = () => {
     const signupData: SignupRequestDTO = {
       user_id: 'user123',
-      user_password: 'strongPassword123!',
+      user_pwd: 'strongPassword123!',
       user_email: 'user123@example.com',
       user_name: '홍길동',
       user_phone_number: '010-1234-5678',
@@ -137,7 +160,7 @@ export const ReservationExample: React.FC = () => {
     createReviewMutation.mutate(reviewData);
   };
 
-  if (isLoading) {
+  if (isLoading || matchesLoading) {
     return <Text>로딩 중...</Text>;
   }
 
@@ -147,44 +170,62 @@ export const ReservationExample: React.FC = () => {
 
   return (
     <ScrollView style={{ flex: 1, padding: 20 }}>
-      <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 20 }}>
-        API 사용 예시 (URL 경로별)
+      <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 20 }}>
+        API 테스트 예시
       </Text>
 
-      {/* GET /reservations - 모임 조회 결과 */}
+      {/* 경기 관련 API */}
       <View style={{ marginBottom: 20 }}>
-        <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 10 }}>
-          모임 목록 ({reservations?.data?.length || 0}개)
+        <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
+          경기 관련 API
         </Text>
-        {reservations?.data?.map((reservation) => (
-          <View key={reservation.reservation_id} style={{ marginBottom: 10, padding: 10, borderWidth: 1 }}>
-            <Text>ID: {reservation.reservation_id}</Text>
-            <Text>매장: {reservation.store_name}</Text>
-            <Text>경기: {reservation.reservation_match}</Text>
-            <Text>참여자: {reservation.reservation_participant_cnt}/{reservation.reservation_max_participant_cnt}</Text>
-            <View style={{ flexDirection: 'row', gap: 5, marginTop: 5 }}>
-              <TouchableOpacity
-                onPress={() => handleJoinReservation(reservation.reservation_id)}
-                style={{ backgroundColor: '#007AFF', padding: 8, borderRadius: 5, flex: 1 }}
-              >
-                <Text style={{ color: 'white', textAlign: 'center' }}>참여하기</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => handleCancelReservation(reservation.reservation_id)}
-                style={{ backgroundColor: '#FF3B30', padding: 8, borderRadius: 5, flex: 1 }}
-              >
-                <Text style={{ color: 'white', textAlign: 'center' }}>취소하기</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
+        
+        <TouchableOpacity
+          onPress={() => console.log('경기 목록:', matches)}
+          style={{ backgroundColor: '#FF6B6B', padding: 15, borderRadius: 8, marginBottom: 10 }}
+        >
+          <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>
+            GET /matches - 경기 목록 조회 ({matches?.data?.length || 0}개)
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => console.log('경기 상세:', matchDetail)}
+          style={{ backgroundColor: '#4ECDC4', padding: 15, borderRadius: 8, marginBottom: 10 }}
+        >
+          <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>
+            GET /matches/123456 - 경기 상세 정보
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => console.log('경기별 모임:', matchReservations)}
+          style={{ backgroundColor: '#45B7D1', padding: 15, borderRadius: 8, marginBottom: 10 }}
+        >
+          <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>
+            GET /matches/123456/reservations - 경기별 모임 ({matchReservations?.data?.length || 0}개)
+          </Text>
+        </TouchableOpacity>
       </View>
 
-      {/* 액션 버튼들 */}
-      <View style={{ gap: 10 }}>
+      {/* 예약 관련 API */}
+      <View style={{ marginBottom: 20 }}>
+        <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
+          예약 관련 API
+        </Text>
+        
+        <TouchableOpacity
+          onPress={() => console.log('예약 목록:', reservations)}
+          style={{ backgroundColor: '#96CEB4', padding: 15, borderRadius: 8, marginBottom: 10 }}
+        >
+          <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>
+            GET /reservations - 예약 목록 조회 ({reservations?.data?.length || 0}개)
+          </Text>
+        </TouchableOpacity>
+
         <TouchableOpacity
           onPress={handleCreateReservation}
-          style={{ backgroundColor: '#34C759', padding: 15, borderRadius: 8 }}
+          style={{ backgroundColor: '#34C759', padding: 15, borderRadius: 8, marginBottom: 10 }}
         >
           <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>
             POST /reservations - 새 모임 생성
@@ -192,8 +233,24 @@ export const ReservationExample: React.FC = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
+          onPress={() => handleJoinReservation(1)}
+          style={{ backgroundColor: '#FF9500', padding: 15, borderRadius: 8, marginBottom: 10 }}
+        >
+          <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>
+            POST /reservations/1/join - 모임 참여
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* 인증 관련 API */}
+      <View style={{ marginBottom: 20 }}>
+        <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
+          인증 관련 API
+        </Text>
+
+        <TouchableOpacity
           onPress={handleLogin}
-          style={{ backgroundColor: '#007AFF', padding: 15, borderRadius: 8 }}
+          style={{ backgroundColor: '#007AFF', padding: 15, borderRadius: 8, marginBottom: 10 }}
         >
           <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>
             POST /auth/login - 로그인
@@ -202,7 +259,7 @@ export const ReservationExample: React.FC = () => {
 
         <TouchableOpacity
           onPress={handleSignup}
-          style={{ backgroundColor: '#FF9500', padding: 15, borderRadius: 8 }}
+          style={{ backgroundColor: '#FF9500', padding: 15, borderRadius: 8, marginBottom: 10 }}
         >
           <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>
             POST /auth/signup - 회원가입
@@ -211,34 +268,82 @@ export const ReservationExample: React.FC = () => {
 
         <TouchableOpacity
           onPress={handleUpdateProfile}
-          style={{ backgroundColor: '#5856D6', padding: 15, borderRadius: 8 }}
+          style={{ backgroundColor: '#5856D6', padding: 15, borderRadius: 8, marginBottom: 10 }}
         >
           <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>
             PUT /users/me - 프로필 수정
           </Text>
         </TouchableOpacity>
+      </View>
+
+      {/* 채팅 관련 API */}
+      <View style={{ marginBottom: 20 }}>
+        <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
+          채팅 관련 API
+        </Text>
+
+        <TouchableOpacity
+          onPress={() => console.log('채팅방 목록:', chatRooms)}
+          style={{ backgroundColor: '#FF2D92', padding: 15, borderRadius: 8, marginBottom: 10 }}
+        >
+          <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>
+            GET /chat/rooms - 채팅방 목록 ({chatRooms?.data?.length || 0}개)
+          </Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
           onPress={handleEnterChatRoom}
-          style={{ backgroundColor: '#FF2D92', padding: 15, borderRadius: 8 }}
+          style={{ backgroundColor: '#FF2D92', padding: 15, borderRadius: 8, marginBottom: 10 }}
         >
           <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>
             POST /chat/rooms/enter - 채팅방 입장
           </Text>
         </TouchableOpacity>
+      </View>
+
+      {/* 결제 관련 API */}
+      <View style={{ marginBottom: 20 }}>
+        <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
+          결제 관련 API
+        </Text>
+
+        <TouchableOpacity
+          onPress={() => console.log('결제 상태:', paymentStatus)}
+          style={{ backgroundColor: '#FF3B30', padding: 15, borderRadius: 8, marginBottom: 10 }}
+        >
+          <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>
+            GET /chat/rooms/1/payments/status - 결제 상태
+          </Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
           onPress={handleRequestPayment}
-          style={{ backgroundColor: '#FFCC00', padding: 15, borderRadius: 8 }}
+          style={{ backgroundColor: '#FF3B30', padding: 15, borderRadius: 8, marginBottom: 10 }}
         >
           <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>
-            POST /chat/rooms/payments/request - 결제 요청
+            POST /chat/rooms/1/payments/request - 결제 요청
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* 리뷰 관련 API */}
+      <View style={{ marginBottom: 20 }}>
+        <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
+          리뷰 관련 API
+        </Text>
+
+        <TouchableOpacity
+          onPress={() => console.log('내 리뷰:', myReviews)}
+          style={{ backgroundColor: '#FF9500', padding: 15, borderRadius: 8, marginBottom: 10 }}
+        >
+          <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>
+            GET /reviews/me - 내 리뷰 목록 ({myReviews?.data?.length || 0}개)
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           onPress={handleCreateReview}
-          style={{ backgroundColor: '#FF6B35', padding: 15, borderRadius: 8 }}
+          style={{ backgroundColor: '#FF9500', padding: 15, borderRadius: 8, marginBottom: 10 }}
         >
           <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>
             POST /reviews - 리뷰 작성
@@ -246,59 +351,30 @@ export const ReservationExample: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {/* 상태 표시 */}
-      {createReservationMutation.isPending && <Text>모임 생성 중...</Text>}
-      {joinReservationMutation.isPending && <Text>모임 참여 중...</Text>}
-      {cancelReservationMutation.isPending && <Text>모임 취소 중...</Text>}
-      {loginMutation.isPending && <Text>로그인 중...</Text>}
-      {signupMutation.isPending && <Text>회원가입 중...</Text>}
-      {updateProfileMutation.isPending && <Text>프로필 수정 중...</Text>}
-      {enterChatRoomMutation.isPending && <Text>채팅방 입장 중...</Text>}
-      {requestPaymentMutation.isPending && <Text>결제 요청 중...</Text>}
-      {createReviewMutation.isPending && <Text>리뷰 작성 중...</Text>}
+      {/* 사용자 정보 */}
+      <View style={{ marginBottom: 20 }}>
+        <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
+          사용자 정보
+        </Text>
 
-      {/* 데이터 표시 */}
-      {myInfo && (
-        <View style={{ marginTop: 20, padding: 10, backgroundColor: '#f0f0f0' }}>
-          <Text style={{ fontWeight: 'bold' }}>내 정보:</Text>
-          <Text>이름: {myInfo.data.user_name}</Text>
-          <Text>이메일: {myInfo.data.user_email}</Text>
-        </View>
-      )}
+        <TouchableOpacity
+          onPress={() => console.log('내 정보:', myInfo)}
+          style={{ backgroundColor: '#5856D6', padding: 15, borderRadius: 8, marginBottom: 10 }}
+        >
+          <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>
+            GET /users/me - 내 정보
+          </Text>
+        </TouchableOpacity>
 
-      {matchingHistory && (
-        <View style={{ marginTop: 20, padding: 10, backgroundColor: '#f0f0f0' }}>
-          <Text style={{ fontWeight: 'bold' }}>매칭 이력 ({matchingHistory.data.length}개):</Text>
-          {matchingHistory.data.map((match, index) => (
-            <Text key={index}>- {match.reservation_match} ({match.status})</Text>
-          ))}
-        </View>
-      )}
-
-      {chatRooms && (
-        <View style={{ marginTop: 20, padding: 10, backgroundColor: '#f0f0f0' }}>
-          <Text style={{ fontWeight: 'bold' }}>채팅방 ({chatRooms.data.length}개):</Text>
-          {chatRooms.data.map((room) => (
-            <Text key={room.chat_room_id}>- {room.chat_room_name}</Text>
-          ))}
-        </View>
-      )}
-
-      {paymentStatus && (
-        <View style={{ marginTop: 20, padding: 10, backgroundColor: '#f0f0f0' }}>
-          <Text style={{ fontWeight: 'bold' }}>결제 현황:</Text>
-          <Text>결제 완료: {paymentStatus.data.current_paid_participants_count}/{paymentStatus.data.required_participants_count}</Text>
-        </View>
-      )}
-
-      {myReviews && (
-        <View style={{ marginTop: 20, padding: 10, backgroundColor: '#f0f0f0' }}>
-          <Text style={{ fontWeight: 'bold' }}>내 리뷰 ({myReviews.data.length}개):</Text>
-          {myReviews.data.map((review) => (
-            <Text key={review.review_id}>- {review.store_name} ({review.review_rating}점)</Text>
-          ))}
-        </View>
-      )}
+        <TouchableOpacity
+          onPress={() => console.log('매칭 이력:', matchingHistory)}
+          style={{ backgroundColor: '#5856D6', padding: 15, borderRadius: 8, marginBottom: 10 }}
+        >
+          <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>
+            GET /users/me/matching-history - 매칭 이력 ({matchingHistory?.data?.length || 0}개)
+          </Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 }; 

@@ -25,6 +25,7 @@ export default function HomeScreen() {
     isEnterModalVisible,
     selectedEvent,
     filteredEvents,
+    isLoading,
     setSelectedFilter,
     setSearchText,
     toggleLocation,
@@ -113,13 +114,27 @@ export default function HomeScreen() {
 
         {/* 매칭 목록 */}
         <View className="px-4 pb-20">
-          {filteredEvents.map((event: any, index) => (
-            <EventCard
-              key={event.id || event.reservation_id || index}
-              event={event}
-              onParticipate={() => handleParticipate(event)}
-            />
-          ))}
+          {filteredEvents.length > 0 ? (
+            filteredEvents.map((event: any, index) => (
+              <EventCard
+                key={event.id || event.reservation_id || index}
+                event={event}
+                onParticipate={() => handleParticipate(event)}
+              />
+            ))
+          ) : (
+            <View className="flex-1 items-center justify-center py-20">
+              <Text className="text-lg text-gray-500 mb-2">
+                {isLoading ? '데이터를 불러오는 중...' : '매칭이 없습니다'}
+              </Text>
+              <Text className="text-sm text-gray-400 text-center">
+                {isLoading 
+                  ? '잠시만 기다려주세요' 
+                  : '다른 조건으로 검색해보세요'
+                }
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
 

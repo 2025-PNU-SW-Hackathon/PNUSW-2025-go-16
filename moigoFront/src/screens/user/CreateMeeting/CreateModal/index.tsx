@@ -3,7 +3,7 @@ import { Modal, TouchableOpacity, ScrollView } from 'react-native';
 import ModalHeader from './ModalHeader';
 import ReservationInfo from './ReservationInfo';
 import ModalButtons from './ModalButtons';
-import type { ReservationDTO } from '@/types/DTO/reservations';
+import type { MatchDTO } from '@/types/DTO/reservations';
 
 interface CreateModalProps {
   isConfirmModalVisible: boolean;
@@ -13,7 +13,8 @@ interface CreateModalProps {
   meetingName: string;
   description: string;
   handleConfirmRegistration: () => void;
-  events: ReservationDTO[];
+  handleCancelRegistration: () => void;
+  events: MatchDTO[];
   isLoading?: boolean;
 }
 
@@ -26,16 +27,24 @@ export default function CreateModal({
   meetingName,
   description,
   handleConfirmRegistration,
+  handleCancelRegistration,
   events,
   isLoading = false,
 }: CreateModalProps) {
   console.log('CreateModal 렌더링:', { selectedEventId, eventsLength: events.length, isConfirmModalVisible });
   
-  const selectedEvent = events.find((event) => event.reservation_id.toString() === selectedEventId);
+  // 안전한 타입 체크 추가
+  const selectedEvent = events.find((event) => {
+    if (event.id === undefined || event.id === null) {
+      console.warn('경기 데이터에 id가 없습니다:', event);
+      return false;
+    }
+    return event.id.toString() === selectedEventId;
+  });
   console.log('찾은 selectedEvent:', selectedEvent);
 
   const handleCancel = () => {
-    setIsConfirmModalVisible(false);
+    handleCancelRegistration();
   };
 
   const handleConfirm = () => {

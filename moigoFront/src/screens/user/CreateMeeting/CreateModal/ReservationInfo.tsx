@@ -1,22 +1,22 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import type { ReservationDTO } from '@/types/DTO/reservations';
+import type { MatchDTO } from '@/types/DTO/reservations';
 
 interface ReservationInfoProps {
-  selectedEvent: ReservationDTO;
+  selectedEvent: MatchDTO;
   maxPeople: number;
 }
 
 // 예약 정보 컴포넌트
 export default function ReservationInfo({ selectedEvent, maxPeople }: ReservationInfoProps) {
   // API 데이터에서 날짜와 시간 추출
-  const startTime = new Date(selectedEvent.reservation_start_time);
-  const date = startTime.toLocaleDateString('ko-KR', {
+  const matchTime = new Date(selectedEvent.match_date);
+  const date = matchTime.toLocaleDateString('ko-KR', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
-  const time = startTime.toLocaleTimeString('ko-KR', {
+  const time = matchTime.toLocaleTimeString('ko-KR', {
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -39,7 +39,7 @@ export default function ReservationInfo({ selectedEvent, maxPeople }: Reservatio
         </View>
         <View className="flex-row justify-between items-center">
           <Text className="text-md text-mainGrayText">선택한 경기</Text>
-          <Text>{selectedEvent.reservation_match}</Text>
+          <Text>{`${selectedEvent.home_team} vs ${selectedEvent.away_team}`}</Text>
         </View>
       </View>
     </View>

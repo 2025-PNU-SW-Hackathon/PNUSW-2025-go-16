@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView, SafeAreaView } from 'react-native';
+import { View, ScrollView, SafeAreaView, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
 import { useCreateMeeting } from '@/hooks/CreateMeeting/index';
@@ -58,6 +58,12 @@ export default function CreateMeeting() {
 
   // 등록 확인 핸들러
   const handleConfirmRegistration = async () => {
+    // 이미 로딩 중이면 중복 요청 방지
+    if (isCreating) {
+      console.log('이미 모임 생성 중입니다. 중복 요청 방지');
+      return;
+    }
+
     try {
       console.log('모임 등록 확인:', { selectedEventId, meetingName, maxPeople, description });
       
@@ -71,11 +77,42 @@ export default function CreateMeeting() {
       
       // 성공 시 모달 닫고 홈으로 이동
       setIsConfirmModalVisible(false);
-      navigation.goBack();
+      Alert.alert('성공', '모임이 성공적으로 생성되었습니다!', [
+        {
+          text: '확인',
+          onPress: () => {
+            // 홈 화면으로 이동
+            navigation.navigate('Main' as never);
+          }
+        }
+      ]);
     } catch (error) {
       console.error('모임 등록 실패:', error);
-      // TODO: 에러 처리 (토스트 메시지 등)
+      Alert.alert('실패', '모임 생성에 실패했습니다. 다시 시도해주세요.');
     }
+  };
+
+  // 모임 생성 취소 핸들러
+  const handleCancelRegistration = () => {
+    Alert.alert(
+      '모임 생성 취소',
+      '모임 생성을 취소하시겠습니까?',
+      [
+        {
+          text: '계속 작성',
+          style: 'cancel'
+        },
+        {
+          text: '취소',
+          style: 'destructive',
+          onPress: () => {
+            // 모달 닫고 이전 화면으로 이동
+            setIsConfirmModalVisible(false);
+            navigation.goBack();
+          }
+        }
+      ]
+    );
   };
 
   // 디버깅 로그
@@ -133,6 +170,7 @@ export default function CreateMeeting() {
           meetingName={meetingName}
           description={description}
           handleConfirmRegistration={handleConfirmRegistration}
+          handleCancelRegistration={handleCancelRegistration}
           events={events}
           isLoading={isCreating}
         />

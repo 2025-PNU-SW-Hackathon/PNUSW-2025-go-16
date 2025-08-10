@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { events } from '@/mocks/events';
+import type { MatchDTO } from '@/types/DTO/reservations';
 
 // 필터 관련 훅
 export function useEventFilter(eventsToShow: any[] = events) {
@@ -8,25 +9,19 @@ export function useEventFilter(eventsToShow: any[] = events) {
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
 
-  // API 데이터에서 고유한 reservation_ex1 값들을 추출하여 필터 옵션 생성
-  const uniqueEx1Values = Array.from(new Set(eventsToShow.map((event: any) => event.reservation_ex1))).filter(Boolean);
-  const filterOptions = ['전체', ...uniqueEx1Values];
+  // 경기 데이터에서 고유한 대회 코드들을 추출하여 필터 옵션 생성
+  const uniqueCompetitions = Array.from(new Set(eventsToShow.map((event: any) => event.competition_code))).filter(Boolean);
+  const filterOptions = ['전체', ...uniqueCompetitions];
   const filterLocations = ['서울', '경기', '인천', '대전', '대구', '부산'];
   
-  // 디버깅 로그
-  console.log('필터 옵션:', {
-    uniqueEx1Values,
-    filterOptions,
-    selectedFilter,
-    eventsCount: eventsToShow.length
-  });
-  
-  // 디버깅 로그
-  console.log('필터 옵션 생성:', {
-    uniqueEx1Values,
-    filterOptions,
-    eventsCount: eventsToShow.length
-  });
+  // 디버깅 로그 (한 번만 출력)
+  if (eventsToShow.length > 0) {
+    console.log('필터 옵션 생성:', {
+      uniqueCompetitions,
+      filterOptions,
+      eventsCount: eventsToShow.length
+    });
+  }
 
   // 위치 선택/해제 함수
   const toggleLocation = (location: string) => {
@@ -56,30 +51,19 @@ export function useEventFilter(eventsToShow: any[] = events) {
     const searchLower = searchText.toLowerCase();
     const matchesSearch =
       searchText === '' ||
-      event.title?.toLowerCase().includes(searchLower) ||
-      event.location?.toLowerCase().includes(searchLower) ||
-      event.sportType?.toLowerCase().includes(searchLower) ||
-      event.reservation_bio?.toLowerCase().includes(searchLower) ||
-      event.reservation_match?.toLowerCase().includes(searchLower) ||
-      event.reservation_ex1?.toLowerCase().includes(searchLower);
+      event.home_team?.toLowerCase().includes(searchLower) ||
+      event.away_team?.toLowerCase().includes(searchLower) ||
+      event.venue?.toLowerCase().includes(searchLower) ||
+      event.competition_code?.toLowerCase().includes(searchLower);
 
-    // 카테고리 필터링 (reservation_ex1 사용)
-    const matchesCategory = selectedFilter === '전체' || event.reservation_ex1 === selectedFilter;
+    // 카테고리 필터링 (대회 코드 사용)
+    const matchesCategory = selectedFilter === '전체' || event.competition_code === selectedFilter;
 
-    // 위치 필터링
+    // 위치 필터링 (venue 사용)
     const matchesLocation =
-      selectedLocations.length === 0 || selectedLocations.includes(event.region);
-
-    // 디버깅 로그
-    if (selectedFilter !== '전체') {
-      console.log('필터링 디버그:', {
-        eventId: event.reservation_id,
-        eventEx1: event.reservation_ex1,
-        selectedFilter,
-        matchesCategory,
-        eventTitle: event.reservation_match
-      });
-    }
+      selectedLocations.length === 0 || selectedLocations.some(location => 
+        event.venue?.includes(location)
+      );
 
     return matchesSearch && matchesCategory && matchesLocation;
   });

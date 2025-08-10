@@ -2,31 +2,42 @@ import { useMeetingForm } from './useMeetingForm';
 import { useEventSelection } from './useEventSelection';
 import { useEventFilter } from './useEventFilter';
 import { useEventPagination } from './useEventPagination';
-import { useGetReservations, useCreateReservation } from '@/hooks/queries/useReservationQueries';
+import { useGetMatches, useCreateReservation } from '@/hooks/queries/useReservationQueries';
 import type { CreateMeetingForm } from './useMeetingForm';
 import type { CreateReservationRequestDTO } from '@/types/DTO/reservations';
+import { useAuthStore } from '@/store/authStore';
 
 // 메인 훅 - 모든 기능을 조합
 export function useCreateMeeting() {
   const form = useMeetingForm();
   const eventSelection = useEventSelection();
   
-  // API로 모임 데이터 가져오기
-  const { data: reservations, isLoading, error } = useGetReservations();
+  // 경기 데이터 가져오기 (기존 예약 데이터 대신)
+  const { data: matches, isLoading, error } = useGetMatches();
   
   // 모임 생성 API
   const createReservationMutation = useCreateReservation();
 
   // API 데이터 사용
-  const eventsToShow = reservations?.data || [];
+  const eventsToShow = matches?.data || [];
   
-  // 디버깅 로그
-  console.log('CreateMeeting API 응답:', {
-    reservations,
-    isLoading,
-    error,
-    eventsToShow: eventsToShow.length,
-  });
+  // 디버깅 로그 (한 번만 출력)
+  if (eventsToShow.length > 0) {
+    console.log('CreateMeeting 경기 데이터:', {
+      matchesCount: eventsToShow.length,
+      isLoading,
+      error: error?.message,
+      firstEvent: eventsToShow[0], // 첫 번째 경기 데이터 구조 확인
+      firstEventId: eventsToShow[0]?.id, // 첫 번째 경기의 ID 확인
+      firstEventIdType: typeof eventsToShow[0]?.id, // ID의 타입 확인
+    });
+  } else {
+    console.log('CreateMeeting 경기 데이터 없음:', {
+      isLoading,
+      error: error?.message,
+      matches: matches,
+    });
+  }
   
   // API 데이터를 필터 훅에 전달
   const eventFilter = useEventFilter(eventsToShow);
@@ -43,30 +54,65 @@ export function useCreateMeeting() {
       return;
     }
 
-    const selectedEvent = eventsToShow.find((e) => e.reservation_id.toString() === eventSelection.selectedEventId);
+    // 토큰 상태 확인
+    const { token } = useAuthStore.getState();
+    console.log('모임 생성 시 토큰 상태:', {
+      hasToken: !!token,
+      tokenValue: token ? token.substring(0, 20) + '...' : '없음',
+      isLoggedIn: useAuthStore.getState().isLoggedIn,
+    });
+
+    // 안전한 타입 체크 추가
+    const selectedEvent = eventsToShow.find((e) => {
+      // id가 존재하고 유효한 값인지 확인
+      if (e.id === undefined || e.id === null) {
+        console.warn('경기 데이터에 id가 없습니다:', e);
+        return false;
+      }
+      // selectedEventId가 유효한지 확인
+      if (!eventSelection.selectedEventId) {
+        console.warn('selectedEventId가 유효하지 않습니다:', eventSelection.selectedEventId);
+        return false;
+      }
+      return e.id.toString() === eventSelection.selectedEventId;
+    });
+    
     if (!selectedEvent) {
       console.error('선택된 경기를 찾을 수 없습니다.');
       return;
     }
 
-    // ISO 8601 형식을 MySQL datetime 형식으로 변환
-    const formatDateTimeForMySQL = (isoString: string) => {
-      const date = new Date(isoString);
-      return date.toISOString().slice(0, 19).replace('T', ' ');
+    // 경기 시간을 기준으로 모임 시간 설정 (경기 1시간 전 ~ 경기 2시간 후)
+    const matchDate = new Date(selectedEvent.match_date);
+    const reservationStartTime = new Date(matchDate.getTime() - 60 * 60 * 1000); // 1시간 전
+    const reservationEndTime = new Date(matchDate.getTime() + 2 * 60 * 60 * 1000); // 2시간 후
+
+    // 날짜와 시간을 분리하여 새로운 형식으로 변환
+    const formatDate = (date: Date) => {
+      return date.toISOString().slice(0, 10); // YYYY-MM-DD
     };
 
-    // 모임 생성 요청 데이터 구성
+    const formatTime = (date: Date) => {
+      return date.toTimeString().slice(0, 8); // HH:MM:SS
+    };
+
+    // 모임 생성 요청 데이터 구성 (서버에서 날짜를 붙이도록 수정했으므로 시간만 전송)
     const createRequest: CreateReservationRequestDTO = {
-      store_id: selectedEvent.store_id,
-      reservation_start_time: formatDateTimeForMySQL(selectedEvent.reservation_start_time),
-      reservation_end_time: formatDateTimeForMySQL(selectedEvent.reservation_end_time),
-      reservation_match: data.meetingName, // 사용자가 입력한 모임 이름 사용
-      reservation_bio: data.description,
-      reservation_max_participant_cnt: data.maxPeople,
-      reservation_match_category: 1, // 기본값 (필요시 수정)
+      store_id: 1, // 기본 매장 ID (실제로는 사용자가 선택해야 함)
+      reservation_title: data.meetingName, // 사용자가 입력한 모임 이름
+      reservation_description: data.description, // 사용자가 입력한 모임 설명
+      reservation_date: formatDate(reservationStartTime), // YYYY-MM-DD 형식
+      reservation_start_time: formatTime(reservationStartTime), // HH:MM:SS 형식
+      reservation_end_time: formatTime(reservationEndTime), // HH:MM:SS 형식
+      reservation_max_participant_cnt: data.maxPeople, // 최대 참여자 수
     };
 
     console.log('모임 생성 요청:', createRequest);
+    console.log('시간 형식 확인:', {
+      date: formatDate(reservationStartTime),
+      startTime: formatTime(reservationStartTime),
+      endTime: formatTime(reservationEndTime),
+    });
 
     try {
       const response = await createReservationMutation.mutateAsync(createRequest);
@@ -82,8 +128,14 @@ export function useCreateMeeting() {
     // 이벤트 관련
     events: eventsToShow,
     selectedEventId: eventSelection.selectedEventId,
-    handleSelectEvent: (eventId: string) =>
-      eventSelection.handleSelectEvent(eventId, form.setValue, eventsToShow),
+    handleSelectEvent: (eventId: string | undefined | null) => {
+      // eventId가 유효한지 확인
+      if (!eventId) {
+        console.warn('handleSelectEvent에 유효하지 않은 eventId가 전달되었습니다:', eventId);
+        return;
+      }
+      eventSelection.handleSelectEvent(eventId, form.setValue, eventsToShow);
+    },
 
     // 필터 관련
     ...eventFilter,
