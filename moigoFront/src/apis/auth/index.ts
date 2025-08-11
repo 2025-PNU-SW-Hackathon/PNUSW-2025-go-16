@@ -7,18 +7,18 @@ import type {
   AuthErrorResponseDTO,
 } from '../../types/DTO/auth';
 
-// POST /auth/signup - 회원가입
+// POST /register - 회원가입 (서버 명세서에 맞게 수정)
 export const signup = async (
   data: SignupRequestDTO
 ): Promise<SignupResponseDTO> => {
   const response = await apiClient.post<SignupResponseDTO>(
-    '/auth/signup',
+    '/register',
     data
   );
   return response.data;
 };
 
-// POST /auth/login - 로그인
+// POST /auth/login - 로그인 (서버 코드에 맞게 수정)
 export const login = async (
   data: LoginRequestDTO
 ): Promise<LoginResponseDTO> => {

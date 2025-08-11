@@ -1,10 +1,13 @@
 import { create } from 'zustand';
 import type { PasswordChangeForm, PasswordValidation } from '@/types/reservation';
 
-// 로그인 사용자 타입 정의
+// 로그인 사용자 타입 정의 - 서버 응답에 맞게 수정
 interface AuthUser {
   id: string;
   email: string;
+  name: string;
+  phoneNumber: string;
+  gender: number;
   userType: 'sports_fan' | 'business';
 }
 
@@ -36,7 +39,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   token: null,
   selectedUserType: null,
   
-  // 로그인 액션
+  // 로그인 액션 - 서버 응답에 맞게 수정
   login: (userData: AuthUser, token: string) => {
     set({
       isLoggedIn: true,

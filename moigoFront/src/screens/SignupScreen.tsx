@@ -1,11 +1,12 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/types/RootStackParamList';
 import { COLORS } from '@/constants/colors';
 import PrimaryButton from '@/components/common/PrimaryButton';
 import { Ionicons } from '@expo/vector-icons';
+import { signup } from '@/apis/auth';
 
 export default function SignupScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -16,6 +17,8 @@ export default function SignupScreen() {
   const [emailDomain, setEmailDomain] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [showDomainDropdown, setShowDomainDropdown] = useState(false);
+  const [isIdAvailable, setIsIdAvailable] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // 이메일 도메인 목록
   const emailDomains = [
@@ -27,6 +30,98 @@ export default function SignupScreen() {
     'yahoo.com',
     'icloud.com'
   ];
+
+  // 아이디 중복확인 (항상 성공)
+  const handleIdCheck = () => {
+    if (!userId.trim()) {
+      Alert.alert('알림', '아이디를 입력해주세요.');
+      return;
+    }
+    if (userId.length < 4 || userId.length > 12) {
+      Alert.alert('알림', '아이디는 4~12자로 입력해주세요.');
+      return;
+    }
+    
+    // 항상 사용 가능하다고 처리
+    setIsIdAvailable(true);
+    Alert.alert('알림', '사용 가능한 아이디입니다.');
+  };
+
+  // 회원가입 처리
+  const handleSignup = async () => {
+    // 유효성 검사
+    if (!userId.trim()) {
+      Alert.alert('알림', '아이디를 입력해주세요.');
+      return;
+    }
+    if (!isIdAvailable) {
+      Alert.alert('알림', '아이디 중복확인을 해주세요.');
+      return;
+    }
+    if (!password.trim()) {
+      Alert.alert('알림', '비밀번호를 입력해주세요.');
+      return;
+    }
+    if (password.length < 6) {
+      Alert.alert('알림', '비밀번호는 6자 이상 입력해주세요.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      Alert.alert('알림', '비밀번호가 일치하지 않습니다.');
+      return;
+    }
+    if (!email.trim() || !emailDomain) {
+      Alert.alert('알림', '이메일을 입력해주세요.');
+      return;
+    }
+    if (!phoneNumber.trim()) {
+      Alert.alert('알림', '휴대폰 번호를 입력해주세요.');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      
+      const fullEmail = `${email}@${emailDomain}`;
+      
+      // 서버에 회원가입 요청
+      const response = await signup({
+        user_id: userId.trim(),
+        user_pwd: password.trim(),
+        user_email: fullEmail,
+        user_name: userId.trim(), // 임시로 아이디를 이름으로 사용
+        user_phone_number: phoneNumber.trim(),
+        user_region: '서울', // 기본값
+        user_gender: 1, // 기본값
+      });
+
+      console.log('회원가입 성공:', response);
+
+      if (response.success) {
+        Alert.alert('성공', '회원가입이 완료되었습니다.', [
+          {
+            text: '확인',
+            onPress: () => navigation.navigate('Login')
+          }
+        ]);
+      } else {
+        Alert.alert('회원가입 실패', response.message);
+      }
+    } catch (error: any) {
+      console.error('회원가입 에러:', error);
+      
+      // 서버에서 받은 에러 메시지 표시
+      if (error.response?.data?.message) {
+        Alert.alert('회원가입 실패', error.response.data.message);
+      } else if (error.message) {
+        Alert.alert('회원가입 실패', error.message);
+      } else {
+        Alert.alert('회원가입 실패', '회원가입 중 오류가 발생했습니다.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <TouchableWithoutFeedback onPress={() => setShowDomainDropdown(false)}>
@@ -52,13 +147,23 @@ export default function SignupScreen() {
               <TextInput
                 placeholder="아이디"
                 value={userId}
-                onChangeText={setUserId}
+                onChangeText={(text) => {
+                  setUserId(text);
+                  setIsIdAvailable(false); // 아이디 변경 시 중복확인 초기화
+                }}
                 className="text-base"
                 autoCapitalize="none"
+                editable={!isLoading}
               />
             </View>
-            <TouchableOpacity className="bg-mainOrange rounded-lg px-4 py-4">
-              <Text className="text-white font-semibold text-sm">중복확인</Text>
+            <TouchableOpacity 
+              className={`rounded-lg px-4 py-4 ${isIdAvailable ? 'bg-green-500' : 'bg-mainOrange'}`}
+              onPress={handleIdCheck}
+              disabled={isLoading}
+            >
+              <Text className="text-white font-semibold text-sm">
+                {isIdAvailable ? '확인완료' : '중복확인'}
+              </Text>
             </TouchableOpacity>
           </View>
           <Text className="text-sm text-mainGrayText mt-2">
@@ -77,6 +182,7 @@ export default function SignupScreen() {
                 onChangeText={setPassword}
                 className="text-base"
                 secureTextEntry
+                editable={!isLoading}
               />
             </View>
             <View className="bg-white rounded-lg border border-gray-200 px-4 py-1 my-2">
@@ -86,6 +192,7 @@ export default function SignupScreen() {
                 onChangeText={setConfirmPassword}
                 className="text-base"
                 secureTextEntry
+                editable={!isLoading}
               />
             </View>
           </View>
@@ -106,6 +213,7 @@ export default function SignupScreen() {
                 className="text-base"
                 autoCapitalize="none"
                 keyboardType="email-address"
+                editable={!isLoading}
               />
             </View>
             <Text className="text-lg font-bold text-mainGrayText mx-2">@</Text>
@@ -113,6 +221,7 @@ export default function SignupScreen() {
               <TouchableOpacity
                 className={`bg-white rounded-lg border border-gray-200 p-4 flex-row items-center justify-between`}
                 onPress={() => setShowDomainDropdown(!showDomainDropdown)}
+                disabled={isLoading}
               >
                 <Text className={`text-base text-mainGrayText`}>
                   {emailDomain || '선택'}
@@ -164,9 +273,13 @@ export default function SignupScreen() {
                 onChangeText={setPhoneNumber}
                 className="text-base"
                 keyboardType="phone-pad"
+                editable={!isLoading}
               />
             </View>
-            <TouchableOpacity className="bg-mainOrange rounded-lg px-4 py-4">
+            <TouchableOpacity 
+              className="bg-mainOrange rounded-lg px-4 py-4"
+              disabled={isLoading}
+            >
               <Text className="text-white font-semibold text-sm">인증번호 받기</Text>
             </TouchableOpacity>
           </View>
@@ -176,11 +289,10 @@ export default function SignupScreen() {
         {/* 가입하기 버튼 */}
         <View className="w-full absolute bottom-0 px-4 py-7">
           <PrimaryButton 
-            title="가입하기" 
+            title={isLoading ? "가입 중..." : "가입하기"} 
             color={COLORS.mainOrange}
-            onPress={() => {
-              // TODO: 회원가입 로직 구현
-            }} 
+            onPress={handleSignup}
+            disabled={isLoading}
           />
         </View>
       </KeyboardAvoidingView>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { events } from '@/mocks/events';
 import { useMyStore } from '@/store/myStore';
 import { useGetReservations } from '@/hooks/queries/useReservationQueries';
+import type { ReservationQueryDTO } from '@/types/DTO/reservations';
 
 export function useHomeScreen() {
   const { userProfile } = useMyStore();
@@ -15,8 +16,29 @@ export function useHomeScreen() {
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [searchText, setSearchText] = useState<string>('');
 
+  // 쿼리 파라미터 구성
+  const queryParams: ReservationQueryDTO = {};
+  
+  // 선택된 위치가 있으면 첫 번째 것을 region으로 사용
+  if (selectedLocations.length > 0) {
+    queryParams.region = selectedLocations[0];
+  }
+  
+  // 선택된 필터가 있으면 category로 사용
+  if (selectedFilter !== '전체') {
+    queryParams.category = selectedFilter;
+  }
+  
+  // 검색어가 있으면 keyword로 사용
+  if (searchText.trim()) {
+    queryParams.keyword = searchText.trim();
+  }
+
   // API 데이터 가져오기
-  const { data: reservations, isLoading, error } = useGetReservations();
+  const { data: reservations, isLoading: apiLoading, error } = useGetReservations(queryParams);
+  
+  // isLoading을 명시적으로 정의
+  const isLoading = apiLoading || false;
 
   // 모달 관련 상태
   const [isFilterModalVisible, setIsFilterModalVisible] = useState<boolean>(false);
@@ -104,28 +126,38 @@ export function useHomeScreen() {
     setShowToast(false);
   };
 
-  // API 데이터와 필터링된 이벤트
-  const eventsToShow = reservations?.data || events; // API 데이터가 있으면 사용, 없으면 mock 데이터
+  // 서버 데이터와 mock 데이터 결합
+  const serverEvents = reservations?.data || [];
+  const hasServerError = error && (error as any)?.response?.status === 500;
+  const hasServerData = serverEvents.length > 0 && !hasServerError;
+  
+  // 서버 데이터가 있으면 서버 데이터 사용, 없으면 빈 배열 (mock 데이터 사용 안함)
+  const eventsToShow = hasServerData ? serverEvents : [];
 
-  // 검색어와 필터에 따른 이벤트 필터링
+  // 클라이언트 사이드 필터링 (서버에서 필터링되지 않은 부분)
   const filteredEvents = eventsToShow.filter((event: any) => {
-    // 검색어 필터링
+    // 서버 데이터와 mock 데이터의 필드명이 다를 수 있으므로 통합 처리
+    const eventTitle = event.title || event.reservation_match || '';
+    const eventLocation = event.location || event.store_name || '';
+    const eventSportType = event.sportType || event.reservation_ex1 || '';
+    const eventBio = event.reservation_bio || '';
+    const eventRegion = event.region || '';
+
+    // 검색어 필터링 (클라이언트 사이드)
     const searchLower = searchText.toLowerCase();
     const matchesSearch =
       searchText === '' ||
-      event.title?.toLowerCase().includes(searchLower) ||
-      event.location?.toLowerCase().includes(searchLower) ||
-      event.sportType?.toLowerCase().includes(searchLower) ||
-      event.reservation_bio?.toLowerCase().includes(searchLower) ||
-      event.reservation_match?.toLowerCase().includes(searchLower) ||
-      event.reservation_ex1?.toLowerCase().includes(searchLower);
+      eventTitle.toLowerCase().includes(searchLower) ||
+      eventLocation.toLowerCase().includes(searchLower) ||
+      eventSportType.toLowerCase().includes(searchLower) ||
+      eventBio.toLowerCase().includes(searchLower);
 
-    // 카테고리 필터링 (reservation_ex1 사용)
-    const matchesCategory = selectedFilter === '전체' || event.reservation_ex1 === selectedFilter;
+    // 카테고리 필터링 (클라이언트 사이드)
+    const matchesCategory = selectedFilter === '전체' || eventSportType === selectedFilter;
 
-    // 위치 필터링 (복수 선택)
+    // 위치 필터링 (클라이언트 사이드 - 복수 선택 지원)
     const matchesLocation =
-      selectedLocations.length === 0 || selectedLocations.includes(event.region);
+      selectedLocations.length === 0 || selectedLocations.includes(eventRegion);
 
     return matchesSearch && matchesCategory && matchesLocation;
   });
