@@ -12,7 +12,7 @@ export const signup = async (
   data: SignupRequestDTO
 ): Promise<SignupResponseDTO> => {
   const response = await apiClient.post<SignupResponseDTO>(
-    '/register',
+    '/users/register',
     data
   );
   return response.data;
@@ -23,7 +23,7 @@ export const login = async (
   data: LoginRequestDTO
 ): Promise<LoginResponseDTO> => {
   const response = await apiClient.post<LoginResponseDTO>(
-    '/auth/login',
+    '/users/login',
     data
   );
   return response.data;

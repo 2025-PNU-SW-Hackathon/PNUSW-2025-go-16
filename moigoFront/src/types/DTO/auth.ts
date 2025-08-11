@@ -32,14 +32,16 @@ export interface LoginResponseDTO {
   success: boolean;
   message: string;
   data: {
-    user_id: string;
-    user_name: string;
-    user_email: string;
-    user_phone_number: string;
-    user_gender: number;
+    // 토큰이 별도 필드로 오거나 data 안에 있을 수 있음
+    token?: string;
+    user: {
+      user_id: string;
+      user_name: string;
+      user_email: string;
+      user_phone_number: string;
+      user_gender: number;
+    }
   };
-  // 토큰이 별도 필드로 오거나 data 안에 있을 수 있음
-  token?: string;
 }
 
 // 인증 에러 응답 DTO

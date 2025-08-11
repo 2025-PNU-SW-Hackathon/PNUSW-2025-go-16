@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { signup, login, logout } from '../../apis/auth';
-import type { SignupRequestDTO, LoginRequestDTO } from '../../types/DTO/auth';
+import type { SignupRequestDTO, LoginRequestDTO,LoginResponseDTO } from '../../types/DTO/auth';
 import { setAccessToken } from '../../apis/apiClient';
 import { useMyStore } from '../../store/myStore';
 
@@ -20,16 +20,16 @@ export const useLogin = () => {
   
   return useMutation({
     mutationFn: (data: LoginRequestDTO) => login(data),
-    onSuccess: (data) => {
+    onSuccess: (data:LoginResponseDTO) => {
       // 로그인 성공 시 액세스 토큰 설정
-      setAccessToken(`Bearer ${data.access_token}`);
+      setAccessToken(`Bearer ${data.data.token}`);
       
       // 사용자 정보를 store에 저장
       if (data.data) {
         updateUserProfile({
-          id: data.data.user_id,
-          name: data.data.user_name,
-          email: data.data.user_email,
+          id: data.data.user.user_id,
+          name: data.data.user.user_name,
+          email: data.data.user.user_email,
           grade: 'BRONZE', // 기본값
           progressToNextGrade: 0,
           coupons: 0,

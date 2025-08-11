@@ -12,7 +12,7 @@ import type {
   MatchReservationDTO,
 } from '../../types/DTO/reservations';
 
-// GET /api/v1/reservations - 예약 목록 조회
+// GET /reservations - 예약 목록 조회
 export const getReservations = async (
   query?: ReservationQueryDTO
 ): Promise<ReservationResponseDTO> => {
@@ -33,13 +33,13 @@ export const getReservations = async (
   }
 
   const queryString = queryParams.toString();
-  const url = `/api/v1/reservations${queryString ? `?${queryString}` : ''}`;
+  const url = `/reservations${queryString ? `?${queryString}` : ''}`;
 
   const response = await apiClient.get<ReservationResponseDTO>(url);
   return response.data;
 };
 
-// GET /api/v1/matches - 경기 목록 조회
+// GET /matches - 경기 목록 조회
 export const getMatches = async (
   query?: MatchQueryDTO
 ): Promise<MatchResponseDTO> => {
@@ -57,32 +57,40 @@ export const getMatches = async (
   }
 
   const queryString = queryParams.toString();
-  const url = `/api/v1/matches${queryString ? `?${queryString}` : ''}`;
+  const url = `/matches${queryString ? `?${queryString}` : ''}`;
 
   const response = await apiClient.get<MatchResponseDTO>(url);
   return response.data;
 };
 
-// GET /api/v1/matches/:match_id - 특정 경기 상세 정보 조회
+// GET /matches/:match_id - 특정 경기 상세 정보 조회
 export const getMatchDetail = async (
   matchId: number
 ): Promise<MatchDetailResponseDTO> => {
-  const response = await apiClient.get<MatchDetailResponseDTO>(`/api/v1/matches/${matchId}`);
+  const response = await apiClient.get<MatchDetailResponseDTO>(`/matches/${matchId}`);
   return response.data;
 };
 
-// GET /api/v1/matches/:match_id/reservations - 경기별 모임 조회
+// GET /matches/:match_id/reservations - 경기별 모임 조회
 export const getMatchReservations = async (
   matchId: number
 ): Promise<MatchReservationsResponseDTO> => {
-  const response = await apiClient.get<MatchReservationsResponseDTO>(`/api/v1/matches/${matchId}/reservations`);
+  const response = await apiClient.get<MatchReservationsResponseDTO>(`/matches/${matchId}/reservations`);
   return response.data;
 };
 
-// POST /api/v1/reservations - 모임 생성
+// POST /reservations - 모임 생성
 export const createReservation = async (
   data: CreateReservationRequestDTO
 ): Promise<CreateReservationResponseDTO> => {
-  const response = await apiClient.post<CreateReservationResponseDTO>('/api/v1/reservations', data);
+  const response = await apiClient.post<CreateReservationResponseDTO>('/reservations', data);
+  return response.data;
+};
+
+// POST /reservations/{reservation_id}/join - 모임 참여
+export const joinReservation = async (
+  reservationId: number
+): Promise<{ success: boolean; message: string; participant_cnt: number }> => {
+  const response = await apiClient.post(`/reservations/${reservationId}/join`);
   return response.data;
 };
