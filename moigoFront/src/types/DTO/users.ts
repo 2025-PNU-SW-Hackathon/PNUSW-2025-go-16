@@ -86,3 +86,18 @@ export interface UpdateUserSettingsResponseDTO {
   success: boolean;
   message: string;
 } 
+
+export interface ReservationHistoryDTO {
+  success: boolean;
+  data: [{
+    reservation_id: number;
+    store_id: string;
+    reservation_start_time: string;
+    reservation_end_time: string;
+    reservation_bio: string;
+    reservation_match: string;
+    reservation_status: number;
+    reservation_participant_cnt: number;
+    reservation_max_participant_cnt: number;
+  }]
+}
