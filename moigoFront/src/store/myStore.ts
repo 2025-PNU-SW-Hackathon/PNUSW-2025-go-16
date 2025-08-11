@@ -9,6 +9,11 @@ interface UserProfile {
   id: string;
   name: string;
   email: string;
+  gender: 'male' | 'female';
+  phone?: string;
+  birthDate?: string;
+  bio?: string;
+  region?: string;
   profileImage?: string;
   grade: UserGrade;
   progressToNextGrade: number;
@@ -33,7 +38,8 @@ interface MyState {
 
   // 액션
   updateUserProfile: (profile: Partial<UserProfile>) => void;
-  initializeUserProfile: (authUser: { id: string; email: string }) => void;
+  updateProfileImage: (imageUri: string) => void;
+  initializeUserProfile: (authUser: { id: string; email: string; userType: 'sports_fan' | 'business' }) => void;
   resetUserProfile: () => void;
   toggleNotifications: () => void;
   setLoading: (loading: boolean) => void;
@@ -46,7 +52,7 @@ const initialSettings: MyPageSettings = {
 };
 
 // authStore의 사용자 정보를 기반으로 마이페이지 사용자 정보 생성
-const createUserProfileFromAuth = (authUser: { id: string; email: string }): UserProfile => {
+const createUserProfileFromAuth = (authUser: { id: string; email: string; userType: 'sports_fan' | 'business' }): UserProfile => {
   // 이메일에서 @ 앞부분을 이름으로 사용
   const name = authUser.email.split('@')[0];
 
@@ -54,6 +60,7 @@ const createUserProfileFromAuth = (authUser: { id: string; email: string }): Use
     id: authUser.id,
     name: name,
     email: authUser.email,
+    gender: 'male', // 기본값
     profileImage: undefined,
     grade: 'BRONZE',
     progressToNextGrade: 0,
@@ -74,12 +81,19 @@ export const useMyStore = create<MyState>((set, get) => ({
   // 사용자 프로필 업데이트
   updateUserProfile: (profile: Partial<UserProfile>) => {
     set((state) => ({
-      userProfile: state.userProfile ? { ...state.userProfile, ...profile } : null,
+      userProfile: state.userProfile ? { ...state.userProfile, ...profile } : profile as UserProfile,
+    }));
+  },
+
+  // 프로필 이미지 업데이트
+  updateProfileImage: (imageUri: string) => {
+    set((state) => ({
+      userProfile: state.userProfile ? { ...state.userProfile, profileImage: imageUri } : null,
     }));
   },
 
   // authStore의 사용자 정보로 프로필 초기화
-  initializeUserProfile: (authUser: { id: string; email: string }) => {
+  initializeUserProfile: (authUser: { id: string; email: string; userType: 'sports_fan' | 'business' }) => {
     const userProfile = createUserProfileFromAuth(authUser);
     set({ userProfile });
   },

@@ -11,4 +11,7 @@ export { useMyStore } from './myStore';
 
 // 설정 관련 스토어
 export { useSettingsStore } from './settingsStore';
-export { useParticipatedMatchesStore } from './participatedMatchesStore'; 
+export { useParticipatedMatchesStore } from './participatedMatchesStore';
+
+// 리뷰 관련 스토어
+export { useReviewStore } from './reviewStore'; 
