@@ -1,36 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { Reservation } from '@/types/reservation';
-import type { MatchingHistoryDTO } from '@/types/DTO/users';
-import { getMatchingHistory } from '@/apis/users';
+import { useGetReservationHistory } from './queries/useUserQueries';
 
 export default function useMeeting() {
   const [visible, setVisible] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
-  const [matchingHistory, setMatchingHistory] = useState<MatchingHistoryDTO[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  
+  const { 
+    data: reservationHistory, 
+    isLoading: loading, 
+    error: queryError,
+    refetch: refreshReservationHistory
+  } = useGetReservationHistory();
 
-  const fetchMatchingHistory = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await getMatchingHistory();
-      if (response.success) {
-        setMatchingHistory(response.data);
-      } else {
-        setError('매칭 이력을 불러오는데 실패했습니다.');
-      }
-    } catch (err) {
-      console.error('매칭 이력 조회 오류:', err);
-      setError('매칭 이력을 불러오는데 실패했습니다.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchMatchingHistory();
-  }, []);
+  const error = queryError ? '참여중인 모임 목록을 불러오는데 실패했습니다.' : null;
 
   const openModal = (reservation: Reservation) => {
     setSelectedReservation(reservation);
@@ -40,13 +23,13 @@ export default function useMeeting() {
   const closeModal = () => setVisible(false);
 
   const refreshMatchingHistory = () => {
-    fetchMatchingHistory();
+    refreshReservationHistory();
   };
 
   return {
     visible,
     selectedReservation,
-    matchingHistory,
+    matchingHistory: reservationHistory?.data || [],
     loading,
     error,
     openModal,

@@ -5,6 +5,8 @@ export interface Reservation {
   time: string;
   date: string;
   status: string;
+  store_id: string;
+  max_participant_cnt: number;
 }
 
 // 참여한 매칭 이력 관련 타입들
