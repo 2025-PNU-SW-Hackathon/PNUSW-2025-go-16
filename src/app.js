@@ -11,8 +11,10 @@ const authRoutes = require('./routes/auth_routes');
 const { Server } = require('socket.io');
 const handleSocket = require('./controllers/socket_controller');
 const http = require('http');
+const path = require('path');
 const paymentRoutes = require('./routes/payment_routes');
-dotenv.config();
+
+dotenv.config({ path: path.resolve(__dirname, '../.env') }); 
 
 const app = express();
 
@@ -37,8 +39,8 @@ app.use(express.json());
 app.use(requestLogger);
 
 // 내부 라우팅 등록
-app.use('/users', authRoutes);
-app.use('/reservations', reservationRoutes);
+app.use('/api/v1/users', authRoutes);
+app.use('/api/v1/reservations', reservationRoutes);
 app.use('/api/v1/reviews', reviewRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/chats', chatRoutes);
