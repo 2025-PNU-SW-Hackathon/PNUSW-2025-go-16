@@ -128,7 +128,7 @@ exports.getMyMatchings = async (user_id) => {
      JOIN chat_rooms cr ON cru.reservation_id = cr.reservation_id
      JOIN reservation_table r ON cr.reservation_id = r.reservation_id
      WHERE cru.user_id = ?
-       AND r.reservation_start_time < NOW()`,
+       AND r.reservation_start_time > NOW()`,
     [user_id]
   );
   return rows;
@@ -150,7 +150,7 @@ exports.getMyReservations = async (user_id) => {
      JOIN chat_rooms cr ON cru.reservation_id = cr.reservation_id
      JOIN reservation_table r ON cr.reservation_id = r.reservation_id
      WHERE cru.user_id = ?
-       AND r.reservation_start_time > NOW()`,
+       AND r.reservation_start_time < NOW()`,
     [user_id]
   );
   return rows;
