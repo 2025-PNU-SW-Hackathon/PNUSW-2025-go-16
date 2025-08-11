@@ -46,7 +46,7 @@ exports.createReservation = async (user_id, data) => {
 
   const create_chatRoom = await chatService.enterChatRoom(user_id, reservation_current_id);
   return {
-    reservation_id: result.insertId,
+    reservation_id: reservation_current_id,
     created_at: createdAt.toISOString(),
   };
 };
@@ -74,9 +74,9 @@ exports.joinReservation = async (user_id, reservation_id) => {
   );
   if (reservation.length == 0 || reservation[0].reservation_status !== 0) {
     const err = new Error("참여할 수 없는 모임입니다.");
-      err.statusCode = 400;
-      err.errorCode = "INVALID_ACTION";
-      throw err;
+    err.statusCode = 400;
+    err.errorCode = "INVALID_ACTION";
+    throw err;
   }
 
   // 참여 등록

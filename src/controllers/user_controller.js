@@ -99,6 +99,17 @@ exports.getMyMatchings = async (req, res, next) => {
   }
 };
 
+// 완료되지 않은 참여 모임
+exports.getMyReservations = async (req, res, next) => {
+  try {
+    const user_id = req.user.user_id;
+    const data = await userService.getMyReservations(user_id);
+    res.status(200).json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.updateProfile = async (req, res, next) => {
   try {
     const user_id = req.user.user_id;

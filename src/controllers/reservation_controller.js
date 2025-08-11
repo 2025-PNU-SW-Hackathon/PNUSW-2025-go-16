@@ -10,7 +10,10 @@ exports.cancelReservation = async (req, res, next) => {
 
     const result = await reservationService.cancelReservation(reservation_id, user_id);
 
-    res.status(200).json({ success: true, message: result });
+    res.status(200).json({ 
+      success: true, 
+      message: "모임이 정상적으로 취소되었습니다." 
+    });
   } catch (error) {
     next(error);
   }
@@ -37,7 +40,10 @@ exports.createReservation = async (req, res, next) => {
 
     res.json({
       success: true,
-      data: result,
+      data: {
+        reservation_id: result.reservation_id,
+        created_at: result.created_at
+      }
     });
   } catch (err) {
     next(err);
@@ -54,7 +60,8 @@ exports.joinReservation = async (req, res, next) => {
 
     res.json({
       success: true,
-      ...result,
+      message: "모임에 참여하였습니다.",
+      participant_cnt: result.participant_cnt
     });
   } catch (err) {
     next(err);
@@ -69,7 +76,18 @@ exports.getReservationList = async (req, res, next) => {
 
     res.json({
       success: true,
-      data,
+      data: data.map(item => ({
+        reservation_id: item.reservation_id,
+        store_id: item.store_id,
+        store_name: item.store_name,
+        reservation_start_time: item.reservation_start_time,
+        reservation_end_time: item.reservation_end_time,
+        reservation_bio: item.reservation_bio,
+        reservation_match: item.reservation_match,
+        reservation_status: item.reservation_status,
+        reservation_participant_cnt: item.reservation_participant_cnt,
+        reservation_max_participant_cnt: item.reservation_max_participant_cnt
+      }))
     });
   } catch (err) {
     next(err);
