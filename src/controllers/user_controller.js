@@ -1,6 +1,54 @@
 // src/controllers/user_controller.js
 const userService = require('../services/user_service');
 
+// 👤 회원가입 컨트롤러
+exports.registerUser = async (req, res, next) => {
+  try {
+    const {
+      user_id,
+      user_pwd,
+      user_email,
+      user_name,
+      user_phone_number,
+      user_region,
+      user_gender
+    } = req.body;
+
+    // 필수 필드 검증
+    if (!user_id || !user_pwd || !user_email || !user_name || !user_phone_number) {
+      return res.status(400).json({
+        success: false,
+        message: '필수 필드가 누락되었습니다. (user_id, user_pwd, user_email, user_name, user_phone_number)'
+      });
+    }
+
+    // 기본값 설정 (user_gender는 int 타입)
+    const userData = {
+      user_id,
+      user_pwd,
+      user_email,
+      user_name,
+      user_phone_number,
+      user_region: user_region || '미지정',
+      user_gender: user_gender || 0  // 0: 미지정, 1: 남성, 2: 여성
+    };
+
+    const result = await userService.registerUser(userData);
+    
+    res.status(201).json({
+      success: true,
+      message: '회원가입이 완료되었습니다.',
+      data: {
+        user_id: result.user_id,
+        user_name: result.user_name,
+        user_email: result.user_email
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // 👤 사용자 프로필 조회 컨트롤러
 exports.getUserProfile = async (req, res, next) => {
   try {

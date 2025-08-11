@@ -1,5 +1,65 @@
 // src/services/user_service.js
 const { getConnection } = require('../config/db_config');
+const bcrypt = require('bcryptjs');
+
+// 👤 회원가입 서비스
+exports.registerUser = async (userData) => {
+  const conn = getConnection();
+  
+  try {
+    const {
+      user_id,
+      user_pwd,
+      user_email,
+      user_name,
+      user_phone_number,
+      user_region,
+      user_gender
+    } = userData;
+
+    // 이메일 중복 확인
+    const [existingUsers] = await conn.query(
+      'SELECT user_id FROM user_table WHERE user_email = ?',
+      [user_email]
+    );
+
+    if (existingUsers.length > 0) {
+      const err = new Error('이미 사용 중인 이메일입니다.');
+      err.statusCode = 400;
+      err.errorCode = 'EMAIL_ALREADY_EXISTS';
+      throw err;
+    }
+
+    // 비밀번호 해싱
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(user_pwd, salt);
+
+    // 사용자 등록
+    const [result] = await conn.query(
+      `INSERT INTO user_table (
+        user_id, user_pwd, user_email, user_name, user_phone_number, 
+        user_region, user_gender, user_updated_time
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        user_id, hashedPassword, user_email, user_name, user_phone_number,
+        user_region, user_gender, new Date().toISOString().slice(0, 19).replace('T', ' ')
+      ]
+    );
+
+    return {
+      user_id,
+      user_name,
+      user_email
+    };
+
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '회원가입 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
 
 // 👤 사용자 프로필 조회 서비스
 exports.getUserProfile = async (userId) => {

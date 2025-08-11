@@ -7,6 +7,7 @@ const reviewRoutes = require('./routes/review_routes');
 const userRoutes = require('./routes/user_routes');
 const chatRoutes = require('./routes/chat_routes');
 const storeRoutes = require('./routes/store_routes');
+const authRoutes = require('./routes/auth_routes');
 const { Server } = require('socket.io');
 const handleSocket = require('./controllers/socket_controller');
 const http = require('http');
@@ -26,6 +27,7 @@ app.use(express.json());
 app.use(requestLogger);
 
 // 내부 라우팅 등록
+app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/reservations', reservationRoutes);
 app.use('/api/v1/reviews', reviewRoutes);
 app.use('/api/v1/users', userRoutes);
