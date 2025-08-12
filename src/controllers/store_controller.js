@@ -87,4 +87,67 @@ exports.getBankCodes = async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+};
+
+// 🏪 사장님 회원가입 컨트롤러
+exports.registerStore = async (req, res, next) => {
+  try {
+    const {
+      store_id,
+      store_pwd,
+      store_name,
+      business_number,
+      store_address,
+      store_phonenumber,
+      store_open_hour,
+      store_close_hour,
+      store_max_people_cnt,
+      store_max_table_cnt,
+      store_max_parking_cnt,
+      store_max_screen_cnt,
+      store_bio,
+      store_holiday
+    } = req.body;
+
+    // 필수 필드 검증
+    if (!store_id || !store_pwd || !store_name || !business_number || !store_address || !store_phonenumber) {
+      return res.status(400).json({
+        success: false,
+        message: '필수 필드가 누락되었습니다. (store_id, store_pwd, store_name, business_number, store_address, store_phonenumber)'
+      });
+    }
+
+    const storeData = {
+      store_id,
+      store_pwd,
+      store_name,
+      business_number,
+      store_address,
+      store_phonenumber,
+      store_open_hour: store_open_hour || 9,
+      store_close_hour: store_close_hour || 22,
+      store_max_people_cnt: store_max_people_cnt || 50,
+      store_max_table_cnt: store_max_table_cnt || 10,
+      store_max_parking_cnt: store_max_parking_cnt || 20,
+      store_max_screen_cnt: store_max_screen_cnt || 5,
+      store_bio: store_bio || '좋은 가게입니다.',
+      store_holiday: store_holiday || 0,
+      store_review_cnt: 0,
+      store_rating: 0
+    };
+
+    const result = await storeService.registerStore(storeData);
+    
+    res.status(201).json({
+      success: true,
+      message: '사장님 회원가입이 완료되었습니다.',
+      data: {
+        store_id: result.store_id,
+        store_name: result.store_name,
+        business_number: result.business_number
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
 }; 

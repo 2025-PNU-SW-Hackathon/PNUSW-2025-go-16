@@ -181,4 +181,79 @@ exports.getBankCodes = async () => {
       { bank_code: '011', bank_name: '카카오뱅크' }
     ];
   }
+};
+
+// 🏪 사장님 회원가입 서비스
+exports.registerStore = async (storeData) => {
+  const conn = getConnection();
+  
+  try {
+    const {
+      store_id,
+      store_pwd,
+      store_name,
+      business_number,
+      store_address,
+      store_phonenumber,
+      store_open_hour,
+      store_close_hour,
+      store_max_people_cnt,
+      store_max_table_cnt,
+      store_max_parking_cnt,
+      store_max_screen_cnt,
+      store_bio,
+      store_holiday,
+      store_review_cnt,
+      store_rating
+    } = storeData;
+
+    // 사업자 등록번호 중복 확인
+    const [existingStores] = await conn.query(
+      'SELECT store_id FROM store_table WHERE business_number = ?',
+      [business_number]
+    );
+
+    if (existingStores.length > 0) {
+      const err = new Error('이미 등록된 사업자 등록번호입니다.');
+      err.statusCode = 400;
+      err.errorCode = 'BUSINESS_NUMBER_ALREADY_EXISTS';
+      throw err;
+    }
+
+    // 비밀번호 해싱
+    const bcrypt = require('bcryptjs');
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(store_pwd, salt);
+
+    // 가게 등록
+    const [result] = await conn.query(
+      `INSERT INTO store_table (
+        store_id, store_pwd, store_name, business_number, store_address,
+        store_phonenumber, store_open_hour, store_close_hour,
+        store_max_people_cnt, store_max_table_cnt, store_max_parking_cnt,
+        store_max_screen_cnt, store_bio, store_holiday, store_review_cnt, store_rating,
+        ex1, ex2, bank_code, account_number, account_holder_name
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        store_id, hashedPassword, store_name, business_number, store_address,
+        store_phonenumber, store_open_hour, store_close_hour,
+        store_max_people_cnt, store_max_table_cnt, store_max_parking_cnt,
+        store_max_screen_cnt, store_bio, store_holiday, store_review_cnt, store_rating,
+        '기본값', '기본값', '000', '000000000000', '가게명'
+      ]
+    );
+
+    return {
+      store_id,
+      store_name,
+      business_number
+    };
+
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '사장님 회원가입 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
 }; 
