@@ -76,26 +76,35 @@ exports.kickUser = async (room_id, target_user_id, requester_id) => {
   const [result] = await conn.query('SELECT user_id from reservation_table WHERE reservation_id = ?',
     [room_id]
   );
+  console.log(requester_id);
   if (result.length > 0 && result[0].user_id === requester_id) {
     // 요청자가 방장인지 확인된 경우
-    await conn.query(
+    const [worked] = await conn.query(
       `UPDATE chat_room_users
       SET is_kicked = 1
-      WHERE chat_room_id = ? AND user_id = ?`,
+      WHERE reservation_id = ? AND user_id = ?`,
       [room_id, target_user_id]
     );
-    // 참여자 수 줄이기
-    await conn.query(
-      `UPDATE reservation_table
-      SET reservation_participant_cnt = reservation_participant_cnt - 1,
-      reservation_status = 0
-      WHERE reservation_id = ?`,
-      [reservation_id]
-    );
+    if (worked.changedRows > 0) {
+      // 참여자 수 줄이기
+      await conn.query(
+        `UPDATE reservation_table
+        SET reservation_participant_cnt = reservation_participant_cnt - 1,
+        reservation_status = 0
+        WHERE reservation_id = ?`,
+        [room_id]
+      );
+    }
+    else {
+      console.log("user not found");
+    }
     return { kicked_user_id: target_user_id };
   }
   else {
-    return res.status(403).json({ error: "방장이 아님." });
+    const err = new Error("권한이 없습니다.");
+    err.statusCode = 401;
+    err.errorCode = "INVALID_APPROACH";
+    throw err;
   }
 };
 
@@ -172,7 +181,7 @@ exports.enterChatRoom = async (user_id, reservation_id) => {
   );
 
   return {
-    chat_room_id,
+    reservation_id,
     message: '입장 완료',
   };
 };

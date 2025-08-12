@@ -41,9 +41,9 @@ app.use(requestLogger);
 app.use('/api/v1/reservations', reservationRoutes);
 app.use('/api/v1/reviews', reviewRoutes);
 app.use('/api/v1/users', userRoutes);
-app.use('/api/v1/chats', chatRoutes);
 app.use('/api/v1/stores', storeRoutes);
-
+app.use('/api/v1/chats/rooms', chatRoutes);
+app.use('/api/v1/payment', paymentRoutes);
 // 404 및 에러 핸들러 등록
 //app.use(notFound);
 app.use(errorHandler);
@@ -57,7 +57,7 @@ handleSocket(io);
 
 const test_token = jwt.sign(
     {
-      user_id: "yejun",
+      user_id: "yejun2",
     },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '2h' }

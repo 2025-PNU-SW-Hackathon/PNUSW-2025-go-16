@@ -19,8 +19,8 @@ router.get('/me/matchings', authMiddleware, userController.getMyMatchings);
 router.get('/me/reservations', authMiddleware, userController.getMyReservations);
 router.put('/me', authMiddleware, userController.updateProfile);
 router.put('/me/password', authMiddleware, userController.updatePassword);
-
-// 사용자 프로필 조회 API
+router.post('/login', authController.login);
+router.post('/register', userController.registerUser);
 router.get('/:userId/profile', authMiddleware, userController.getUserProfile);
 
 module.exports = router;
