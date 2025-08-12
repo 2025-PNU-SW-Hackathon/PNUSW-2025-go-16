@@ -574,7 +574,7 @@
 ```
 
 ### 5.5 채팅방 강퇴
-- **URL**: `DELETE /api/v1/chats/rooms/{roomId}/participants/{userId}`
+- **URL**: `DELETE /api/v1/chats/rooms/:roomId/kick/:userId`
 - **설명**: 채팅방에서 특정 참가자를 강퇴시킵니다.
 - **Headers**: `Authorization: Bearer <JWT>` ✅ 필수
 - **Response**:
