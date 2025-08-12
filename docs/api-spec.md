@@ -498,6 +498,179 @@
 }
 ```
 
+# 💰 결제 시스템 API (Routing 업데이트)
+
+> 이 문서는 실제 라우팅 패턴에 맞게 URL을 정리했습니다.  
+> 참고된 라우터:
+>
+> ```js
+> router.post('/request', authMiddleware, paymentController.createPaymentRequest);
+> router.post('/initiate', authMiddleware, paymentController.initiatePayment);
+> router.post('/release', authMiddleware, paymentController.releasePayments);
+> router.get('/status/:chatRoomId', authMiddleware, paymentController.getPaymentStatus);
+> router.post('/cancel', authMiddleware, paymentController.cancelPayment);
+> ```
+>
+> ⚠️ `DELETE /chat/rooms/:roomId/participants/:userId` 는 결제 라우터가 아닌 채팅/방 라우터에서 처리합니다.
+
+### 기본 라우팅 : /api/v1/payments
+
+---
+
+## 4.1 방장의 예약금 결제 요청
+- **Method & URL**: `POST /api/v1/payments/request`
+- **설명**: 방장이 참가자들에게 예약금 결제를 요청합니다.
+- **Headers**: `Authorization: Bearer <JWT>` ✅ 필수
+- **Request Body**:
+```json
+{
+  "chat_room_id": "abc123",
+  "amount": 5000,
+  "due_date": "2025-01-18 23:59:59",
+  "description": "축구 모임 예약금"
+}
+```
+- **Response**:
+```json
+{
+  "success": true,
+  "message": "결제 요청이 생성되었습니다.",
+  "data": {
+    "payment_request_id": 1,
+    "chat_room_id": "abc123",
+    "amount": 5000,
+    "due_date": "2025-01-18 23:59:59"
+  }
+}
+```
+
+---
+
+## 4.2 결제 상태 확인
+- **Method & URL**: `GET /api/v1/payments/status/{chatRoomId}`
+- **설명**: 채팅방의 결제 상태를 확인합니다.
+- **Headers**: `Authorization: Bearer <JWT>` ✅ 필수
+- **Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "chat_room_id": "abc123",
+    "total_participants": 5,
+    "paid_participants": 3,
+    "unpaid_participants": 2,
+    "payment_requests": [
+      {
+        "user_id": "user1",
+        "status": "paid",
+        "amount": 5000,
+        "paid_at": "2025-01-18 20:30:00"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## 4.3 결제 처리 (참가자 결제)
+- **Method & URL**: `POST /api/v1/payments/initiate`
+- **설명**: 참가자가 예약금을 결제합니다.
+- **Headers**: `Authorization: Bearer <JWT>` ✅ 필수
+- **Request Body**:
+```json
+{
+  "chat_room_id": "abc123",
+  "amount": 5000,
+  "payment_method": "bank_transfer"
+}
+```
+- **Response**:
+```json
+{
+  "success": true,
+  "message": "결제가 완료되었습니다.",
+  "data": {
+    "payment_id": 1,
+    "chat_room_id": "abc123",
+    "amount": 5000,
+    "status": "completed"
+  }
+}
+```
+
+---
+
+## 4.4 에스크로 해제 (정산 처리)
+- **Method & URL**: `POST /api/v1/payments/release`
+- **설명**: 결제가 완료된 인원에 대해 에스크로 금액을 해제(정산)합니다.
+- **Headers**: `Authorization: Bearer <JWT>` ✅ 필수
+- **Request Body (예시)**:
+```json
+{
+  "chat_room_id": "abc123"
+}
+```
+- **Response (예시)**:
+```json
+{
+  "success": true,
+  "message": "정산(에스크로 해제)이 완료되었습니다.",
+  "data": {
+    "chat_room_id": "abc123",
+    "released_total_amount": 25000,
+    "released_count": 5
+  }
+}
+```
+
+---
+
+## 4.5 결제 취소
+- **Method & URL**: `POST /api/v1/payments/cancel`
+- **설명**: 결제 요청 또는 특정 결제를 취소합니다.
+- **Headers**: `Authorization: Bearer <JWT>` ✅ 필수
+- **Request Body (예시)**:
+```json
+{
+  "chat_room_id": "abc123",
+  "reason": "모임 일정 변경"
+}
+```
+- **Response (예시)**:
+```json
+{
+  "success": true,
+  "message": "결제가 취소되었습니다.",
+  "data": {
+    "chat_room_id": "abc123",
+    "canceled": true
+  }
+}
+```
+
+---
+
+## 4.6 결제 미완료 참가자 강퇴 (채팅/방 라우터)
+- **Method & URL**: `DELETE /chat/rooms/{roomId}/participants/{userId}`
+- **설명**: 방장이 결제 기한이 지난 참가자를 채팅방에서 강퇴시킵니다.
+- **Headers**: `Authorization: Bearer <JWT>` ✅ 필수
+- **Response**:
+```json
+{
+  "success": true,
+  "message": "참가자가 성공적으로 강퇴되었습니다."
+}
+```
+
+---
+
+## 참고
+- `GET /status/{chatRoomId}` 만 경로 파라미터를 사용합니다. 그 외 엔드포인트는 실제 라우터에 맞춰 **Request Body**에 `chat_room_id`를 포함합니다.
+- 컨트롤러 함수명: `paymentController.createPaymentRequest`, `paymentController.initiatePayment`, `paymentController.releasePayments`, `paymentController.getPaymentStatus`, `paymentController.cancelPayment`.
+- 강퇴는 결제 라우터가 아닌 별도 `chatRoomController.kickParticipant` 에서 처리하는 것을 권장합니다.
+
+
 ---
 
 ## 💰 결제 시스템
