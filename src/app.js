@@ -42,6 +42,7 @@ app.use('/api/v1/reservations', reservationRoutes);
 app.use('/api/v1/reviews', reviewRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/chats', chatRoutes);
+app.use('/api/v1/stores', storeRoutes);
 
 // 404 및 에러 핸들러 등록
 //app.use(notFound);
