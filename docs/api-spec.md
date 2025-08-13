@@ -323,7 +323,7 @@
 
 ---
 
-## 9. 📖 참여한 매칭 이력 조회 API
+## 9-1. 📖 참여 완료된 매칭 이력 조회 API
 
 ### GET `/users/me/matchings`
 
@@ -340,11 +340,46 @@
   "success": true,
   "data": [
     {
-      "reservation_id": 101,
-      "reservation_match": "맨유 vs 리버풀",
-      "reservation_start_time": "2025-07-20T18:00:00",
-      "store_name": "티비있는 포차",
-      "status": "참여완료"
+      "reservation_id": 16,
+      "store_id": "store_123",
+      "reservation_start_time": "2025-08-10T10:00:00.000Z",
+      "reservation_end_time": "2025-08-10T12:00:00.000Z",
+      "reservation_bio": "치킨에 맥주까지 마시면서 친해져요!",
+      "reservation_match": "맨시티 vs 첼시",
+      "reservation_status": 0,
+      "reservation_participant_cnt": 1,
+      "reservation_max_participant_cnt": 6
+    }
+  ]
+}
+```
+
+## 9-2. 📖 참여중인 매칭 이력 조회 API
+
+### GET `/users/me/reservations`
+
+> 내가 참여중인 시작되지 않은 모임 이력을 조회합니다.
+
+#### Headers
+
+* Authorization: Bearer `<JWT>` ✅ 필수
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "reservation_id": 16,
+      "store_id": "store_123",
+      "reservation_start_time": "2025-08-10T10:00:00.000Z",
+      "reservation_end_time": "2025-08-10T12:00:00.000Z",
+      "reservation_bio": "치킨에 맥주까지 마시면서 친해져요!",
+      "reservation_match": "맨시티 vs 첼시",
+      "reservation_status": 0,
+      "reservation_participant_cnt": 1,
+      "reservation_max_participant_cnt": 6
     }
   ]
 }
@@ -954,4 +989,40 @@
   "message": "유효하지 않은 토큰입니다."
 ```
 
+
+### 14.5. 로그인 API
+
+**POST** `/users/login`
+
+> 사용자가 이메일과 비밀번호로 로그인합니다.  
+> 비밀번호는 **bcrypt**로 암호화되어 저장되며, 로그인 시 입력 비밀번호를 bcrypt로 검증합니다.
+
+---
+
+#### Headers
+
+- `Content-Type: application/json` ✅ 필수
+
+---
+
+#### Request Body
+
+```json
+{
+  "id": "",
+  "password": "plain_password"
+}
+```
+#### Response (200)
+
+```json
+{
+    "success": true,
+    "message": "로그인 성공",
+    "user": {
+        "user_id": "yejun",
+        "user_name": "예준"
+    }
+}
+```
 ---

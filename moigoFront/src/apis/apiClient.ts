@@ -30,6 +30,7 @@ apiClient.interceptors.request.use(
     const accessToken = getAccessToken();
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
+      console.log('accessToken', accessToken);
       console.log('인증 헤더 설정됨:', accessToken.substring(0, 20) + '...');
     } else {
       console.log('토큰이 없습니다! (로그인 전에는 정상)');

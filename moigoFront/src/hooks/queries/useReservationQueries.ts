@@ -5,6 +5,7 @@ import {
   getMatches,
   getMatchDetail,
   getMatchReservations,
+  joinReservation,
 } from '../../apis/reservations';
 import type {
   ReservationQueryDTO,
@@ -85,27 +86,32 @@ export const useCreateReservation = () => {
   });
 };
 
-// POST /reservations/{reservation_id}/join - 모임 참여 훅 (임시 구현)
+// POST /reservations/{reservation_id}/join - 모임 참여 훅
 export const useJoinReservation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (reservationId: number) => {
-      // 임시로 성공 응답 반환 (실제 API가 구현되면 교체)
-      console.log('모임 참여 시도:', reservationId);
-      return Promise.resolve({
-        success: true,
-        message: '모임 참여가 완료되었습니다.',
-        participant_cnt: 1
-      });
+      const response = await joinReservation(reservationId);
+      return response;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('모임 참여 성공:', data);
       // 모임 참여 성공 시 모임 목록 캐시 무효화
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
       queryClient.invalidateQueries({ queryKey: ['match-reservations'] });
+      // 참여중인 모임 목록 캐시도 무효화
+      queryClient.invalidateQueries({ queryKey: ['reservation-history'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('모임 참여 실패:', error);
+      
+      // 에러 코드에 따른 메시지 처리
+      if (error?.response?.data?.errorCode === 'ALREADY_JOINED') {
+        console.error('이미 참여 중인 모임입니다.');
+      } else if (error?.response?.data?.errorCode === 'INVALID_ACTION') {
+        console.error('참여할 수 없는 모임입니다.');
+      }
     },
   });
 }; 

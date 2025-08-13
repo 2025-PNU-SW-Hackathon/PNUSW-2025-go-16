@@ -16,33 +16,33 @@ interface MeetingModalProps {
 export default function MeetingModal({ visible, selectedReservation, onClose }: MeetingModalProps) {
   if (!selectedReservation) {
     return null;
-  }
+  } 
 
   return (
-    <ModalBox visible={visible} title="매칭 상세 정보" onClose={onClose}>
-      <View className="gap-8 mt-4">
+    <ModalBox visible={visible} title="예약 상세 정보" onClose={onClose}>
+      <View className="gap-8 mt-6">
         {/* 매칭 정보 리스트 */}
         <View className="gap-2 space-y-8">
-          <View className="flex-row justify-between items-center">
+          <View className="flex-row justify-between items-center mb-2">
             <Text className="text-lg font-medium text-gray-900">{selectedReservation.title}</Text>
           </View>
           <View className="flex-row justify-between items-center">
-            <Text className="text-sm text-gray-600">매칭 날짜</Text>
-            <Text className="text-sm font-medium text-gray-900">{selectedReservation.date}</Text>
+            <Text className="text-lg text-gray-600">예약 날짜</Text>
+            <Text className="text-lg font-medium text-gray-900">{selectedReservation.date}</Text>
           </View>
           <View className="flex-row justify-between items-center">
-            <Text className="text-sm text-gray-600">매칭 시간</Text>
-            <Text className="text-sm font-medium text-gray-900">{selectedReservation.time}</Text>
+            <Text className="text-lg text-gray-600">예약 시간</Text>
+            <Text className="text-lg font-medium text-gray-900">{selectedReservation.time}</Text>
           </View>
           <View className="flex-row justify-between items-center">
-            <Text className="text-sm text-gray-600">매칭 장소</Text>
-            <Text className="text-sm font-medium text-gray-900">
-              {selectedReservation.description}
-            </Text>
+            <Text className="text-lg text-gray-600">예약 장소</Text>
+                         <Text className="text-lg font-medium text-gray-900">
+               {selectedReservation.store_id}
+             </Text>
           </View>
           <View className="flex-row justify-between items-center">
-            <Text className="text-sm text-gray-600">매칭 상태</Text>
-            <Text className="text-sm font-medium text-gray-900">{selectedReservation.status}</Text>
+            <Text className="text-lg text-gray-600">모집 최대 인원</Text>
+                         <Text className="text-lg font-medium text-gray-900">{selectedReservation.max_participant_cnt}인</Text>
           </View>
         </View>
 

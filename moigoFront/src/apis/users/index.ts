@@ -9,6 +9,7 @@ import type {
   GetMatchingHistoryResponseDTO,
   UpdateUserSettingsRequestDTO,
   UpdateUserSettingsResponseDTO,
+  ReservationHistoryDTO,
 } from '../../types/DTO/users';
 import type { GetUserProfileResponseDTO } from '../../types/DTO/chat';
 
@@ -58,6 +59,12 @@ export const changePassword = async (
 // GET /users/me/matchings - 참여한 매칭 이력 조회
 export const getMatchingHistory = async (): Promise<GetMatchingHistoryResponseDTO> => {
   const response = await apiClient.get<GetMatchingHistoryResponseDTO>('/users/me/matchings');
+  return response.data;
+};
+
+// GET /users/me/reservations - 참여중인 매칭 이력 조회
+export const getReservationHistory = async (): Promise<ReservationHistoryDTO> => {
+  const response = await apiClient.get<ReservationHistoryDTO>('/users/me/reservations');
   return response.data;
 };
 

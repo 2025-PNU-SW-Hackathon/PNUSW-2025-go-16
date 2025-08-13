@@ -146,3 +146,56 @@ CREATE TABLE `chat_room_users` (
   `joined_at` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+CREATE TABLE `payment_request_table` (
+  `payment_request_id` int NOT NULL AUTO_INCREMENT,
+  `chat_room_id` int NOT NULL,
+  `requester_id` varchar(45) NOT NULL,
+  `amount` int NOT NULL,
+  `message` text,
+  `request_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `status` enum('pending','completed','cancelled') DEFAULT 'pending',
+  PRIMARY KEY (`payment_request_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+CREATE TABLE `payment_table` (
+  `payment_id` int NOT NULL AUTO_INCREMENT,
+  `chat_room_id` int NOT NULL,
+  `payer_id` varchar(45) NOT NULL,
+  `payment_amount` int NOT NULL,
+  `payment_method` enum('card','bank_transfer','cash','mobile_payment') NOT NULL,
+  `payment_status` enum('pending','completed','failed','refunded') DEFAULT 'pending',
+  `payment_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`payment_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+--------chat_room_users table update -------------
+ALTER TABLE chat_room_users
+ADD COLUMN payment_status ENUM('pending', 'completed', 'refunded') DEFAULT 'pending',
+ADD COLUMN payment_method ENUM('card','bank_transfer','cash','mobile_payment'),
+ADD COLUMN payment_key VARCHAR(100),
+ADD COLUMN payment_amount INT;
+
+
+CREATE TABLE `bank_codes` (
+  `bank_code` varchar(10) NOT NULL,
+  `bank_name` varchar(50) NOT NULL,
+  PRIMARY KEY (`bank_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 주요 은행 코드 데이터
+INSERT INTO bank_codes (bank_code, bank_name) VALUES
+('001', '한국은행'),
+('002', '산업은행'),
+('003', '기업은행'),
+('004', '국민은행'),
+('005', '하나은행'),
+('006', '신한은행'),
+('007', '우리은행'),
+('008', '농협은행'),
+('009', '수협은행'),
+('010', '케이뱅크'),
+('011', '카카오뱅크');

@@ -6,6 +6,7 @@ import {
   getMatchingHistory,
   updateUserSettings,
   getUserProfile,
+  getReservationHistory,
 } from '../../apis/users';
 import type {
   UpdateProfileRequestDTO,
@@ -41,6 +42,14 @@ export const useGetUserProfile = (userId: string) => {
     enabled: !!userId,
     staleTime: 5 * 60 * 1000, // 5분
     gcTime: 15 * 60 * 1000, // 15분
+  });
+};
+
+// GET /users/me/reservations - 참여중인 매칭 이력 조회 훅
+export const useGetReservationHistory = () => {
+  return useQuery({
+    queryKey: ['reservation-history'],
+    queryFn: () => getReservationHistory(),
   });
 };
 
