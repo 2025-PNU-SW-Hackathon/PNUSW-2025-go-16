@@ -28,19 +28,16 @@ exports.markAllMessagesAsRead = async (user_id, room_id) => {
     const new_message_id = ((last_message_id[0]?.maxId) ?? 0);
     console.log(last_message_id);
     console.log(new_message_id);
-    if (new_message_id > 0) {
-        // 메시지 읽음 업데이트
-        await conn.query(
-            'UPDATE chat_read_status SET last_read_message_id = ?, updated_at = CURRENT_TIMESTAMP WHERE chat_room_id = ? AND user_id = ?',
-            [new_message_id, room_id, user_id]
-        )
-    }
-    else {
-        // 메시지 읽음 테이블 추가
-        await conn.query('INSERT INTO chat_read_status (chat_room_id, user_id, last_read_message_id) VALUES (?, ?, ?)'
-            , [room_id, user_id, -1]
-        );
-    }
+    
+    // UPSERT 방식으로 읽음 상태 업데이트
+    await conn.query(
+        `INSERT INTO chat_read_status (chat_room_id, user_id, last_read_message_id, updated_at) 
+         VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+         ON DUPLICATE KEY UPDATE 
+         last_read_message_id = VALUES(last_read_message_id),
+         updated_at = CURRENT_TIMESTAMP`,
+        [room_id, user_id, new_message_id > 0 ? new_message_id : -1]
+    );
 
     return true;
 }
