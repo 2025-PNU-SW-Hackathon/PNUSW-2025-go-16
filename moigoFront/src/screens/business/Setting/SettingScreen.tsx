@@ -13,11 +13,15 @@ import MinReservationModal from '@/components/business/MinReservationModal';
 import ReservationDepositModal from '@/components/business/ReservationDepositModal';
 import LogoutConfirmModal from '@/components/business/LogoutConfirmModal';
 import WithdrawConfirmModal from '@/components/business/WithdrawConfirmModal';
+import { useAuthStore } from '@/store/authStore';
+import { useMyStore } from '@/store/myStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'StoreBasicInfo'>;
 
 export default function SettingScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const { logout: authLogout } = useAuthStore();
+  const { resetUserProfile } = useMyStore();
   const [showMinReservationModal, setShowMinReservationModal] = useState(false);
   const [showReservationDepositModal, setShowReservationDepositModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -44,10 +48,20 @@ export default function SettingScreen() {
   };
 
   const handleConfirmLogout = () => {
-    // 실제 로그아웃 로직
+    // 로그아웃 실행
     console.log('로그아웃 실행');
+    
+    // myStore의 사용자 정보 초기화
+    resetUserProfile();
+    
+    // authStore의 로그아웃 실행
+    authLogout();
+    
+    // 모달 닫기
     setShowLogoutModal(false);
-    // TODO: 로그아웃 API 호출 및 상태 정리
+    
+    // 첫 화면(Onboarding)으로 이동
+    // RootNavigator에서 isLoggedIn이 false일 때 자동으로 Onboarding 화면으로 이동됨
   };
 
   const handleWithdraw = () => {
