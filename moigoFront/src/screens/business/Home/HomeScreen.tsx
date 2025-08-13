@@ -1,9 +1,63 @@
-import { Text, View, ScrollView } from "react-native";
+import { Text, View, ScrollView, TouchableOpacity, Alert } from "react-native";
+import { useState } from "react";
+import { Feather } from "@expo/vector-icons";
 import StatsCard from "@/components/business/StatsCard";
 import ReservationCard from "@/components/business/ReservationCard";
 import PromotionCard from "@/components/business/PromotionCard";
+import AcceptModal from "./AcceptModal";
+import RejectModal from "./RejectModal";
+import { COLORS } from "@/constants/colors";
 
 export default function BusinessHomeScreen () {
+  const [isAcceptModalVisible, setIsAcceptModalVisible] = useState(false);
+  const [isRejectModalVisible, setIsRejectModalVisible] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<{
+    title: string;
+    type: string;
+    time: string;
+    participants: string;
+    location: string;
+  } | null>(null);
+
+  const handleReservationAction = (
+    action: 'confirm' | 'reject',
+    eventData: {
+      title: string;
+      type: string;
+      time: string;
+      participants: string;
+      location: string;
+    }
+  ) => {
+    setSelectedEvent(eventData);
+    if (action === 'confirm') {
+      setIsAcceptModalVisible(true);
+    } else {
+      setIsRejectModalVisible(true);
+    }
+  };
+
+  const handleModalConfirm = () => {
+    if (selectedEvent) {
+      if (isAcceptModalVisible) {
+        console.log('예약 승인:', selectedEvent.title);
+        Alert.alert('승인 완료', '예약이 승인되었습니다.');
+      } else {
+        console.log('예약 거절:', selectedEvent.title);
+        Alert.alert('거절 완료', '예약이 거절되었습니다.');
+      }
+    }
+    setIsAcceptModalVisible(false);
+    setIsRejectModalVisible(false);
+    setSelectedEvent(null);
+  };
+
+  const handleModalCancel = () => {
+    setIsAcceptModalVisible(false);
+    setIsRejectModalVisible(false);
+    setSelectedEvent(null);
+  };
+
   return (
     <View className="flex-1 bg-white">
       <ScrollView className="flex-1 px-4 pt-8 pb-20" showsVerticalScrollIndicator={false}>
@@ -39,6 +93,8 @@ export default function BusinessHomeScreen () {
               time="19:30"
               participants="김민준 외 4명"
               location="테이블 3번"
+              onConfirm={(eventData) => handleReservationAction('confirm', eventData)}
+              onReject={(eventData) => handleReservationAction('reject', eventData)}
             />
             <ReservationCard
               eventType="야구 경기"
@@ -46,6 +102,8 @@ export default function BusinessHomeScreen () {
               time="18:00"
               participants="박지현 외 3명"
               location="테이블 5번"
+              onConfirm={(eventData) => handleReservationAction('confirm', eventData)}
+              onReject={(eventData) => handleReservationAction('reject', eventData)}
             />
             <ReservationCard
               eventType="농구 경기"
@@ -53,6 +111,8 @@ export default function BusinessHomeScreen () {
               time="20:00"
               participants="이서연 외 7명"
               location="VIP 룸"
+              onConfirm={(eventData) => handleReservationAction('confirm', eventData)}
+              onReject={(eventData) => handleReservationAction('reject', eventData)}
             />
           </View>
         </View>
@@ -73,6 +133,21 @@ export default function BusinessHomeScreen () {
           />
         </View>
       </ScrollView>
+
+      {/* 분리된 모달들 */}
+      <AcceptModal
+        visible={isAcceptModalVisible}
+        onClose={handleModalCancel}
+        onConfirm={handleModalConfirm}
+        eventData={selectedEvent}
+      />
+      
+      <RejectModal
+        visible={isRejectModalVisible}
+        onClose={handleModalCancel}
+        onConfirm={handleModalConfirm}
+        eventData={selectedEvent}
+      />
     </View>
   );
 };

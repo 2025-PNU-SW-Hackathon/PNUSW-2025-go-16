@@ -75,7 +75,10 @@ export const useUpdateProfile = () => {
 // PUT /users/me/password - 비밀번호 변경 훅
 export const useChangePassword = () => {
   return useMutation({
-    mutationFn: (data: ChangePasswordRequestDTO) => changePassword(data),
+    mutationFn: (data: ChangePasswordRequestDTO & { endpoint?: string }) => {
+      const { endpoint, ...passwordData } = data;
+      return changePassword(passwordData, endpoint);
+    },
     onError: (error) => {
       console.error('비밀번호 변경 실패:', error);
     },

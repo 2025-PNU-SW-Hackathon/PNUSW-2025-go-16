@@ -110,6 +110,7 @@ export default function ChangePasswordScreen() {
         type={toastType}
         onHide={() => setShowToast(false)}
         duration={2000}
+        className="bottom-10 top-auto"
       />
     </SafeAreaView>
   );
