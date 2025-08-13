@@ -3,8 +3,6 @@ import { View, Text, ScrollView, TouchableOpacity, TextInput } from 'react-nativ
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/types/RootStackParamList';
-import { Feather } from '@expo/vector-icons';
-import { COLORS } from '@/constants/colors';
 import ToggleSwitch from '@/components/common/ToggleSwitch';
 import Toast from '@/components/common/Toast';
 
@@ -142,7 +140,7 @@ export default function ReservationTimeScreen() {
 
         {/* 시간대 설정 섹션 */}
         <View className="mb-8">
-          <Text className="text-lg font-semibold text-gray-800 mb-4">시간대 설정</Text>
+          <Text className="mb-4 text-lg font-semibold text-gray-800">시간대 설정</Text>
           
           <View className="flex-row space-x-4">
             {/* 시작 시간 */}
@@ -173,11 +171,11 @@ export default function ReservationTimeScreen() {
 
         {/* 설정 시간 요약 섹션 */}
         <View className="mb-8">
-          <Text className="text-lg font-semibold text-gray-800 mb-4">설정 시간 요약</Text>
+          <Text className="mb-4 text-lg font-semibold text-gray-800">설정 시간 요약</Text>
           
           {schedule.map((day) => (
-            <View key={day.id} className="mb-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
-              <Text className="text-base font-medium text-gray-800 mb-3">{day.name}</Text>
+            <View key={day.id} className="p-4 mb-3 bg-gray-50 rounded-xl border border-gray-200">
+              <Text className="mb-3 text-base font-medium text-gray-800">{day.name}</Text>
               
               {day.isSelected && (
                 <View className="flex-row space-x-4">
@@ -185,7 +183,7 @@ export default function ReservationTimeScreen() {
                   <View className="flex-1">
                     <Text className="mb-2 text-xs font-medium text-gray-500">시작 시간</Text>
                     <TextInput
-                      className="p-2 bg-white rounded border border-gray-200 text-center text-sm"
+                      className="p-2 text-sm text-center bg-white rounded border border-gray-200"
                       value={day.startTime || globalStartTime}
                       onChangeText={(time) => handleIndividualTimeChange(day.id, 'startTime', time)}
                       placeholder={globalStartTime || "05:00"}
@@ -197,7 +195,7 @@ export default function ReservationTimeScreen() {
                   <View className="flex-1">
                     <Text className="mb-2 text-xs font-medium text-gray-500">종료 시간</Text>
                     <TextInput
-                      className="p-2 bg-white rounded border border-gray-200 text-center text-sm"
+                      className="p-2 text-sm text-center bg-white rounded border border-gray-200"
                       value={day.endTime || globalEndTime}
                       onChangeText={(time) => handleIndividualTimeChange(day.id, 'endTime', time)}
                       placeholder={globalEndTime || "23:00"}
@@ -209,7 +207,7 @@ export default function ReservationTimeScreen() {
               
               {/* 시간 요약 표시 */}
               {day.isSelected && (day.startTime || day.endTime || globalStartTime || globalEndTime) ? (
-                <Text className="mt-2 text-sm text-orange-500 font-medium">
+                <Text className="mt-2 text-sm font-medium text-orange-500">
                   {(day.startTime || globalStartTime) && (day.endTime || globalEndTime)
                     ? `${day.startTime || globalStartTime} ~ ${day.endTime || globalEndTime}`
                     : '시간 미설정'
@@ -226,7 +224,7 @@ export default function ReservationTimeScreen() {
       {/* 설정 저장 버튼 */}
       <View className="px-4 pb-8 bg-white">
         <TouchableOpacity 
-          className="w-full py-4 bg-orange-500 rounded-xl"
+          className="py-4 w-full bg-orange-500 rounded-xl"
           onPress={handleSave}
           activeOpacity={0.7}
         >

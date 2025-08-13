@@ -189,9 +189,9 @@ export default function SettingScreen() {
         <SettingSection title="계정 관리">
           <MenuItem
             title="사업자 정보 수정"
-            icon="user"
-            iconColor="#6B7280"
-            onPress={() => console.log('사업자 정보 수정')}
+            icon="file-text"
+            iconColor="#8B5CF6"
+            onPress={() => navigation.navigate('BusinessInfoEdit')}
             className="mb-0 rounded-t-2xl border-2 border-mainGray"
           />
           

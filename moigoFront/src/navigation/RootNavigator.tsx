@@ -20,6 +20,7 @@ import StoreDetailInfoScreen from '@/screens/business/Setting/StoreDetailInfoScr
 import SportsRegistrationScreen from '@/screens/business/Setting/SportsRegistrationScreen';
 import BusinessHoursScreen from '@/screens/business/Setting/BusinessHoursScreen';
 import ReservationTimeScreen from '@/screens/business/Setting/ReservationTimeScreen';
+import BusinessInfoEditScreen from '@/screens/business/Setting/BusinessInfoEditScreen';
 import ChatScreen from '@/screens/ChatScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -99,6 +100,14 @@ export default function RootNavigator() {
             options={{ 
               headerShown: true,
               header: () => <CustomHeader title="예약 시간 설정" />,
+            }} 
+          />
+          <Stack.Screen 
+            name="BusinessInfoEdit" 
+            component={BusinessInfoEditScreen} 
+            options={{ 
+              headerShown: true,
+              header: () => <CustomHeader title="사업자 정보 수정" />,
             }} 
           />
           <Stack.Screen 
