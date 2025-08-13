@@ -63,9 +63,14 @@ exports.createPaymentRequest = async ({ chat_room_id, requester_id, amount, mess
 
     // 메시지를 해당 방에 브로드캐스트
     io.to(chat_room_id).emit('newMessage', new_message_result);
+
+    // 읽음 처리
+    const socketsInRoom = await io.in(chat_room_id).fetchSockets();
+    for (const socket of socketsInRoom) {
+      await messageService.markAllMessagesAsRead(socket.user.user_id, chat_room_id);
+    }
   } catch (err) {
     console.error('메시지 저장 오류:', err);
-    socket.emit('error', '메시지를 보낼 수 없습니다.');
   }
 
   return { payment_request_id: result.insertId, status: 'pending' };
