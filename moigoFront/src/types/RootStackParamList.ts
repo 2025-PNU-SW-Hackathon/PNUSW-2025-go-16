@@ -1,4 +1,4 @@
-import { ChatRoom } from './ChatTypes';
+import type { ChatRoomDTO } from './DTO/chat';
 
 export type RootStackParamList = {
   Onboarding: undefined;
@@ -6,7 +6,8 @@ export type RootStackParamList = {
   Signup: undefined;
   Main: { screen?: string };
   Business: undefined;
-  ChatRoom: { chatRoom: ChatRoom };
+  ChatList: undefined;
+  ChatRoom: { chatRoom: ChatRoomDTO };
   Profile: undefined;
   MyInfoSetting: undefined;
   CreateMeeting: undefined;

@@ -5,6 +5,7 @@ import MainTabNavigator from './MainTabNavigator';
 import OnboardingScreen from '@/screens/OnboardingScreen';
 import LoginScreen from '@/screens/LoginScreen';
 import SignupScreen from '@/screens/SignupScreen';
+import ChatListScreen from '@/screens/ChatListScreen';
 import ChatRoomScreen from '@/screens/ChatRoomScreen';
 import Profile from '@/screens/user/Mypage/Profile';
 import MyInfoSetting from '@/screens/user/Mypage/MyInfoSetting';
@@ -37,6 +38,14 @@ export default function RootNavigator() {
               {() => <MainTabNavigator />}
             </Stack.Screen>
           )}
+          <Stack.Screen 
+            name="ChatList" 
+            component={ChatListScreen} 
+            options={{ 
+              headerShown: true,
+              header: () => <CustomHeader title="채팅" />,
+            }} 
+          />
           <Stack.Screen name="ChatRoom" component={ChatRoomScreen} options={{ headerShown: false }} />
           <Stack.Screen 
             name="MyInfoSetting" 

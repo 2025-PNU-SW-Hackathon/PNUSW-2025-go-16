@@ -1,379 +1,411 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { RootStackParamList } from '@/types/RootStackParamList';
-import { ChatRoom, ChatMessage, MessageGroup } from '@/types/ChatTypes';
-import ChatBubble from '@/components/chat/ChatBubble';
-import ChatStatusMessage from '@/components/chat/ChatStatusMessage';
-import ReservationDepositInfo from '@/components/chat/ReservationDepositInfo';
-import PaymentModal from '@/components/common/PaymentModal';
-import DropdownMenu, { DropdownOption } from '@/components/common/DropdownMenu';
-import Feather from 'react-native-vector-icons/Feather';
-import { groupMessages } from '@/utils/chatUtils';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
+import { useChatMessages } from '@/hooks/queries/useChatQueries';
+import { socketManager } from '@/utils/socketUtils';
+import { useAuthStore } from '@/store/authStore';
+import { formatTime } from '@/utils/dateUtils';
+import type { ChatMessageDTO, NewMessageDTO } from '@/types/DTO/chat';
+import type { RootStackParamList } from '@/types/RootStackParamList';
 
 type ChatRoomScreenRouteProp = RouteProp<RootStackParamList, 'ChatRoom'>;
 
-// 테스트 데이터
-const testMessages: ChatMessage[] = [
-  {
-    id: '1',
-    senderId: 'system',
-    senderName: '시스템',
-    senderAvatar: '',
-    message: '새로운 멤버가 참여했습니다.',
-    timestamp: new Date('2024-01-15T10:00:00'),
-    type: 'system'
-  },
-  {
-    id: '2',
-    senderId: 'user123',
-    senderName: '박태원 (방장)',
-    senderAvatar: '방',
-    message: '안녕하세요! 오늘 함께 경기 볼 멤버분들 반갑습니다',
-    timestamp: new Date('2024-01-15T10:01:00'),
-    type: 'text'
-  },
-  {
-    id: '3',
-    senderId: 'currentUser',
-    senderName: '나',
-    senderAvatar: '나',
-    message: '안녕하세요! 저도 반갑습니다',
-    timestamp: new Date('2024-01-15T10:02:00'),
-    type: 'text'
-  },
-  {
-    id: '4',
-    senderId: 'currentUser',
-    senderName: '나',
-    senderAvatar: '나',
-    message: '오늘 경기 기대되네요!',
-    timestamp: new Date('2024-01-15T10:02:30'),
-    type: 'text'
-  },
-  {
-    id: '5',
-    senderId: 'currentUser',
-    senderName: '나',
-    senderAvatar: '나',
-    message: '몇 시에 만나나요?',
-    timestamp: new Date('2024-01-15T10:03:00'),
-    type: 'text'
-  },
-  {
-    id: '6',
-    senderId: 'user456',
-    senderName: '정예준',
-    senderAvatar: '정',
-    message: '네 안녕하세요~ 오늘 경기 기대되네요!',
-    timestamp: new Date('2024-01-15T10:04:00'),
-    type: 'text'
-  },
-  {
-    id: '7',
-    senderId: 'user789',
-    senderName: '김세한',
-    senderAvatar: '김',
-    message: '정말 긴 메시지를 보내면 어떻게 될까요? 이렇게 긴 텍스트가 들어가면 자동으로 줄바꿈이 되어서 다음 줄로 넘어가게 됩니다. 이제 말풍선이 더 자연스럽게 보일 거예요!',
-    timestamp: new Date('2024-01-15T10:05:00'),
-    type: 'text'
-  },
-  {
-    id: '8',
-    senderId: 'user789',
-    senderName: '김세한',
-    senderAvatar: '김',
-    message: '저도 기대됩니다!',
-    timestamp: new Date('2024-01-15T10:05:30'),
-    type: 'text'
-  },
-  {
-    id: '9',
-    senderId: 'system',
-    senderName: '시스템',
-    senderAvatar: '',
-    message: '매칭 모집이 마감되었습니다.',
-    timestamp: new Date('2024-01-15T10:06:00'),
-    type: 'system'
-  },
-  {
-    id: '10',
-    senderId: 'user123',
-    senderName: '박태원 (방장)',
-    senderAvatar: '방',
-    message: '마감했어요! 가게 찾아봅시다~',
-    timestamp: new Date('2024-01-15T10:07:00'),
-    type: 'text'
-  },
-  {
-    id: '11',
-    senderId: 'user123',
-    senderName: '박태원 (방장)',
-    senderAvatar: '방',
-    message: '',
-    timestamp: new Date('2024-01-15T10:07:02'),
-    type: 'store',
-    storeInfo: {
-      storeName: "챔피언 스포츠 펍",
-      rating: 4.8,
-      reviewCount: 128,
-      imageUrl: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
-    }
-  },
-  {
-    id: '12',
-    senderId: 'user123',
-    senderName: '박태원 (방장)',
-    senderAvatar: '방',
-    message: '이곳은 분위기가 좋고 TV도 크게 있어서 경기 보기 좋아요',
-    timestamp: new Date('2024-01-15T10:08:00'),
-    type: 'text'
-  },
-  {
-    id: '13',
-    senderId: 'currentUser',
-    senderName: '나',
-    senderAvatar: '나',
-    message: '',
-    timestamp: new Date('2024-01-15T10:08:02'),
-    type: 'store',
-    storeInfo: {
-      storeName: "챔피언 스포츠 펍",
-      rating: 5.0,
-      reviewCount: 1208,
-      imageUrl: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
-    }
-  },
-  {
-    id: '14',
-    senderId: 'currentUser',
-    senderName: '나',
-    senderAvatar: '나',
-    message: '여기가 더 좋은듯요',
-    timestamp: new Date('2024-01-15T10:08:05'),
-    type: 'text'
-  }
-];
-
 export default function ChatRoomScreen() {
-  const navigation = useNavigation();
   const route = useRoute<ChatRoomScreenRouteProp>();
+  const navigation = useNavigation();
   const { chatRoom } = route.params;
+  const { user } = useAuthStore();
   const [message, setMessage] = useState('');
-  const [showMenu, setShowMenu] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
-  
-  // 예약금 관련 상태 (실시간 업데이트 가능)
-  const [depositInfo, setDepositInfo] = useState({
-    participants: [
-      { id: '1', name: '박태원', avatar: '방', isHost: true, hasDeposited: true },
-      { id: '2', name: '김세한', avatar: '참', isHost: false, hasDeposited: false },
-      { id: '3', name: '김재혁', avatar: '참', isHost: false, hasDeposited: false },
-      { id: '4', name: '정예준', avatar: '참', isHost: false, hasDeposited: false },
-    ],
-    depositAmount: 5000,
-    timeLimit: 30
-  });
+  const [messages, setMessages] = useState<ChatMessageDTO[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const flatListRef = useRef<FlatList>(null);
 
-  // 현재 사용자 ID (실제로는 세션에서 가져와야 함)
-  const currentUserId = 'currentUser';
+  const { data, isLoading, error, refetch } = useChatMessages(chatRoom.chat_room_id);
 
-  // 방장용 메뉴 옵션
-  const hostMenuOptions: DropdownOption[] = [
-    { id: '1', label: '매칭 정보 보기', onPress: () => console.log('매칭 정보 보기') },
-    { id: '2', label: '매칭 정보 수정하기', onPress: () => console.log('매칭 정보 수정하기') },
-    { id: '3', label: '매칭 모집 마감하기', onPress: () => console.log('매칭 모집 마감하기') },
-    { id: '4', label: '참여자 목록', onPress: () => console.log('참여자 목록') },
-    { id: '5', label: '채팅방 나가기', onPress: () => navigation.goBack() },
-    { id: '6', label: '신고하기', isDanger: true, onPress: () => console.log('신고하기') },
-  ];
+  // 소켓 연결 및 메시지 처리
+  useEffect(() => {
+    console.log('ChatRoomScreen - 채팅방 입장:', chatRoom.chat_room_id);
+    
+    // 소켓 연결 시도
+    const connectSocket = async () => {
+      setIsConnecting(true);
+      try {
+        // 소켓 연결
+        socketManager.connect();
+        
+        // 연결 상태 확인을 위한 타이머
+        const checkConnection = setInterval(() => {
+          if (socketManager.isConnected()) {
+            setIsConnected(true);
+            setIsConnecting(false);
+            clearInterval(checkConnection);
+            
+            // 채팅방 입장
+            socketManager.joinRoom(chatRoom.chat_room_id);
+            console.log('채팅방 입장 완료:', chatRoom.chat_room_id);
+          }
+        }, 100);
 
-  // 일반 참여자용 메뉴 옵션
-  const participantMenuOptions: DropdownOption[] = [
-    { id: '1', label: '채팅방 정보', onPress: () => console.log('채팅방 정보') },
-    { id: '2', label: '멤버 관리', onPress: () => console.log('멤버 관리') },
-    { id: '3', label: '알림 설정', onPress: () => console.log('알림 설정') },
-    { id: '4', label: '채팅방 나가기', onPress: () => navigation.goBack() },
-  ];
+        // 5초 후 연결 실패 시 타이머 정리
+        setTimeout(() => {
+          clearInterval(checkConnection);
+          if (!socketManager.isConnected()) {
+            setIsConnecting(false);
+            console.error('소켓 연결 시간 초과');
+          }
+        }, 5000);
+      } catch (error) {
+        console.error('소켓 연결 실패:', error);
+        setIsConnecting(false);
+      }
+    };
 
-  // 현재 사용자의 메뉴 옵션 결정
-  const menuOptions = chatRoom.isHost ? hostMenuOptions : participantMenuOptions;
+    connectSocket();
 
-  // 메시지 그룹화 로직
-  const groupedMessages = useMemo(() => {
-    return groupMessages(testMessages, currentUserId);
-  }, [currentUserId]);
+    // 새 메시지 수신 콜백 등록
+    const handleNewMessage = (newMessage: NewMessageDTO) => {
+      console.log('새 메시지 수신:', newMessage);
+      setMessages(prev => [...prev, {
+        id: newMessage.id,
+        sender_id: newMessage.sender_id,
+        message: newMessage.message,
+        created_at: newMessage.created_at,
+        read_count: newMessage.read_count || 0
+      }]);
+    };
+
+    socketManager.onNewMessage(handleNewMessage);
+
+    // 에러 콜백 등록
+    const handleSocketError = (error: any) => {
+      console.error('소켓 에러:', error);
+      Alert.alert('연결 오류', '채팅 연결에 문제가 발생했습니다.');
+    };
+
+    socketManager.onError(handleSocketError);
+
+    // 컴포넌트 언마운트 시 정리
+    return () => {
+      console.log('ChatRoomScreen - 채팅방 나가기:', chatRoom.chat_room_id);
+      socketManager.removeCallback(handleNewMessage);
+      socketManager.leaveRoom(chatRoom.chat_room_id);
+    };
+  }, [chatRoom.chat_room_id]);
+
+  // API에서 받은 메시지 데이터 처리
+  useEffect(() => {
+    if (data?.data) {
+      console.log('API에서 메시지 데이터 수신:', data.data.length, '개');
+      setMessages(data.data);
+    }
+  }, [data]);
 
   const handleSendMessage = () => {
-    if (message.trim()) {
-      // TODO: 메시지 전송 로직 구현
-      console.log('메시지 전송:', message);
-      setMessage('');
-    }
-  };
+    if (!message.trim()) return;
 
-  // 예약금 입금 처리 함수 (결제 모달 열기)
-  const handleDeposit = (participantId: string) => {
-    setSelectedParticipantId(participantId);
-    setShowPaymentModal(true);
-  };
-
-  // 결제 수단 선택 처리
-  const handlePaymentMethodSelect = (method: 'kakao' | 'naver' | 'bank') => {
-    console.log(`결제 수단 선택: ${method}, 참가자 ID: ${selectedParticipantId}`);
-    
-    // TODO: 실제 결제 로직 구현
-    // 여기서는 테스트용으로 바로 입금 완료 처리
-    if (selectedParticipantId) {
-      setDepositInfo(prev => ({
-        ...prev,
-        participants: prev.participants.map(p => 
-          p.id === selectedParticipantId 
-            ? { ...p, hasDeposited: true }
-            : p
-        )
-      }));
-    }
-    
-    setShowPaymentModal(false);
-    setSelectedParticipantId(null);
-  };
-
-  const renderMessageGroup = (group: MessageGroup, index: number) => {
-    // 시스템 메시지 그룹
-    if (group.type === 'system') {
-      return group.messages.map((msg: ChatMessage) => (
-        <ChatStatusMessage 
-          key={msg.id}
-          message={msg.message} 
-        />
-      ));
+    if (!socketManager.isConnected()) {
+      Alert.alert('연결 오류', '채팅 서버에 연결되지 않았습니다.');
+      return;
     }
 
-    // 사용자 메시지 그룹 - 시간 순서대로 정렬된 메시지 배열 생성
-    const sortedMessages = group.messages
-      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
-      .map(msg => ({
-        id: msg.id,
-        type: msg.type as 'text' | 'store',
-        content: msg.message,
-        storeInfo: msg.storeInfo
-      }));
-    
+    const messageData = {
+      room: chatRoom.chat_room_id,
+      message: message.trim()
+    };
+
+    socketManager.sendMessage(messageData);
+    setMessage('');
+  };
+
+  const renderMessage = ({ item }: { item: ChatMessageDTO }) => {
+    const isMyMessage = item.sender_id === user?.id;
+    const messageTime = formatTime(item.created_at);
+
     return (
-      <ChatBubble
-        key={group.id}
-        messages={sortedMessages}
-        isMyMessage={group.isMyMessage}
-        senderName={group.senderName}
-        senderAvatar={group.senderAvatar}
-      />
+      <View style={[styles.messageContainer, isMyMessage ? styles.myMessage : styles.otherMessage]}>
+        <View style={[styles.messageBubble, isMyMessage ? styles.myBubble : styles.otherBubble]}>
+          <Text style={[styles.messageText, isMyMessage ? styles.myMessageText : styles.otherMessageText]}>
+            {item.message}
+          </Text>
+          <Text style={[styles.messageTime, isMyMessage ? styles.myMessageTime : styles.otherMessageTime]}>
+            {messageTime}
+          </Text>
+        </View>
+      </View>
     );
   };
 
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <Text style={styles.roomName}>{chatRoom.name}</Text>
+      <View style={styles.connectionStatus}>
+        {isConnecting ? (
+          <View style={styles.statusContainer}>
+            <ActivityIndicator size="small" color="#007AFF" />
+            <Text style={styles.statusText}>연결 중...</Text>
+          </View>
+        ) : isConnected ? (
+          <View style={styles.statusContainer}>
+            <View style={[styles.statusDot, styles.connected]} />
+            <Text style={styles.statusText}>연결됨</Text>
+          </View>
+        ) : (
+          <View style={styles.statusContainer}>
+            <View style={[styles.statusDot, styles.disconnected]} />
+            <Text style={styles.statusText}>연결 안됨</Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>메시지를 불러오는데 실패했습니다.</Text>
+        <Text style={styles.errorDetailText}>{error.message}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+          <Text style={styles.retryButtonText}>다시 시도</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView 
-      className="flex-1 bg-white"
+      style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-        {/* 헤더 */}
-        <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-200">
-          <TouchableOpacity 
-            onPress={() => navigation.goBack()}
-            className="mr-3"
-          >
-            <Text className="text-2xl">←</Text>
-          </TouchableOpacity>
-          
-          <View className="flex-1">
-            <Text className="text-lg font-semibold text-gray-900">
-              {chatRoom.title}
-            </Text>
-            <Text className="text-sm text-gray-600">
-              {chatRoom.subtitle}
-            </Text>
-          </View>
+      {renderHeader()}
+      
+      <FlatList
+        ref={flatListRef}
+        data={messages}
+        renderItem={renderMessage}
+        keyExtractor={(item) => item.id.toString()}
+        contentContainerStyle={styles.messagesList}
+        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+        onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
+        ListEmptyComponent={
+          isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#007AFF" />
+              <Text style={styles.loadingText}>메시지를 불러오는 중...</Text>
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>아직 메시지가 없습니다.</Text>
+            </View>
+          )
+        }
+      />
 
-          {/* 메뉴 버튼 */}
-          <TouchableOpacity
-            onPress={() => setShowMenu(!showMenu)}
-            className="p-2"
-          >
-            <Text className="text-xl font-bold text-gray-700">⋮</Text>
-          </TouchableOpacity>
-        </View>
-
-                 {/* 드롭다운 메뉴 */}
-         <DropdownMenu
-           options={menuOptions}
-           isVisible={showMenu}
-           onClose={() => setShowMenu(false)}
-         />
-
-         {/* 결제 모달 */}
-         <PaymentModal
-           isVisible={showPaymentModal}
-           onClose={() => {
-             setShowPaymentModal(false);
-             setSelectedParticipantId(null);
-           }}
-           amount={depositInfo.depositAmount}
-           onPaymentMethodSelect={handlePaymentMethodSelect}
-         />
-
-             {/* 메시지 영역 */}
-       <ScrollView 
-         className="flex-1 px-4 py-2"
-         showsVerticalScrollIndicator={false}
-       >
-         {/* 예약금 안내 컴포넌트 */}
-         <ReservationDepositInfo
-           participants={depositInfo.participants}
-           depositAmount={depositInfo.depositAmount}
-           timeLimit={depositInfo.timeLimit}
-           onDeposit={handleDeposit}
-         />
-         
-         {/* 채팅 메시지들 */}
-         {groupedMessages.map((group, index) => renderMessageGroup(group, index))}
-       </ScrollView>
-
-      {/* 메시지 입력 영역 */}
-      <View className="flex-row items-center px-4 py-3 bg-white border-t border-gray-200">
-        {/* 왼쪽 상점 아이콘 버튼 */}
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.textInput}
+          value={message}
+          onChangeText={setMessage}
+          placeholder="메시지를 입력하세요..."
+          multiline
+          maxLength={500}
+        />
         <TouchableOpacity
-          onPress={() => console.log('상점 버튼 클릭')}
-          className="justify-center items-center mr-3 w-10 h-10 rounded-full bg-mainOrange"
-          activeOpacity={0.8}
+          style={[styles.sendButton, !message.trim() && styles.sendButtonDisabled]}
+          onPress={handleSendMessage}
+          disabled={!message.trim() || !isConnected}
         >
-            <Feather name="home" size={15} color="#F5F5F5" />
+          <Text style={styles.sendButtonText}>전송</Text>
         </TouchableOpacity>
-        
-        {/* 메시지 입력 필드 (전송 버튼 포함) */}
-        <View className="flex-row flex-1 items-center px-4 py-2 mr-3 bg-gray-100 rounded-full">
-          <TextInput
-            value={message}
-            onChangeText={setMessage}
-            placeholder="메시지를 입력하세요"
-            className="flex-1 px-2"
-            multiline
-            placeholderTextColor="#9CA3AF"
-          />
-          
-          {/* 전송 버튼 (입력 필드 안에) */}
-          <TouchableOpacity
-            onPress={handleSendMessage}
-            disabled={!message.trim()}
-            className={`w-8 h-8 rounded-full items-center justify-center ${
-              message.trim() ? 'bg-mainOrange' : 'bg-gray-300'
-            }`}
-            activeOpacity={0.8}
-          >
-            <Feather name="send" size={15} color="#F5F5F5" />
-          </TouchableOpacity>
-        </View>
       </View>
     </KeyboardAvoidingView>
   );
-} 
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  roomName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  connectionStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 4,
+  },
+  connected: {
+    backgroundColor: '#4CAF50',
+  },
+  disconnected: {
+    backgroundColor: '#F44336',
+  },
+  statusText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  messagesList: {
+    flexGrow: 1,
+    padding: 16,
+  },
+  messageContainer: {
+    marginVertical: 4,
+  },
+  myMessage: {
+    alignItems: 'flex-end',
+  },
+  otherMessage: {
+    alignItems: 'flex-start',
+  },
+  messageBubble: {
+    maxWidth: '80%',
+    padding: 12,
+    borderRadius: 16,
+  },
+  myBubble: {
+    backgroundColor: '#007AFF',
+    borderBottomRightRadius: 4,
+  },
+  otherBubble: {
+    backgroundColor: 'white',
+    borderBottomLeftRadius: 4,
+  },
+  messageText: {
+    fontSize: 16,
+    lineHeight: 20,
+  },
+  myMessageText: {
+    color: 'white',
+  },
+  otherMessageText: {
+    color: '#333',
+  },
+  messageTime: {
+    fontSize: 11,
+    marginTop: 4,
+  },
+  myMessageTime: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    textAlign: 'right',
+  },
+  otherMessageTime: {
+    color: '#999',
+    textAlign: 'left',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    padding: 16,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  textInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginRight: 8,
+    maxHeight: 100,
+    fontSize: 16,
+  },
+  sendButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    justifyContent: 'center',
+  },
+  sendButtonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  sendButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 10,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  errorDetailText: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+}); 

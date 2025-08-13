@@ -7,7 +7,7 @@ import type {
   AuthErrorResponseDTO,
 } from '../../types/DTO/auth';
 
-// POST /register - 회원가입 (서버 명세서에 맞게 수정)
+// POST /users/register - 회원가입 (서버 명세서에 맞게 수정)
 export const signup = async (
   data: SignupRequestDTO
 ): Promise<SignupResponseDTO> => {
@@ -18,7 +18,7 @@ export const signup = async (
   return response.data;
 };
 
-// POST /auth/login - 로그인 (서버 코드에 맞게 수정)
+// POST /users/login - 로그인 (서버 코드에 맞게 수정)
 export const login = async (
   data: LoginRequestDTO
 ): Promise<LoginResponseDTO> => {

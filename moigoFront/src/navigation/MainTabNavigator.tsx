@@ -3,7 +3,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import HomeScreen from '@/screens/user/Home/HomeScreen';
 import MeetingScreen from '@/screens/user/Meeting/MeetingScreen';
-import ChatScreen from '@/screens/ChatScreen';
+import ChatListScreen from '@/screens/ChatListScreen';
 import MyScreen from '@/screens/user/Mypage/MyScreen';
 import Header from '@/layout/Header';
 import Feather from 'react-native-vector-icons/Feather';
@@ -53,7 +53,7 @@ export default function MainTabNavigator() {
       />
       <Tab.Screen
         name="Chat"
-        component={ChatScreen}
+        component={ChatListScreen}
         options={{
           tabBarLabel: '채팅',
           tabBarIcon: ({ color, size }) => (
