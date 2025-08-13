@@ -26,8 +26,15 @@ export const useChangePassword = () => {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
   
-  const { validatePassword } = useAuthStore();
+  const { validatePassword, user } = useAuthStore();
   const changePasswordMutation = useChangePasswordMutation();
+
+  // 사용자 타입에 따른 API 엔드포인트 결정
+  const getApiEndpoint = () => {
+    return user?.userType === 'business' 
+      ? '/business/change-password' 
+      : '/user/change-password';
+  };
 
   // 폼 유효성 검사
   const validateForm = (): boolean => {
@@ -95,13 +102,18 @@ export const useChangePassword = () => {
     if (!validateForm()) return;
     
     try {
+      // 사용자 타입에 따른 API 엔드포인트 사용
+      const endpoint = getApiEndpoint();
+      console.log(`비밀번호 변경 API 호출: ${endpoint} (사용자 타입: ${user?.userType})`);
+      
       const result = await changePasswordMutation.mutateAsync({
         old_password: form.currentPassword,
         new_password: form.newPassword,
+        endpoint, // API 엔드포인트 전달
       });
       
       if (result.success) {
-        setToastMessage('저장되었습니다');
+        setToastMessage('비밀번호가 성공적으로 변경되었습니다');
         setToastType('success');
         setShowToast(true);
         

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, Text, Animated } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { COLORS } from '@/constants/colors';
+import { twMerge } from 'tailwind-merge';
 
 interface ToastProps {
   visible: boolean;
@@ -9,6 +9,7 @@ interface ToastProps {
   type?: 'success' | 'error' | 'info';
   onHide: () => void;
   duration?: number;
+  className?: string;
 }
 
 export default function Toast({ 
@@ -16,7 +17,8 @@ export default function Toast({
   message, 
   type = 'success', 
   onHide, 
-  duration = 3000 
+  duration = 3000,
+  className
 }: ToastProps) {
   const fadeAnim = new Animated.Value(0);
   const slideAnim = new Animated.Value(-100);
@@ -97,7 +99,11 @@ export default function Toast({
         opacity: fadeAnim,
         transform: [{ translateY: slideAnim }],
       }}
-      className={`absolute top-0 right-4 left-4 z-50 p-4 rounded-lg shadow-lg ${getToastStyle()}`}
+      className={twMerge(
+        'absolute top-0 right-4 left-4 z-50 p-4 rounded-lg shadow-lg',
+        getToastStyle(),
+        className
+      )}
     >
       <View className="flex-row items-center">
         <Feather 
@@ -109,12 +115,12 @@ export default function Toast({
         <Text className="flex-1 text-base font-medium text-white">
           {message}
         </Text>
-        <Feather 
+        {/* <Feather 
           name="x" 
           size={20} 
           color="white" 
           onPress={hideToast}
-        />
+        /> */}
       </View>
     </Animated.View>
   );

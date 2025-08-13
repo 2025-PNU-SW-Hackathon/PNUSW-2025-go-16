@@ -199,7 +199,7 @@ export default function SettingScreen() {
             title="비밀번호 변경"
             icon="lock"
             iconColor="#8B5CF6"
-            onPress={() => console.log('비밀번호 변경')}
+            onPress={() => navigation.navigate('ChangePassword')}
             className="mb-0 border-2 border-t-0 border-mainGray"
           />
           

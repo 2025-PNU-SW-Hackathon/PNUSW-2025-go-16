@@ -47,12 +47,11 @@ export const updateProfile = async (
 
 // PUT /users/me/password - 비밀번호 변경
 export const changePassword = async (
-  data: ChangePasswordRequestDTO
+  data: ChangePasswordRequestDTO,
+  endpoint?: string
 ): Promise<ChangePasswordResponseDTO> => {
-  const response = await apiClient.put<ChangePasswordResponseDTO>(
-    '/users/me/password',
-    data
-  );
+  const apiEndpoint = endpoint || '/users/me/password';
+  const response = await apiClient.put<ChangePasswordResponseDTO>(apiEndpoint, data);
   return response.data;
 };
 
