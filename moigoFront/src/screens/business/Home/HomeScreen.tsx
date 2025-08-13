@@ -1,14 +1,16 @@
-import { Text, View, ScrollView, Modal, TouchableOpacity, Alert } from "react-native";
+import { Text, View, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { useState } from "react";
 import { Feather } from "@expo/vector-icons";
 import StatsCard from "@/components/business/StatsCard";
 import ReservationCard from "@/components/business/ReservationCard";
 import PromotionCard from "@/components/business/PromotionCard";
+import AcceptModal from "./AcceptModal";
+import RejectModal from "./RejectModal";
 import { COLORS } from "@/constants/colors";
 
 export default function BusinessHomeScreen () {
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [modalType, setModalType] = useState<'confirm' | 'reject'>('confirm');
+  const [isAcceptModalVisible, setIsAcceptModalVisible] = useState(false);
+  const [isRejectModalVisible, setIsRejectModalVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<{
     title: string;
     type: string;
@@ -27,25 +29,32 @@ export default function BusinessHomeScreen () {
       location: string;
     }
   ) => {
-    setModalType(action);
     setSelectedEvent(eventData);
-    setIsModalVisible(true);
+    if (action === 'confirm') {
+      setIsAcceptModalVisible(true);
+    } else {
+      setIsRejectModalVisible(true);
+    }
   };
 
   const handleModalConfirm = () => {
-    if (modalType === 'confirm' && selectedEvent) {
-      console.log('예약 승인:', selectedEvent.title);
-      Alert.alert('승인 완료', '예약이 승인되었습니다.');
-    } else if (modalType === 'reject' && selectedEvent) {
-      console.log('예약 거절:', selectedEvent.title);
-      Alert.alert('거절 완료', '예약이 거절되었습니다.');
+    if (selectedEvent) {
+      if (isAcceptModalVisible) {
+        console.log('예약 승인:', selectedEvent.title);
+        Alert.alert('승인 완료', '예약이 승인되었습니다.');
+      } else {
+        console.log('예약 거절:', selectedEvent.title);
+        Alert.alert('거절 완료', '예약이 거절되었습니다.');
+      }
     }
-    setIsModalVisible(false);
+    setIsAcceptModalVisible(false);
+    setIsRejectModalVisible(false);
     setSelectedEvent(null);
   };
 
   const handleModalCancel = () => {
-    setIsModalVisible(false);
+    setIsAcceptModalVisible(false);
+    setIsRejectModalVisible(false);
     setSelectedEvent(null);
   };
 
@@ -125,62 +134,20 @@ export default function BusinessHomeScreen () {
         </View>
       </ScrollView>
 
-      {/* 확인/거절 모달 */}
-      <Modal
-        visible={isModalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={handleModalCancel}
-      >
-        <View className="flex-1 justify-center items-center px-4 bg-black/50">
-          <View className="p-6 w-full max-w-sm bg-white rounded-2xl">
-            <View className="items-center mb-4">
-              <View className={`w-16 h-16 rounded-full justify-center items-center mb-3 ${
-                modalType === 'confirm' ? 'bg-green-100' : 'bg-red-100'
-              }`}>
-                <Feather 
-                  name={modalType === 'confirm' ? 'check' : 'x'} 
-                  size={24} 
-                  color={modalType === 'confirm' ? COLORS.confirmText : COLORS.mainRed} 
-                />
-              </View>
-              <Text className="text-lg font-semibold text-gray-800">
-                {modalType === 'confirm' ? '예약 승인' : '예약 거절'}
-              </Text>
-              <Text className="mt-2 text-sm text-center text-gray-600">
-                {selectedEvent ? (
-                  modalType === 'confirm' 
-                    ? `"${selectedEvent.title}" 예약을 승인하시겠습니까?`
-                    : `"${selectedEvent.title}" 예약을 거절하시겠습니까?`
-                ) : ''}
-              </Text>
-            </View>
-            
-            <View className="flex-row gap-3">
-              <TouchableOpacity 
-                className="flex-1 px-4 py-3 rounded-xl border border-gray-300"
-                onPress={handleModalCancel}
-                activeOpacity={0.7}
-              >
-                <Text className="font-medium text-center text-gray-600">취소</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                className={`flex-1 py-3 px-4 rounded-xl ${
-                  modalType === 'confirm' ? 'bg-confirmBg' : 'bg-red-500'
-                }`}
-                onPress={handleModalConfirm}
-                activeOpacity={0.7}
-              >
-                <Text className={`text-center font-medium ${
-                  modalType === 'confirm' ? 'text-confirmText' : 'text-white'
-                }`}>
-                  {modalType === 'confirm' ? '승인' : '거절'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* 분리된 모달들 */}
+      <AcceptModal
+        visible={isAcceptModalVisible}
+        onClose={handleModalCancel}
+        onConfirm={handleModalConfirm}
+        eventData={selectedEvent}
+      />
+      
+      <RejectModal
+        visible={isRejectModalVisible}
+        onClose={handleModalCancel}
+        onConfirm={handleModalConfirm}
+        eventData={selectedEvent}
+      />
     </View>
   );
 };
