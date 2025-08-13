@@ -9,6 +9,7 @@ export type RootStackParamList = {
   StoreDetailInfo: undefined;
   SportsRegistration: undefined;
   BusinessHours: undefined;
+  ReservationTime: undefined;
   Chat: undefined;
   ChatRoom: { chatId: string };
   CreateMeeting: undefined;

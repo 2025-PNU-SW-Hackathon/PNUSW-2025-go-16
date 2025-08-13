@@ -121,7 +121,7 @@ export default function SettingScreen() {
             title="예약 가능 시간대 설정"
             icon="calendar"
             iconColor="#3B82F6"
-            onPress={() => console.log('예약 가능 시간대 설정')}
+            onPress={() => navigation.navigate('ReservationTime')}
             className="mb-4 rounded-b-2xl border-2 border-t-0 border-mainGray"
           />
         </SettingSection>
