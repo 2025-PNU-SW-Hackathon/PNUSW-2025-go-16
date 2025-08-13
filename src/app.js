@@ -12,7 +12,7 @@ const handleSocket = require('./controllers/socket_controller');
 const http = require('http');
 const path = require('path');
 const paymentRoutes = require('./routes/payment_routes');
-
+const matchRoutes = require('./routes/match_routes');
 dotenv.config({ path: path.resolve(__dirname, '../.env') }); 
 
 const app = express();
@@ -44,6 +44,8 @@ app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/stores', storeRoutes);
 app.use('/api/v1/chats/rooms', chatRoutes);
 app.use('/api/v1/payment', paymentRoutes);
+app.use('/api/v1/matches', matchRoutes);
+
 // 404 및 에러 핸들러 등록
 //app.use(notFound);
 app.use(errorHandler);

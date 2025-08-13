@@ -112,8 +112,8 @@ const fetchKboSeason = async (seasonStr /* '2025' */) => {
 /** 6) 저장 */
 const saveMatchesToDB = async (matches, conn) => {
   const insertQuery = `
-    INSERT IGNORE INTO matches (id, competition_code, match_date, status, home_team, away_team, venue)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT IGNORE INTO matches (id, competition_code, match_date, status, home_team, away_team, venue, category)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 2)
   `;
   for (const ev of matches) {
     const id = parseInt(ev.idEvent, 10);
@@ -184,7 +184,7 @@ const updateKboMatches = async (days = 10, useSeasonFallback = true) => {
  */
 (async () => {
   await connectDB();
-  await updateKboMatches(10, true);
+  await updateKboMatches(5, true);
 
   schedule.scheduleJob('5 6 * * *', async () => {
     console.log(`[${new Date().toISOString()}] KBO scheduled job started`);
