@@ -1369,3 +1369,94 @@
 ```
 
 ---
+
+17.5 사장님 로그인 API
+
+**POST** `users/store/login`
+
+>  매장 로그인을 수행합니다
+
+
+#### Headers
+
+* Authorization: Bearer `<JWT>` ✅ 필수 
+
+#### Request Body
+
+
+```json
+{
+  "store_id": "champion_sports_pub",
+  "store_pwd": "storepass123"
+}
+```
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "message": "사장님 로그인 성공",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "store": {
+      "store_id": "champion_sports_pub",
+      "store_name": "챔피언 스포츠 펍",
+      "business_number": "123-45-67890",
+      "store_address": "서울시 강남구 역삼동 123-45"
+    }
+  }
+}
+```
+
+---
+
+17.6 사장님 회원가입 API
+
+**POST** `users/store/register`
+
+>  새로운 매장을 등록합니다
+
+
+#### Headers
+
+* Authorization: Bearer `<JWT>` ✅ 필수 
+
+#### Request Body
+
+
+```json
+{
+  "store_id": "champion_sports_pub",
+  "store_pwd": "storepass123",
+  "store_name": "챔피언 스포츠 펍",
+  "business_number": "123-45-67890",
+  "store_address": "서울시 강남구 역삼동 123-45",
+  "store_phonenumber": "02-1234-5678",
+  "store_bio": "강남역 근처에 위치한 스포츠 전문 바입니다.",
+  "store_open_hour": 18,
+  "store_close_hour": 24,
+  "store_max_people_cnt": 50,
+  "store_max_table_cnt": 10,
+  "store_max_parking_cnt": 20,
+  "store_max_screen_cnt": 5,
+  "store_holiday": 0
+}
+```
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "message": "사장님 회원가입이 완료되었습니다.",
+  "data": {
+    "store_id": "champion_sports_pub",
+    "store_name": "챔피언 스포츠 펍",
+    "business_number": "123-45-67890"
+  }
+}
+```
+
+---
+
