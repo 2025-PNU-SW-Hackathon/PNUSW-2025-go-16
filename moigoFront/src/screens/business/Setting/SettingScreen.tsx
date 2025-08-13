@@ -9,11 +9,17 @@ import MenuItem from '@/components/my/MenuItem';
 import ToggleSwitch from '@/components/common/ToggleSwitch';
 import SettingSection from '@/components/business/SettingSection';
 import StoreInfoCard from '@/components/business/StoreInfoCard';
+import MinReservationModal from '@/components/business/MinReservationModal';
+import ReservationDepositModal from '@/components/business/ReservationDepositModal';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'StoreBasicInfo'>;
 
 export default function SettingScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const [showMinReservationModal, setShowMinReservationModal] = useState(false);
+  const [showReservationDepositModal, setShowReservationDepositModal] = useState(false);
+  const [minReservationCapacity, setMinReservationCapacity] = useState(4);
+  const [reservationDeposit, setReservationDeposit] = useState(1000);
   
   const [notificationSettings, setNotificationSettings] = useState({
     reservation: true,
@@ -95,19 +101,19 @@ export default function SettingScreen() {
         <SettingSection title="예약 설정">
           <MenuItem
             title="예약 최소 인원수 설정"
-            subtitle="현재: 최소 4명"
+            subtitle={`현재: 최소 ${minReservationCapacity}명`}
             icon="users"
             iconColor="#EF4444"
-            onPress={() => console.log('예약 최소 인원수 설정')}
+            onPress={() => setShowMinReservationModal(true)}
             className="mb-0 rounded-t-2xl border-2 border-mainGray"
           />
           
           <MenuItem
             title="예약금 설정"
-            subtitle="현재: 10,000원"
+            subtitle={`현재: ${reservationDeposit.toLocaleString()}원`}
             icon="dollar-sign"
             iconColor="#10B981"
-            onPress={() => console.log('예약금 설정')}
+            onPress={() => setShowReservationDepositModal(true)}
             className="mb-0 border-2 border-t-0 border-mainGray"
           />
           
@@ -256,6 +262,19 @@ export default function SettingScreen() {
           />
         </SettingSection>
       </ScrollView>
+
+      <MinReservationModal
+        visible={showMinReservationModal}
+        currentMinCapacity={minReservationCapacity}
+        onClose={() => setShowMinReservationModal(false)}
+        onSave={setMinReservationCapacity}
+      />
+      <ReservationDepositModal
+        visible={showReservationDepositModal}
+        currentDeposit={reservationDeposit}
+        onClose={() => setShowReservationDepositModal(false)}
+        onSave={setReservationDeposit}
+      />
     </View>
   );
 }
