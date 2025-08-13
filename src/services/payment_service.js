@@ -2,7 +2,7 @@
 const axios = require('axios');
 const { getConnection } = require('../config/db_config');
 require('dotenv').config();
-
+const socketService = require('./socket_service');
 const TOSS_SECRET_KEY = process.env.TOSS_SECRET_KEY;
 const bankCodes = [
   { name: "KB국민은행", code: "04" },
@@ -47,12 +47,12 @@ exports.createPaymentRequest = async ({ chat_room_id, requester_id, amount, mess
   );
 
   await conn.query(
-  `UPDATE reservation_table 
+    `UPDATE reservation_table 
    SET reservation_status = 1 
    WHERE reservation_id = ?`,
-  [chat_room_id]
-);
-
+    [chat_room_id]
+  );
+  
   return { payment_request_id: result.insertId, status: 'pending' };
 };
 
@@ -178,11 +178,11 @@ exports.releasePayments = async (chat_room_id) => {
     });
   }
   await conn.query(
-  `UPDATE reservation_table 
+    `UPDATE reservation_table 
    SET reservation_status = 2 
    WHERE reservation_id = ?`,
-  [chat_room_id]
-);
+    [chat_room_id]
+  );
   return { released_payments: released };
 };
 

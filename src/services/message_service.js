@@ -12,7 +12,7 @@ exports.joinRoom = async (user_id, room_id) => {
 exports.authRoom = async (room_id) => {
 
     const conn = getConnection();
-    const [result] = await conn.query('SELECT user_id FROM reservation_participant_table WHERE reservation_id = ?'
+    const [result] = await conn.query('SELECT user_id FROM chat_room_users WHERE reservation_id = ?'
         , [room_id]
     );
     return result;
@@ -22,23 +22,28 @@ exports.authRoom = async (room_id) => {
 exports.markAllMessagesAsRead = async (user_id, room_id) => {
 
     const conn = getConnection();
-    const [last_message_id] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages WHERE chat_room_id = ?',
+
+    const [rows] = await conn.query(
+        'SELECT MAX(message_id) AS maxId FROM chat_messages WHERE chat_room_id = ?',
         [room_id]
-    )
-    const new_message_id = ((last_message_id[0]?.maxId) ?? 0);
-    console.log(last_message_id);
-    console.log(new_message_id);
-    if (new_message_id > 0) {
-        // 메시지 읽음 업데이트
+    );
+    const lastId = rows?.[0]?.maxId ?? -1;
+
+    // 먼저 업데이트 시도
+    const [updateRes] = await conn.query(
+        `UPDATE chat_read_status
+   SET last_read_message_id = GREATEST(?, last_read_message_id),
+       updated_at = CURRENT_TIMESTAMP
+   WHERE chat_room_id = ? AND user_id = ?`,
+        [lastId, room_id, user_id]
+    );
+
+    // 없으면 insert
+    if (updateRes.affectedRows === 0) {
         await conn.query(
-            'UPDATE chat_read_status SET last_read_message_id = ?, updated_at = CURRENT_TIMESTAMP WHERE chat_room_id = ? AND user_id = ?',
-            [new_message_id, room_id, user_id]
-        )
-    }
-    else {
-        // 메시지 읽음 테이블 추가
-        await conn.query('INSERT INTO chat_read_status (chat_room_id, user_id, last_read_message_id) VALUES (?, ?, ?)'
-            , [room_id, user_id, -1]
+            `INSERT INTO chat_read_status (chat_room_id, user_id, last_read_message_id, updated_at)
+     VALUES (?, ?, ?, CURRENT_TIMESTAMP)`,
+            [room_id, user_id, lastId]
         );
     }
 

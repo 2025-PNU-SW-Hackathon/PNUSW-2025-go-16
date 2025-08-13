@@ -61,10 +61,18 @@ exports.joinReservation = async (user_id, reservation_id) => {
     [user_id, reservation_id]
   );
   if (exists.length > 0) {
-    const err = new Error("이미 참여 중입니다.");
-    err.statusCode = 409;
-    err.errorCode = "ALREADY_JOINED";
-    throw err;
+    if (exists[0].is_kicked === 1) {
+      const err = new Error("강제 퇴장 당하였습니다.");
+      err.statusCode = 401;
+      err.errorCode = "KICKED";
+      throw err;
+    }
+    else {
+      const err = new Error("이미 참여 중입니다.");
+      err.statusCode = 409;
+      err.errorCode = "ALREADY_JOINED";
+      throw err;
+    }
   }
 
   // 모임 유효성 검사
@@ -86,7 +94,7 @@ exports.joinReservation = async (user_id, reservation_id) => {
 
   // 참여자 수 증가 (reservation_table에 기록된 수치 업데이트)
   // 모임 정보 업데이트
-  var reservation_status_value = reservation[0].reservation_participant_cnt+1 >= reservation[0].reservation_max_participant_cnt ? 1 : 0;
+  var reservation_status_value = reservation[0].reservation_participant_cnt + 1 >= reservation[0].reservation_max_participant_cnt ? 1 : 0;
   await conn.query(
     `UPDATE reservation_table
     SET reservation_participant_cnt = reservation_participant_cnt + 1,

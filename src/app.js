@@ -13,6 +13,7 @@ const http = require('http');
 const path = require('path');
 const paymentRoutes = require('./routes/payment_routes');
 const matchRoutes = require('./routes/match_routes');
+const { setIO } = require('./config/socket_hub');
 dotenv.config({ path: path.resolve(__dirname, '../.env') }); 
 
 const app = express();
@@ -56,10 +57,10 @@ app.get('/', (req, res) => {
 
 // 👇 소켓 핸들러 등록
 handleSocket(io);
-
+setIO(io);
 const test_token = jwt.sign(
     {
-      user_id: "yejun2",
+      user_id: "testid",
     },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '2h' }
