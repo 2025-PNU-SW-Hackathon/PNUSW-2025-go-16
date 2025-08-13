@@ -690,6 +690,149 @@
 }
 ```
 
+### 7.1 전체 매치 조회
+
+# 🏟️ 경기 목록 조회 API 명세서
+
+**Base URL**: `/api/v1`  
+**인증**: 공개 조회(기본 불필요) ※ 필요 시 `Authorization: Bearer <JWT>`
+
+> `matches` 테이블 기반의 **전체 경기 목록 조회** API입니다.
+
+---
+
+## GET `/api/v1/matches`
+
+조건에 맞는 경기 리스트를 조회합니다.
+
+### Query Parameters
+
+| 이름 | 타입 | 예시 | 설명 |
+|---|---|---|---|
+| `competition_code` | string | `EPL` | 대회 코드(정확히 일치) |
+| `status` | string | `SCHEDULED`,`LIVE`,`FINISHED`,`POSTPONED` | 경기 상태 필터 |
+| `date_from` | datetime | `2025-09-01T00:00:00Z` | 경기일 시작(이상) |
+| `date_to` | datetime | `2025-09-30T23:59:59Z` | 경기일 종료(이하) |
+| `home` | string | `Manchester` | 홈팀 **부분 검색** |
+| `away` | string | `Chelsea` | 원정팀 **부분 검색** |
+| `venue` | string | `Etihad` | 경기장 **부분 검색** |
+| `category` | int | `1` | 카테고리 일치 |
+| `sort` | string | `match_date:asc` | 정렬(필드: `match_date`,`id` / 방향: `asc \| desc`) |
+| `page` | int | `1` | 페이지 번호(기본 1) |
+| `page_size` | int | `20` | 페이지 크기(기본 20, 최대 100 권장) |
+
+> 날짜 형식은 **ISO 8601** 권장(`YYYY-MM-DDTHH:mm:ssZ`). 서비스 정책에 따라 `YYYY-MM-DD HH:mm:ss`도 허용 가능(응답은 ISO 권장).
+
+---
+
+### Response (200)
+
+```json
+{
+  "success": true,
+  "meta": {
+    "page": 1,
+    "page_size": 20,
+    "total": 235,
+    "total_pages": 12,
+    "sort": "match_date:asc",
+    "filters": {
+      "competition_code": "EPL",
+      "date_from": "2025-09-01T00:00:00Z",
+      "date_to": "2025-09-30T23:59:59Z",
+      "status": "SCHEDULED"
+    }
+  },
+  "data": [
+    {
+      "id": 12345,
+      "competition_code": "EPL",
+      "match_date": "2025-09-01T19:00:00Z",
+      "status": "SCHEDULED",
+      "home_team": "Manchester City",
+      "away_team": "Chelsea",
+      "venue": "Etihad Stadium",
+      "category": 1
+    },
+    {
+      "id": 12346,
+      "competition_code": "EPL",
+      "match_date": "2025-09-02T19:00:00Z",
+      "status": "SCHEDULED",
+      "home_team": "Arsenal",
+      "away_team": "Liverpool",
+      "venue": "Emirates Stadium",
+      "category": 1
+    }
+  ]
+}
+```
+
+---
+
+### Response (400)
+
+```json
+{
+  "success": false,
+  "errorCode": "INVALID_PARAMETER",
+  "message": "date_from은 date_to보다 이전이어야 합니다."
+}
+```
+
+### Response (500)
+
+```json
+{
+  "success": false,
+  "errorCode": "INTERNAL_SERVER_ERROR",
+  "message": "서버 내부 오류가 발생했습니다."
+}
+```
+
+---
+
+## 필드 정의
+
+| 필드 | 타입 | 설명 |
+|---|---|---|
+| `id` | int | 경기 고유 ID (PK) |
+| `competition_code` | string(10) | 대회 코드 (예: EPL, UCL 등) |
+| `match_date` | datetime | 경기 시작 일시 (UTC 권장) |
+| `status` | string(20) | `SCHEDULED`,`LIVE`,`FINISHED`,`POSTPONED` 등 |
+| `home_team` | string(100) | 홈 팀명 |
+| `away_team` | string(100) | 원정 팀명 |
+| `venue` | string(255) | 경기장 |
+| `category` | int | 서비스 내 분류 값 |
+
+---
+
+## 예시 요청
+
+**EPL 9월 예정 경기만, 날짜 오름차순 1페이지(50개)**  
+```
+GET /api/v1/matches?competition_code=EPL&status=SCHEDULED&date_from=2025-09-01T00:00:00Z&date_to=2025-09-30T23:59:59Z&sort=match_date:asc&page=1&page_size=50
+```
+
+**맨시티가 홈인 경기 검색**  
+```
+GET /api/v1/matches?home=Manchester%20City
+```
+
+**경기장에 ‘Park’가 포함된 모든 경기 최신순**  
+```
+GET /api/v1/matches?venue=Park&sort=match_date:desc
+```
+
+---
+
+## 응답 규칙
+
+- 성공: `{ "success": true, "data": [...] , "meta": {...} }`
+- 실패: `{ "success": false, "errorCode": "...", "message": "..." }`
+
+
+
 ---
 
 ## 🔧 에러 코드
