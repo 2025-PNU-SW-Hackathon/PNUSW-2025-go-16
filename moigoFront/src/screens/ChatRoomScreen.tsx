@@ -1,291 +1,247 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  TextInput,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
-import type { RouteProp } from '@react-navigation/native';
-import { useChatMessages } from '@/hooks/queries/useChatQueries';
-import { socketManager } from '@/utils/socketUtils';
-import { useAuthStore } from '@/store/authStore';
-import { formatTime } from '@/utils/dateUtils';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { RootStackParamList } from '@/types/RootStackParamList';
+import { ChatRoom, ChatMessage, MessageGroup } from '@/types/ChatTypes';
 import ChatBubble from '@/components/chat/ChatBubble';
 import ChatStatusMessage from '@/components/chat/ChatStatusMessage';
 import ReservationDepositInfo from '@/components/chat/ReservationDepositInfo';
-import StoreShareMessage from '@/components/chat/StoreShareMessage';
+import PaymentModal from '@/components/common/PaymentModal';
+import DropdownMenu, { DropdownOption } from '@/components/common/DropdownMenu';
 import Feather from 'react-native-vector-icons/Feather';
+import { groupMessages } from '@/utils/chatUtils';
+import { useChatMessages } from '@/hooks/queries/useChatQueries';
+import { socketManager } from '@/utils/socketUtils';
+import { useAuthStore } from '@/store/authStore';
 import type { ChatMessageDTO, NewMessageDTO } from '@/types/DTO/chat';
-import type { RootStackParamList } from '@/types/RootStackParamList';
 
 type ChatRoomScreenRouteProp = RouteProp<RootStackParamList, 'ChatRoom'>;
 
 export default function ChatRoomScreen() {
-  const route = useRoute<ChatRoomScreenRouteProp>();
   const navigation = useNavigation();
+  const route = useRoute<ChatRoomScreenRouteProp>();
   const { chatRoom } = route.params;
   const { user } = useAuthStore();
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<ChatMessageDTO[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [isHost, setIsHost] = useState(false); // 방장 여부
-  const [showDepositInfo, setShowDepositInfo] = useState(false); // 예약금 정보 표시 여부
-  const flatListRef = useRef<FlatList>(null);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  
+  // API에서 메시지 데이터 가져오기
+  const { data: apiData, isLoading, error, refetch } = useChatMessages(chatRoom.chat_room_id || 1);
+  
+  // 예약금 관련 상태 (실시간 업데이트 가능)
+  const [depositInfo, setDepositInfo] = useState({
+    participants: [
+      { id: '1', name: '박태원', avatar: '방', isHost: true, hasDeposited: true },
+      { id: '2', name: '김세한', avatar: '참', isHost: false, hasDeposited: false },
+      { id: '3', name: '김재혁', avatar: '참', isHost: false, hasDeposited: false },
+      { id: '4', name: '정예준', avatar: '참', isHost: false, hasDeposited: false },
+    ],
+    depositAmount: 5000,
+    timeLimit: 30
+  });
 
-  const { data, isLoading, error, refetch } = useChatMessages(chatRoom.chat_room_id);
+  // 현재 사용자 ID (실제로는 세션에서 가져와야 함)
+  const currentUserId = user?.id || 'test'; // user?.id가 있으면 사용, 없으면 'test' 사용
+  
+  console.log('=== ChatRoomScreen 디버깅 ===');
+  console.log('user 객체:', user);
+  console.log('user?.id:', user?.id);
+  console.log('user?.id 타입:', typeof user?.id);
+  console.log('currentUserId (최종):', currentUserId);
+  console.log('currentUserId 타입:', typeof currentUserId);
+  console.log('user?.id가 undefined인가?', user?.id === undefined);
+  console.log('user?.id가 null인가?', user?.id === null);
+  console.log('user?.id가 빈 문자열인가?', user?.id === '');
 
-  // 소켓 연결 및 메시지 처리
+  // API 데이터를 ChatMessage 형식으로 변환
   useEffect(() => {
-    console.log('ChatRoomScreen - 채팅방 입장:', chatRoom.chat_room_id);
-    
-    // 방장 여부 확인 (임시로 랜덤 설정)
-    setIsHost(Math.random() > 0.5);
-    
-    // 소켓 연결 시도
-    const connectSocket = async () => {
-      setIsConnecting(true);
-      try {
-        // 소켓 연결
-        socketManager.connect();
+    if (apiData?.data) {
+      console.log('API 데이터 변환 시작:', {
+        currentUserId,
+        currentUserIdType: typeof currentUserId,
+        apiDataLength: apiData.data.length,
+        firstMessage: apiData.data[0]
+      });
+      
+      const convertedMessages: ChatMessage[] = apiData.data.map((msg: ChatMessageDTO) => {
+        console.log('메시지 원본:', {
+          sender_id: msg.sender_id,
+          sender_idType: typeof msg.sender_id,
+          currentUserId,
+          currentUserIdType: typeof currentUserId,
+          isEqual: msg.sender_id === currentUserId,
+          isEqualStrict: msg.sender_id === currentUserId,
+          isEqualTrim: msg.sender_id?.trim() === currentUserId?.trim()
+        });
         
-        // 연결 상태 확인을 위한 타이머
-        const checkConnection = setInterval(() => {
-          if (socketManager.isConnected()) {
-            setIsConnected(true);
-            setIsConnecting(false);
-            clearInterval(checkConnection);
-            
-            // 채팅방 입장
-            socketManager.joinRoom(chatRoom.chat_room_id);
-            console.log('채팅방 입장 완료:', chatRoom.chat_room_id);
-          }
-        }, 100);
+        const isMyMessage = msg.sender_id === currentUserId;
+        
+        return {
+          id: msg.id.toString(),
+          senderId: msg.sender_id,
+          senderName: isMyMessage ? '나' : msg.sender_id,
+          senderAvatar: isMyMessage ? '나' : msg.sender_id.charAt(0),
+          message: msg.message,
+          timestamp: new Date(msg.created_at),
+          type: 'text' as const
+        };
+      });
+      setMessages(convertedMessages);
+    }
+  }, [apiData, currentUserId]);
 
-        // 5초 후 연결 실패 시 타이머 정리
-        setTimeout(() => {
-          clearInterval(checkConnection);
-          if (!socketManager.isConnected()) {
-            setIsConnecting(false);
-            console.error('소켓 연결 시간 초과');
-          }
-        }, 5000);
-      } catch (error) {
-        console.error('소켓 연결 실패:', error);
-        setIsConnecting(false);
-      }
-    };
-
-    connectSocket();
-
+  // 소켓 연결 및 실시간 메시지 처리
+  useEffect(() => {
+    // 소켓 연결
+    socketManager.connect();
+    
     // 새 메시지 수신 콜백 등록
     const handleNewMessage = (newMessage: NewMessageDTO) => {
-      console.log('새 메시지 수신:', newMessage);
-      setMessages(prev => [...prev, {
-        id: newMessage.id,
+      console.log('새 메시지 원본:', {
         sender_id: newMessage.sender_id,
+        sender_idType: typeof newMessage.sender_id,
+        currentUserId,
+        currentUserIdType: typeof currentUserId,
+        isEqual: newMessage.sender_id === currentUserId,
+        isEqualStrict: newMessage.sender_id === currentUserId,
+        isEqualTrim: newMessage.sender_id?.trim() === currentUserId?.trim()
+      });
+      
+      const isMyMessage = newMessage.sender_id === currentUserId;
+      
+      const convertedMessage: ChatMessage = {
+        id: newMessage.id.toString(),
+        senderId: newMessage.sender_id,
+        senderName: isMyMessage ? '나' : newMessage.sender_id,
+        senderAvatar: isMyMessage ? '나' : newMessage.sender_id.charAt(0),
         message: newMessage.message,
-        created_at: newMessage.created_at,
-        read_count: newMessage.read_count || 0
-      }]);
+        timestamp: new Date(newMessage.created_at),
+        type: 'text'
+      };
+      setMessages(prev => [...prev, convertedMessage]);
     };
 
     socketManager.onNewMessage(handleNewMessage);
+    socketManager.joinRoom(chatRoom.chat_room_id || 1);
 
-    // 에러 콜백 등록
-    const handleSocketError = (error: any) => {
-      console.error('소켓 에러:', error);
-      Alert.alert('연결 오류', '채팅 연결에 문제가 발생했습니다.');
-    };
-
-    socketManager.onError(handleSocketError);
-
-    // 컴포넌트 언마운트 시 정리
     return () => {
-      console.log('ChatRoomScreen - 채팅방 나가기:', chatRoom.chat_room_id);
       socketManager.removeCallback(handleNewMessage);
-      socketManager.leaveRoom(chatRoom.chat_room_id);
+      socketManager.leaveRoom(chatRoom.chat_room_id || 1);
     };
-  }, [chatRoom.chat_room_id]);
+  }, [chatRoom.chat_room_id, currentUserId]);
 
-  // API에서 받은 메시지 데이터 처리
-  useEffect(() => {
-    if (data?.data) {
-      console.log('API에서 메시지 데이터 수신:', data.data.length, '개');
-      setMessages(data.data);
-    }
-  }, [data]);
+  // 방장용 메뉴 옵션
+  const hostMenuOptions: DropdownOption[] = [
+    { id: '1', label: '매칭 정보 보기', onPress: () => console.log('매칭 정보 보기') },
+    { id: '2', label: '매칭 정보 수정하기', onPress: () => console.log('매칭 정보 수정하기') },
+    { id: '3', label: '매칭 모집 마감하기', onPress: () => console.log('매칭 모집 마감하기') },
+    { id: '4', label: '참여자 목록', onPress: () => console.log('참여자 목록') },
+    { id: '5', label: '채팅방 나가기', onPress: () => navigation.goBack() },
+    { id: '6', label: '신고하기', isDanger: true, onPress: () => console.log('신고하기') },
+  ];
+
+  // 일반 참여자용 메뉴 옵션
+  const participantMenuOptions: DropdownOption[] = [
+    { id: '1', label: '채팅방 정보', onPress: () => console.log('채팅방 정보') },
+    { id: '2', label: '멤버 관리', onPress: () => console.log('멤버 관리') },
+    { id: '3', label: '알림 설정', onPress: () => console.log('알림 설정') },
+    { id: '4', label: '채팅방 나가기', onPress: () => navigation.goBack() },
+  ];
+
+  // 현재 사용자의 메뉴 옵션 결정 (임시로 랜덤)
+  const menuOptions = Math.random() > 0.5 ? hostMenuOptions : participantMenuOptions;
+
+  // 메시지 그룹화 로직
+  const groupedMessages = useMemo(() => {
+    return groupMessages(messages, currentUserId);
+  }, [messages, currentUserId]);
 
   const handleSendMessage = () => {
-    if (!message.trim()) return;
+    if (message.trim()) {
+      // 소켓을 통해 메시지 전송
+      socketManager.sendMessage({
+        room: chatRoom.chat_room_id || 1,
+        message: message.trim()
+      });
+      setMessage('');
+    }
+  };
 
-    if (!socketManager.isConnected()) {
-      Alert.alert('연결 오류', '채팅 서버에 연결되지 않았습니다.');
-      return;
+  // 예약금 입금 처리 함수 (결제 모달 열기)
+  const handleDeposit = (participantId: string) => {
+    setSelectedParticipantId(participantId);
+    setShowPaymentModal(true);
+  };
+
+  // 결제 수단 선택 처리
+  const handlePaymentMethodSelect = (method: 'kakao' | 'naver' | 'bank') => {
+    console.log(`결제 수단 선택: ${method}, 참가자 ID: ${selectedParticipantId}`);
+    
+    // TODO: 실제 결제 로직 구현
+    // 여기서는 테스트용으로 바로 입금 완료 처리
+    if (selectedParticipantId) {
+      setDepositInfo(prev => ({
+        ...prev,
+        participants: prev.participants.map(p => 
+          p.id === selectedParticipantId 
+            ? { ...p, hasDeposited: true }
+            : p
+        )
+      }));
+    }
+    
+    setShowPaymentModal(false);
+    setSelectedParticipantId(null);
+  };
+
+  const renderMessageGroup = (group: MessageGroup, index: number) => {
+    // 시스템 메시지 그룹
+    if (group.type === 'system') {
+      return group.messages.map((msg: ChatMessage) => (
+        <ChatStatusMessage 
+          key={msg.id}
+          message={msg.message} 
+        />
+      ));
     }
 
-    const messageData = {
-      room: chatRoom.chat_room_id,
-      message: message.trim()
-    };
-
-    socketManager.sendMessage(messageData);
-    setMessage('');
-  };
-
-  // 예약금 입금 처리
-  const handleDeposit = (participantId: string) => {
-    Alert.alert('입금 처리', `${participantId}님의 입금을 확인하시겠습니까?`);
-  };
-
-  // 메시지를 그룹화하는 함수
-  const groupMessages = (messages: ChatMessageDTO[]) => {
-    const groups: Array<{
-      senderId: string;
-      senderName: string;
-      messages: Array<{
-        id: string;
-        type: 'text' | 'store';
-        content: string;
-        storeInfo?: any;
-      }>;
-    }> = [];
-
-    messages.forEach((msg) => {
-      const lastGroup = groups[groups.length - 1];
-      
-      if (lastGroup && lastGroup.senderId === msg.sender_id) {
-        // 같은 발신자의 연속된 메시지
-        lastGroup.messages.push({
-          id: msg.id.toString(),
-          type: 'text',
-          content: msg.message
-        });
-      } else {
-        // 새로운 발신자 또는 첫 메시지
-        groups.push({
-          senderId: msg.sender_id,
-          senderName: msg.sender_id === user?.id ? '나' : msg.sender_id,
-          messages: [{
-            id: msg.id.toString(),
-            type: 'text',
-            content: msg.message
-          }]
-        });
-      }
-    });
-
-    return groups;
-  };
-
-  const renderMessageGroup = ({ item }: { item: any }) => {
-    const isMyMessage = item.senderId === user?.id;
-    const senderAvatar = item.senderName.charAt(0);
-
+    // 사용자 메시지 그룹 - 시간 순서대로 정렬된 메시지 배열 생성
+    const sortedMessages = group.messages
+      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+      .map(msg => ({
+        id: msg.id,
+        type: msg.type as 'text' | 'store',
+        content: msg.message,
+        storeInfo: msg.storeInfo
+      }));
+    
     return (
       <ChatBubble
-        messages={item.messages}
-        isMyMessage={isMyMessage}
-        senderName={!isMyMessage ? item.senderName : undefined}
-        senderAvatar={!isMyMessage ? senderAvatar : undefined}
+        key={group.id}
+        messages={sortedMessages}
+        isMyMessage={group.isMyMessage}
+        senderName={group.senderName}
+        senderAvatar={group.senderAvatar}
       />
     );
   };
 
-  const renderStatusMessage = ({ item }: { item: any }) => {
-    return <ChatStatusMessage message={item.message} />;
-  };
-
-  const renderDepositInfo = () => {
-    const participants = [
-      { id: 'user1', name: '김철수', avatar: '김', isHost: true, hasDeposited: true },
-      { id: 'user2', name: '이영희', avatar: '이', isHost: false, hasDeposited: false },
-      { id: 'user3', name: '박민수', avatar: '박', isHost: false, hasDeposited: true },
-    ];
-
+  // 로딩 상태
+  if (isLoading && messages.length === 0) {
     return (
-      <ReservationDepositInfo
-        participants={participants}
-        depositAmount={50000}
-        timeLimit={30}
-        onDeposit={handleDeposit}
-      />
+      <View className="flex-1 bg-white justify-center items-center">
+        <Text className="text-gray-600">메시지를 불러오는 중...</Text>
+      </View>
     );
-  };
+  }
 
-  const renderItem = ({ item }: { item: any }) => {
-    if (item.type === 'status') {
-      return renderStatusMessage({ item });
-    } else if (item.type === 'deposit') {
-      return renderDepositInfo();
-    } else {
-      return renderMessageGroup({ item });
-    }
-  };
-
-  // 헤더 렌더링 (방장/참가자 구분)
-  const renderHeader = () => (
-    <View className="flex-row justify-between items-center p-4 bg-white border-b border-gray-200">
-      <View className="flex-1">
-        <View className="flex-row items-center">
-          <Text className="text-lg font-semibold text-gray-900 mr-2">{chatRoom.name}</Text>
-          {isHost && (
-            <View className="bg-mainOrange px-2 py-1 rounded-full">
-              <Text className="text-xs font-bold text-white">방장</Text>
-            </View>
-          )}
-        </View>
-        <Text className="text-sm text-gray-500">
-          {isConnecting ? '연결 중...' : isConnected ? '연결됨' : '연결 안됨'}
-        </Text>
-      </View>
-      
-      <View className="flex-row items-center">
-        {isConnecting && (
-          <ActivityIndicator size="small" color="#FF6B35" className="mr-2" />
-        )}
-        
-        {/* 방장일 때만 표시되는 버튼들 */}
-        {isHost && (
-          <>
-            <TouchableOpacity 
-              className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center mr-2"
-              onPress={() => setShowDepositInfo(!showDepositInfo)}
-            >
-              <Feather name="credit-card" size={16} color="#666" />
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center mr-2"
-              onPress={() => Alert.alert('모임 관리', '모임 관리 기능')}
-            >
-              <Feather name="settings" size={16} color="#666" />
-            </TouchableOpacity>
-          </>
-        )}
-        
-        {/* 참가자일 때 표시되는 버튼 */}
-        {!isHost && (
-          <TouchableOpacity 
-            className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center"
-            onPress={() => Alert.alert('채팅방 나가기', '채팅방을 나가시겠습니까?')}
-          >
-            <Feather name="log-out" size={16} color="#666" />
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
-  );
-
-  if (error) {
+  // 에러 상태
+  if (error && messages.length === 0) {
     return (
-      <View className="flex-1 justify-center items-center p-4">
+      <View className="flex-1 bg-white justify-center items-center px-4">
         <Text className="text-gray-600 text-center mb-4">메시지를 불러오는데 실패했습니다.</Text>
         <TouchableOpacity 
           className="bg-mainOrange px-6 py-3 rounded-lg"
@@ -297,68 +253,107 @@ export default function ChatRoomScreen() {
     );
   }
 
-  // 메시지 그룹화
-  const messageGroups = groupMessages(messages);
-  const displayItems = [
-    ...messageGroups.map(group => ({ ...group, type: 'message' })),
-    // 예약금 정보 (방장일 때만 표시)
-    ...(showDepositInfo && isHost ? [{ type: 'deposit' }] : []),
-  ];
-
   return (
     <KeyboardAvoidingView 
-      className="flex-1 bg-gray-50"
+      className="flex-1 bg-white"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      {renderHeader()}
-      
-      <FlatList
-        ref={flatListRef}
-        data={displayItems}
-        renderItem={renderItem}
-        keyExtractor={(item, index) => {
-          if (item.type === 'status') return `status-${index}`;
-          if (item.type === 'deposit') return `deposit-${index}`;
-          return `message-${item.senderId}-${index}`;
-        }}
-        className="flex-1"
-        contentContainerStyle={{ padding: 16 }}
-        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-        onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
-        ListEmptyComponent={
-          isLoading ? (
-            <View className="flex-1 justify-center items-center py-20">
-              <ActivityIndicator size="large" color="#FF6B35" />
-              <Text className="text-gray-600 mt-4">메시지를 불러오는 중...</Text>
-            </View>
-          ) : (
-            <View className="flex-1 justify-center items-center py-20">
-              <Text className="text-gray-500 text-center">아직 메시지가 없습니다.</Text>
-            </View>
-          )
-        }
-      />
+        {/* 헤더 */}
+        <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-200">
+          <TouchableOpacity 
+            onPress={() => navigation.goBack()}
+            className="mr-3"
+          >
+            <Text className="text-2xl">←</Text>
+          </TouchableOpacity>
+          
+          <View className="flex-1">
+            <Text className="text-lg font-semibold text-gray-900">
+              {chatRoom.title || chatRoom.name}
+            </Text>
+            <Text className="text-sm text-gray-600">
+              {chatRoom.subtitle || '채팅방'}
+            </Text>
+          </View>
 
-      <View className="flex-row p-4 bg-white border-t border-gray-200">
-        <TextInput
-          className="flex-1 border border-gray-300 rounded-full px-4 py-2 mr-3 text-base"
-          value={message}
-          onChangeText={setMessage}
-          placeholder="메시지를 입력하세요..."
-          multiline
-          maxLength={500}
-        />
+          {/* 메뉴 버튼 */}
+          <TouchableOpacity
+            onPress={() => setShowMenu(!showMenu)}
+            className="p-2"
+          >
+            <Text className="text-xl font-bold text-gray-700">⋮</Text>
+          </TouchableOpacity>
+        </View>
+
+                 {/* 드롭다운 메뉴 */}
+         <DropdownMenu
+           options={menuOptions}
+           isVisible={showMenu}
+           onClose={() => setShowMenu(false)}
+         />
+
+         {/* 결제 모달 */}
+         <PaymentModal
+           isVisible={showPaymentModal}
+           onClose={() => {
+             setShowPaymentModal(false);
+             setSelectedParticipantId(null);
+           }}
+           amount={depositInfo.depositAmount}
+           onPaymentMethodSelect={handlePaymentMethodSelect}
+         />
+
+             {/* 메시지 영역 */}
+       <ScrollView 
+         className="flex-1 px-4 py-2"
+         showsVerticalScrollIndicator={false}
+       >
+         {/* 예약금 안내 컴포넌트 */}
+         <ReservationDepositInfo
+           participants={depositInfo.participants}
+           depositAmount={depositInfo.depositAmount}
+           timeLimit={depositInfo.timeLimit}
+           onDeposit={handleDeposit}
+         />
+         
+         {/* 채팅 메시지들 */}
+         {groupedMessages.map((group, index) => renderMessageGroup(group, index))}
+       </ScrollView>
+
+      {/* 메시지 입력 영역 */}
+      <View className="flex-row items-center px-4 py-3 bg-white border-t border-gray-200">
+        {/* 왼쪽 상점 아이콘 버튼 */}
         <TouchableOpacity
-          className={`px-6 py-2 rounded-full justify-center ${
-            !message.trim() || !isConnected ? 'bg-gray-300' : 'bg-mainOrange'
-          }`}
-          onPress={handleSendMessage}
-          disabled={!message.trim() || !isConnected}
+          onPress={() => console.log('상점 버튼 클릭')}
+          className="justify-center items-center mr-3 w-10 h-10 rounded-full bg-mainOrange"
+          activeOpacity={0.8}
         >
-          <Text className={`font-semibold ${!message.trim() || !isConnected ? 'text-gray-500' : 'text-white'}`}>
-            전송
-          </Text>
+            <Feather name="home" size={15} color="#F5F5F5" />
         </TouchableOpacity>
+        
+        {/* 메시지 입력 필드 (전송 버튼 포함) */}
+        <View className="flex-row flex-1 items-center px-4 py-2 mr-3 bg-gray-100 rounded-full">
+          <TextInput
+            value={message}
+            onChangeText={setMessage}
+            placeholder="메시지를 입력하세요"
+            className="flex-1 px-2"
+            multiline
+            placeholderTextColor="#9CA3AF"
+          />
+          
+          {/* 전송 버튼 (입력 필드 안에) */}
+          <TouchableOpacity
+            onPress={handleSendMessage}
+            disabled={!message.trim()}
+            className={`w-8 h-8 rounded-full items-center justify-center ${
+              message.trim() ? 'bg-mainOrange' : 'bg-gray-300'
+            }`}
+            activeOpacity={0.8}
+          >
+            <Feather name="send" size={15} color="#F5F5F5" />
+          </TouchableOpacity>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );

@@ -37,6 +37,10 @@ export default function LoginScreen() {
       });
 
       console.log('로그인 성공:', response);
+      console.log('서버 응답 데이터:', response.data);
+      console.log('user 객체:', response.data.user);
+      console.log('user_id 값:', response.data.user.user_id);
+      console.log('user_id 타입:', typeof response.data.user.user_id);
 
       // 서버 응답에서 토큰 찾기 (여러 가능한 위치 확인)
       let token: string | null = null;
@@ -64,7 +68,7 @@ export default function LoginScreen() {
         console.log('서버에서 토큰을 제공하지 않음. 임시 토큰 생성');
         const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
         const payload = btoa(JSON.stringify({ 
-          user_id: response.data.user_id,
+          user_id: response.data.user.user_id,
           exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24시간 후 만료
           iat: Math.floor(Date.now() / 1000)
         }));
@@ -76,14 +80,20 @@ export default function LoginScreen() {
       setAccessToken(token);
 
       // 스토어에 사용자 정보 저장
-      login({
-        id: response.data.user_id,
-        email: response.data.user_email,
-        name: response.data.user_name,
-        phoneNumber: response.data.user_phone_number,
-        gender: response.data.user_gender,
+      const userData = {
+        id: response.data.user.user_id,
+        email: response.data.user.user_email,
+        name: response.data.user.user_name,
+        phoneNumber: response.data.user.user_phone_number,
+        gender: response.data.user.user_gender,
         userType: selectedUserType || 'sports_fan',
-      }, token);
+      };
+      
+      console.log('스토어에 저장할 사용자 데이터:', userData);
+      console.log('저장할 id 값:', userData.id);
+      console.log('저장할 id 타입:', typeof userData.id);
+      
+      login(userData, token);
 
       // 로그인 성공 알림 (네비게이션은 RootNavigator에서 자동 처리)
       Alert.alert('성공', '로그인되었습니다.');
