@@ -16,6 +16,9 @@ import { useAuthStore } from '@/store';
 import CreateMeeting from '@/screens/user/CreateMeeting/CreateMeeting/index';
 import BusinessNavigator from './BusinessNavigator';
 import BusinessHomeScreen from '@/screens/business/Home/HomeScreen';
+import StoreBasicInfoScreen from '@/screens/business/Setting/StoreBasicInfoScreen';
+import StoreDetailInfoScreen from '@/screens/business/Setting/StoreDetailInfoScreen';
+import SportsRegistrationScreen from '@/screens/business/Setting/SportsRegistrationScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -60,6 +63,30 @@ export default function RootNavigator() {
             }} 
           />
           <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ headerShown: false }} />
+          <Stack.Screen 
+            name="StoreBasicInfo" 
+            component={StoreBasicInfoScreen} 
+            options={{ 
+              headerShown: true,
+              header: () => <CustomHeader title="가게 기본 정보" />,
+            }} 
+          />
+          <Stack.Screen 
+            name="StoreDetailInfo" 
+            component={StoreDetailInfoScreen} 
+            options={{ 
+              headerShown: true,
+              header: () => <CustomHeader title="가게 상세 정보" />,
+            }} 
+          />
+          <Stack.Screen 
+            name="SportsRegistration" 
+            component={SportsRegistrationScreen} 
+            options={{ 
+              headerShown: true,
+              header: () => <CustomHeader title="시청 가능 스포츠 등록" />,
+            }} 
+          />
         </>
       ) : (
         <>

@@ -12,4 +12,7 @@ export type RootStackParamList = {
   CreateMeeting: undefined;
   ParticipatedMatches: undefined;
   ChangePassword: undefined;
+  StoreBasicInfo: undefined;
+  StoreDetailInfo: undefined;
+  SportsRegistration: undefined;
 };
