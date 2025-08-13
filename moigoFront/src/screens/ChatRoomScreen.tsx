@@ -5,7 +5,6 @@ import {
   FlatList,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   KeyboardAvoidingView,
   Platform,
   Alert,
@@ -17,6 +16,11 @@ import { useChatMessages } from '@/hooks/queries/useChatQueries';
 import { socketManager } from '@/utils/socketUtils';
 import { useAuthStore } from '@/store/authStore';
 import { formatTime } from '@/utils/dateUtils';
+import ChatBubble from '@/components/chat/ChatBubble';
+import ChatStatusMessage from '@/components/chat/ChatStatusMessage';
+import ReservationDepositInfo from '@/components/chat/ReservationDepositInfo';
+import StoreShareMessage from '@/components/chat/StoreShareMessage';
+import Feather from 'react-native-vector-icons/Feather';
 import type { ChatMessageDTO, NewMessageDTO } from '@/types/DTO/chat';
 import type { RootStackParamList } from '@/types/RootStackParamList';
 
@@ -31,6 +35,8 @@ export default function ChatRoomScreen() {
   const [messages, setMessages] = useState<ChatMessageDTO[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isHost, setIsHost] = useState(false); // 방장 여부
+  const [showDepositInfo, setShowDepositInfo] = useState(false); // 예약금 정보 표시 여부
   const flatListRef = useRef<FlatList>(null);
 
   const { data, isLoading, error, refetch } = useChatMessages(chatRoom.chat_room_id);
@@ -38,6 +44,9 @@ export default function ChatRoomScreen() {
   // 소켓 연결 및 메시지 처리
   useEffect(() => {
     console.log('ChatRoomScreen - 채팅방 입장:', chatRoom.chat_room_id);
+    
+    // 방장 여부 확인 (임시로 랜덤 설정)
+    setIsHost(Math.random() > 0.5);
     
     // 소켓 연결 시도
     const connectSocket = async () => {
@@ -130,43 +139,145 @@ export default function ChatRoomScreen() {
     setMessage('');
   };
 
-  const renderMessage = ({ item }: { item: ChatMessageDTO }) => {
-    const isMyMessage = item.sender_id === user?.id;
-    const messageTime = formatTime(item.created_at);
+  // 예약금 입금 처리
+  const handleDeposit = (participantId: string) => {
+    Alert.alert('입금 처리', `${participantId}님의 입금을 확인하시겠습니까?`);
+  };
+
+  // 메시지를 그룹화하는 함수
+  const groupMessages = (messages: ChatMessageDTO[]) => {
+    const groups: Array<{
+      senderId: string;
+      senderName: string;
+      messages: Array<{
+        id: string;
+        type: 'text' | 'store';
+        content: string;
+        storeInfo?: any;
+      }>;
+    }> = [];
+
+    messages.forEach((msg) => {
+      const lastGroup = groups[groups.length - 1];
+      
+      if (lastGroup && lastGroup.senderId === msg.sender_id) {
+        // 같은 발신자의 연속된 메시지
+        lastGroup.messages.push({
+          id: msg.id.toString(),
+          type: 'text',
+          content: msg.message
+        });
+      } else {
+        // 새로운 발신자 또는 첫 메시지
+        groups.push({
+          senderId: msg.sender_id,
+          senderName: msg.sender_id === user?.id ? '나' : msg.sender_id,
+          messages: [{
+            id: msg.id.toString(),
+            type: 'text',
+            content: msg.message
+          }]
+        });
+      }
+    });
+
+    return groups;
+  };
+
+  const renderMessageGroup = ({ item }: { item: any }) => {
+    const isMyMessage = item.senderId === user?.id;
+    const senderAvatar = item.senderName.charAt(0);
 
     return (
-      <View style={[styles.messageContainer, isMyMessage ? styles.myMessage : styles.otherMessage]}>
-        <View style={[styles.messageBubble, isMyMessage ? styles.myBubble : styles.otherBubble]}>
-          <Text style={[styles.messageText, isMyMessage ? styles.myMessageText : styles.otherMessageText]}>
-            {item.message}
-          </Text>
-          <Text style={[styles.messageTime, isMyMessage ? styles.myMessageTime : styles.otherMessageTime]}>
-            {messageTime}
-          </Text>
-        </View>
-      </View>
+      <ChatBubble
+        messages={item.messages}
+        isMyMessage={isMyMessage}
+        senderName={!isMyMessage ? item.senderName : undefined}
+        senderAvatar={!isMyMessage ? senderAvatar : undefined}
+      />
     );
   };
 
+  const renderStatusMessage = ({ item }: { item: any }) => {
+    return <ChatStatusMessage message={item.message} />;
+  };
+
+  const renderDepositInfo = () => {
+    const participants = [
+      { id: 'user1', name: '김철수', avatar: '김', isHost: true, hasDeposited: true },
+      { id: 'user2', name: '이영희', avatar: '이', isHost: false, hasDeposited: false },
+      { id: 'user3', name: '박민수', avatar: '박', isHost: false, hasDeposited: true },
+    ];
+
+    return (
+      <ReservationDepositInfo
+        participants={participants}
+        depositAmount={50000}
+        timeLimit={30}
+        onDeposit={handleDeposit}
+      />
+    );
+  };
+
+  const renderItem = ({ item }: { item: any }) => {
+    if (item.type === 'status') {
+      return renderStatusMessage({ item });
+    } else if (item.type === 'deposit') {
+      return renderDepositInfo();
+    } else {
+      return renderMessageGroup({ item });
+    }
+  };
+
+  // 헤더 렌더링 (방장/참가자 구분)
   const renderHeader = () => (
-    <View style={styles.header}>
-      <Text style={styles.roomName}>{chatRoom.name}</Text>
-      <View style={styles.connectionStatus}>
-        {isConnecting ? (
-          <View style={styles.statusContainer}>
-            <ActivityIndicator size="small" color="#007AFF" />
-            <Text style={styles.statusText}>연결 중...</Text>
-          </View>
-        ) : isConnected ? (
-          <View style={styles.statusContainer}>
-            <View style={[styles.statusDot, styles.connected]} />
-            <Text style={styles.statusText}>연결됨</Text>
-          </View>
-        ) : (
-          <View style={styles.statusContainer}>
-            <View style={[styles.statusDot, styles.disconnected]} />
-            <Text style={styles.statusText}>연결 안됨</Text>
-          </View>
+    <View className="flex-row justify-between items-center p-4 bg-white border-b border-gray-200">
+      <View className="flex-1">
+        <View className="flex-row items-center">
+          <Text className="text-lg font-semibold text-gray-900 mr-2">{chatRoom.name}</Text>
+          {isHost && (
+            <View className="bg-mainOrange px-2 py-1 rounded-full">
+              <Text className="text-xs font-bold text-white">방장</Text>
+            </View>
+          )}
+        </View>
+        <Text className="text-sm text-gray-500">
+          {isConnecting ? '연결 중...' : isConnected ? '연결됨' : '연결 안됨'}
+        </Text>
+      </View>
+      
+      <View className="flex-row items-center">
+        {isConnecting && (
+          <ActivityIndicator size="small" color="#FF6B35" className="mr-2" />
+        )}
+        
+        {/* 방장일 때만 표시되는 버튼들 */}
+        {isHost && (
+          <>
+            <TouchableOpacity 
+              className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center mr-2"
+              onPress={() => setShowDepositInfo(!showDepositInfo)}
+            >
+              <Feather name="credit-card" size={16} color="#666" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center mr-2"
+              onPress={() => Alert.alert('모임 관리', '모임 관리 기능')}
+            >
+              <Feather name="settings" size={16} color="#666" />
+            </TouchableOpacity>
+          </>
+        )}
+        
+        {/* 참가자일 때 표시되는 버튼 */}
+        {!isHost && (
+          <TouchableOpacity 
+            className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center"
+            onPress={() => Alert.alert('채팅방 나가기', '채팅방을 나가시겠습니까?')}
+          >
+            <Feather name="log-out" size={16} color="#666" />
+          </TouchableOpacity>
         )}
       </View>
     </View>
@@ -174,48 +285,63 @@ export default function ChatRoomScreen() {
 
   if (error) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>메시지를 불러오는데 실패했습니다.</Text>
-        <Text style={styles.errorDetailText}>{error.message}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-          <Text style={styles.retryButtonText}>다시 시도</Text>
+      <View className="flex-1 justify-center items-center p-4">
+        <Text className="text-gray-600 text-center mb-4">메시지를 불러오는데 실패했습니다.</Text>
+        <TouchableOpacity 
+          className="bg-mainOrange px-6 py-3 rounded-lg"
+          onPress={() => refetch()}
+        >
+          <Text className="text-white font-semibold">다시 시도</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
+  // 메시지 그룹화
+  const messageGroups = groupMessages(messages);
+  const displayItems = [
+    ...messageGroups.map(group => ({ ...group, type: 'message' })),
+    // 예약금 정보 (방장일 때만 표시)
+    ...(showDepositInfo && isHost ? [{ type: 'deposit' }] : []),
+  ];
+
   return (
     <KeyboardAvoidingView 
-      style={styles.container} 
+      className="flex-1 bg-gray-50"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       {renderHeader()}
       
       <FlatList
         ref={flatListRef}
-        data={messages}
-        renderItem={renderMessage}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.messagesList}
+        data={displayItems}
+        renderItem={renderItem}
+        keyExtractor={(item, index) => {
+          if (item.type === 'status') return `status-${index}`;
+          if (item.type === 'deposit') return `deposit-${index}`;
+          return `message-${item.senderId}-${index}`;
+        }}
+        className="flex-1"
+        contentContainerStyle={{ padding: 16 }}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
         onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
         ListEmptyComponent={
           isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#007AFF" />
-              <Text style={styles.loadingText}>메시지를 불러오는 중...</Text>
+            <View className="flex-1 justify-center items-center py-20">
+              <ActivityIndicator size="large" color="#FF6B35" />
+              <Text className="text-gray-600 mt-4">메시지를 불러오는 중...</Text>
             </View>
           ) : (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>아직 메시지가 없습니다.</Text>
+            <View className="flex-1 justify-center items-center py-20">
+              <Text className="text-gray-500 text-center">아직 메시지가 없습니다.</Text>
             </View>
           )
         }
       />
 
-      <View style={styles.inputContainer}>
+      <View className="flex-row p-4 bg-white border-t border-gray-200">
         <TextInput
-          style={styles.textInput}
+          className="flex-1 border border-gray-300 rounded-full px-4 py-2 mr-3 text-base"
           value={message}
           onChangeText={setMessage}
           placeholder="메시지를 입력하세요..."
@@ -223,189 +349,17 @@ export default function ChatRoomScreen() {
           maxLength={500}
         />
         <TouchableOpacity
-          style={[styles.sendButton, !message.trim() && styles.sendButtonDisabled]}
+          className={`px-6 py-2 rounded-full justify-center ${
+            !message.trim() || !isConnected ? 'bg-gray-300' : 'bg-mainOrange'
+          }`}
           onPress={handleSendMessage}
           disabled={!message.trim() || !isConnected}
         >
-          <Text style={styles.sendButtonText}>전송</Text>
+          <Text className={`font-semibold ${!message.trim() || !isConnected ? 'text-gray-500' : 'text-white'}`}>
+            전송
+          </Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  roomName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-  },
-  connectionStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 4,
-  },
-  connected: {
-    backgroundColor: '#4CAF50',
-  },
-  disconnected: {
-    backgroundColor: '#F44336',
-  },
-  statusText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  messagesList: {
-    flexGrow: 1,
-    padding: 16,
-  },
-  messageContainer: {
-    marginVertical: 4,
-  },
-  myMessage: {
-    alignItems: 'flex-end',
-  },
-  otherMessage: {
-    alignItems: 'flex-start',
-  },
-  messageBubble: {
-    maxWidth: '80%',
-    padding: 12,
-    borderRadius: 16,
-  },
-  myBubble: {
-    backgroundColor: '#007AFF',
-    borderBottomRightRadius: 4,
-  },
-  otherBubble: {
-    backgroundColor: 'white',
-    borderBottomLeftRadius: 4,
-  },
-  messageText: {
-    fontSize: 16,
-    lineHeight: 20,
-  },
-  myMessageText: {
-    color: 'white',
-  },
-  otherMessageText: {
-    color: '#333',
-  },
-  messageTime: {
-    fontSize: 11,
-    marginTop: 4,
-  },
-  myMessageTime: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    textAlign: 'right',
-  },
-  otherMessageTime: {
-    color: '#999',
-    textAlign: 'left',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    padding: 16,
-    backgroundColor: 'white',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  textInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 8,
-    maxHeight: 100,
-    fontSize: 16,
-  },
-  sendButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    justifyContent: 'center',
-  },
-  sendButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  sendButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 10,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#666',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  errorDetailText: {
-    fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-}); 
+} 
