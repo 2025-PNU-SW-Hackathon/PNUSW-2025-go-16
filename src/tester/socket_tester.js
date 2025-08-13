@@ -2,7 +2,7 @@
 const { io } = require('socket.io-client');
 
 // JWT 토큰 (Bearer 포함)
-const token = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidGVzdGlkMiIsImlhdCI6MTc1NTA5ODYxMiwiZXhwIjoxNzU1MTA1ODEyfQ.rCSaEz5iIhYdprA6e62hzZ8icBJpCaeww5nyVPi3GIE';
+const token = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoieWVqdW4yIiwiaWF0IjoxNzU1MTExNzkyLCJleHAiOjE3NTUxMTg5OTJ9.a2nMtClpGChkVm8XJUv7Uj1vdCvTi7WhCdxlccsGU4M';
 
 
 // socket.io-client 초기화

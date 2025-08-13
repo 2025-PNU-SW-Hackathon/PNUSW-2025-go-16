@@ -3,6 +3,8 @@ const axios = require('axios');
 const { getConnection } = require('../config/db_config');
 require('dotenv').config();
 const socketService = require('./socket_service');
+const { getIO } = require('../config/socket_hub');
+const messageService = require('./message_service');
 const TOSS_SECRET_KEY = process.env.TOSS_SECRET_KEY;
 const bankCodes = [
   { name: "KB국민은행", code: "04" },
@@ -52,7 +54,20 @@ exports.createPaymentRequest = async ({ chat_room_id, requester_id, amount, mess
    WHERE reservation_id = ?`,
     [chat_room_id]
   );
-  
+
+  const io = getIO(); // 전역 등록된 io 가져오기
+
+  try {
+    // 메시지를 db에 저장
+    const new_message_result = await messageService.saveNewMessage('admin', chat_room_id, '결제를 요청하였습니다.');
+
+    // 메시지를 해당 방에 브로드캐스트
+    io.to(chat_room_id).emit('newMessage', new_message_result);
+  } catch (err) {
+    console.error('메시지 저장 오류:', err);
+    socket.emit('error', '메시지를 보낼 수 없습니다.');
+  }
+
   return { payment_request_id: result.insertId, status: 'pending' };
 };
 

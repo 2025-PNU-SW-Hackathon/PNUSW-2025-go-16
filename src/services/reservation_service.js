@@ -212,9 +212,10 @@ exports.getReservationDetail = async (reservation_id) => {
 
   const [participants] = await conn.query(
     `SELECT u.user_id, u.user_name
-     FROM chat_room_users r
-     JOIN user_table u ON r.user_id = u.user_id
-     WHERE r.reservation_id = ?`,
+    FROM chat_room_users cru
+    JOIN user_table u 
+      ON cru.user_id = u.user_id
+    WHERE cru.reservation_id = ?`,
     [reservation_id]
   );
 
