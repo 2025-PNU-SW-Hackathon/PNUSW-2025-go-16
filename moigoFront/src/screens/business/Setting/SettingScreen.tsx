@@ -86,7 +86,7 @@ export default function SettingScreen() {
             title="영업 시간 설정"
             icon="clock"
             iconColor="#F59E0B"
-            onPress={() => console.log('영업 시간 설정')}
+            onPress={() => navigation.navigate('BusinessHours')}
             className="mb-4 rounded-b-2xl border-2 border-t-0 border-mainGray"
           />
         </SettingSection>

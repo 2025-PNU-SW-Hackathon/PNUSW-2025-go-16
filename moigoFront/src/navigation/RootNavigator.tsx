@@ -6,7 +6,6 @@ import OnboardingScreen from '@/screens/OnboardingScreen';
 import LoginScreen from '@/screens/LoginScreen';
 import SignupScreen from '@/screens/SignupScreen';
 import ChatRoomScreen from '@/screens/ChatRoomScreen';
-import Profile from '@/screens/user/Mypage/Profile';
 import MyInfoSetting from '@/screens/user/Mypage/MyInfoSetting';
 import ParticipatedMatchesScreen from '@/screens/user/ParticipatedMatches/ParticipatedMatchesScreen';
 import ChangePasswordScreen from '@/screens/user/Password/ChangePasswordScreen';
@@ -19,6 +18,8 @@ import BusinessHomeScreen from '@/screens/business/Home/HomeScreen';
 import StoreBasicInfoScreen from '@/screens/business/Setting/StoreBasicInfoScreen';
 import StoreDetailInfoScreen from '@/screens/business/Setting/StoreDetailInfoScreen';
 import SportsRegistrationScreen from '@/screens/business/Setting/SportsRegistrationScreen';
+import BusinessHoursScreen from '@/screens/business/Setting/BusinessHoursScreen';
+import ChatScreen from '@/screens/ChatScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -49,10 +50,6 @@ export default function RootNavigator() {
               header: () => <CustomHeader title="설정" />,
             }} 
           />
-          <Stack.Screen name="Profile" component={Profile} options={{ 
-              headerShown: true,
-              header: () => <CustomHeader title="프로필 관리" />,
-            }}  />
           <Stack.Screen name="CreateMeeting" component={CreateMeeting} options={{ headerShown: false }} />
           <Stack.Screen 
             name="ParticipatedMatches" 
@@ -85,6 +82,22 @@ export default function RootNavigator() {
             options={{ 
               headerShown: true,
               header: () => <CustomHeader title="시청 가능 스포츠 등록" />,
+            }} 
+          />
+          <Stack.Screen 
+            name="BusinessHours" 
+            component={BusinessHoursScreen} 
+            options={{ 
+              headerShown: true,
+              header: () => <CustomHeader title="영업 시간 설정" />,
+            }} 
+          />
+          <Stack.Screen 
+            name="Chat" 
+            component={ChatScreen} 
+            options={{ 
+              headerShown: true,
+              header: () => <CustomHeader title="채팅" />,
             }} 
           />
         </>
