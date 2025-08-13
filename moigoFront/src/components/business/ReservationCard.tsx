@@ -10,6 +10,20 @@ interface ReservationCardProps {
   time: string;
   participants: string;
   location: string;
+  onConfirm: (eventData: {
+    title: string;
+    type: string;
+    time: string;
+    participants: string;
+    location: string;
+  }) => void;
+  onReject: (eventData: {
+    title: string;
+    type: string;
+    time: string;
+    participants: string;
+    location: string;
+  }) => void;
 }
 
 const ReservationCard: React.FC<ReservationCardProps> = ({
@@ -18,7 +32,29 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
   time,
   participants,
   location,
+  onConfirm,
+  onReject,
 }) => {
+  const handleConfirm = () => {
+    onConfirm({
+      title: eventTitle,
+      type: eventType,
+      time,
+      participants,
+      location,
+    });
+  };
+
+  const handleReject = () => {
+    onReject({
+      title: eventTitle,
+      type: eventType,
+      time,
+      participants,
+      location,
+    });
+  };
+
   return (
     <View className="p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
       <View className="flex-row justify-between items-start mb-3">
@@ -46,10 +82,18 @@ const ReservationCard: React.FC<ReservationCardProps> = ({
           </View>
         </View>
         <View className="flex-row gap-2 items-center">
-          <TouchableOpacity className="justify-center items-center w-10 h-10 rounded-full bg-confirmBg">
+          <TouchableOpacity 
+            className="justify-center items-center w-10 h-10 rounded-full bg-confirmBg"
+            onPress={handleConfirm}
+            activeOpacity={0.7}
+          >
             <Feather name="check" size={16} color={COLORS.confirmText} />
           </TouchableOpacity>
-          <TouchableOpacity className="justify-center items-center w-10 h-10 bg-red-200 rounded-full">
+          <TouchableOpacity 
+            className="justify-center items-center w-10 h-10 bg-red-200 rounded-full"
+            onPress={handleReject}
+            activeOpacity={0.7}
+          >
             <Feather name="x" size={16} color={COLORS.mainRed} />
           </TouchableOpacity>
         </View>
