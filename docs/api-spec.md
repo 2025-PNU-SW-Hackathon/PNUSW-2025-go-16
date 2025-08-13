@@ -688,85 +688,127 @@
     "user_gender": 1
   }
 }
+
 ```
 
-### 7.1 전체 매치 조회
+---
 
-# 🏟️ 경기 목록 조회 API 명세서
+# 🏟️ 경기 정보 조회 API 명세서
 
-**Base URL**: `/api/v1`  
-**인증**: 공개 조회(기본 불필요) ※ 필요 시 `Authorization: Bearer <JWT>`
+## 1. 전체 경기 목록 조회
 
-> `matches` 테이블 기반의 **전체 경기 목록 조회** API입니다.
+### 설명
+`matches` 테이블에서 경기 정보를 조회합니다.  
+기본적으로 **현재 시각 이후의 경기만** 반환하지만, `date_from` 또는 `date_to`가 주어지면 이 제한은 적용되지 않습니다.  
+구단명 검색 시 홈/원정 모두를 검색합니다.
 
 ---
 
-## GET `/api/v1/matches`
-
-조건에 맞는 경기 리스트를 조회합니다.
-
-### Query Parameters
-
-| 이름 | 타입 | 예시 | 설명 |
-|---|---|---|---|
-| `competition_code` | string | `EPL` | 대회 코드(정확히 일치) |
-| `status` | string | `SCHEDULED`,`LIVE`,`FINISHED`,`POSTPONED` | 경기 상태 필터 |
-| `date_from` | datetime | `2025-09-01T00:00:00Z` | 경기일 시작(이상) |
-| `date_to` | datetime | `2025-09-30T23:59:59Z` | 경기일 종료(이하) |
-| `home` | string | `Manchester` | 홈팀 **부분 검색** |
-| `away` | string | `Chelsea` | 원정팀 **부분 검색** |
-| `venue` | string | `Etihad` | 경기장 **부분 검색** |
-| `category` | int | `1` | 카테고리 일치 |
-| `sort` | string | `match_date:asc` | 정렬(필드: `match_date`,`id` / 방향: `asc \| desc`) |
-| `page` | int | `1` | 페이지 번호(기본 1) |
-| `page_size` | int | `20` | 페이지 크기(기본 20, 최대 100 권장) |
-
-> 날짜 형식은 **ISO 8601** 권장(`YYYY-MM-DDTHH:mm:ssZ`). 서비스 정책에 따라 `YYYY-MM-DD HH:mm:ss`도 허용 가능(응답은 ISO 권장).
+### **URL**
+```
+GET /api/v1/matches
+```
+### category = 1 : 축구, 2 : 야구
+### **Query Parameters**
+| 이름 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| competition_code | string | ❌ | 대회 코드 |
+| status | string | ❌ | 경기 상태(ex: SCHEDULED, FINISHED) |
+| date_from | string(datetime) | ❌ | 조회 시작 날짜 (`YYYY-MM-DD` 또는 `YYYY-MM-DD HH:MM:SS`) |
+| date_to | string(datetime) | ❌ | 조회 종료 날짜 |
+| home | string | ❌ | 홈팀명 검색 |
+| away | string | ❌ | 원정팀명 검색 |
+| team | string | ❌ | 홈/원정 모두 포함 구단명 검색 |
+| venue | string | ❌ | 경기장명 검색 |
+| category | int | ❌ | 카테고리(숫자) |
+| sort | string | ❌ | 정렬 필드와 방향 (`match_date:asc` 기본) |
+| page | int | ❌ | 페이지 번호(기본 1) |
+| page_size | int / `"all"` | ❌ | 페이지 크기. `"all"` 또는 `all=true`면 전체 조회 |
+| all | boolean | ❌ | `true`이면 전체 조회 (page/page_size 무시) |
 
 ---
 
-### Response (200)
+### **Request 예시**
 
+#### 1) 전체 조회
+```
+GET /api/v1/matches?all=true
+```
+
+#### 2) 구단명 통합 검색
+```
+GET /api/v1/matches?team=Arsenal
+```
+
+#### 3) 날짜 범위 검색
+```
+GET /api/v1/matches?date_from=2025-08-15&date_to=2025-08-20
+```
+
+#### 4) 날짜+구단명 검색
+```
+GET /api/v1/matches?date_from=2025-08-15&date_to=2025-08-20&team=Manchester
+```
+
+---
+
+### **Response 예시**
 ```json
 {
   "success": true,
   "meta": {
     "page": 1,
     "page_size": 20,
-    "total": 235,
-    "total_pages": 12,
+    "total": 150,
+    "total_pages": 8,
     "sort": "match_date:asc",
     "filters": {
-      "competition_code": "EPL",
-      "date_from": "2025-09-01T00:00:00Z",
-      "date_to": "2025-09-30T23:59:59Z",
-      "status": "SCHEDULED"
+      "team": "Arsenal"
     }
   },
   "data": [
     {
-      "id": 12345,
+      "id": 101,
       "competition_code": "EPL",
-      "match_date": "2025-09-01T19:00:00Z",
+      "match_date": "2025-08-17 17:00:00",
       "status": "SCHEDULED",
-      "home_team": "Manchester City",
+      "home_team": "Arsenal",
       "away_team": "Chelsea",
-      "venue": "Etihad Stadium",
+      "venue": "Emirates Stadium",
       "category": 1
     },
     {
-      "id": 12346,
+      "id": 102,
       "competition_code": "EPL",
-      "match_date": "2025-09-02T19:00:00Z",
+      "match_date": "2025-08-18 19:00:00",
       "status": "SCHEDULED",
-      "home_team": "Arsenal",
-      "away_team": "Liverpool",
-      "venue": "Emirates Stadium",
+      "home_team": "Liverpool",
+      "away_team": "Arsenal",
+      "venue": "Anfield",
       "category": 1
     }
   ]
 }
 ```
+
+---
+
+### **에러 응답 예시**
+```json
+{
+  "success": false,
+  "errorCode": "INVALID_PARAMETER",
+  "message": "date_from은 date_to보다 이전이어야 합니다."
+}
+```
+
+---
+
+### **비고**
+- `team` 파라미터는 홈/원정 팀명 모두를 검색
+- 날짜 범위 필터가 없으면 기본적으로 `match_date > NOW()` 조건이 자동 적용
+- `page_size`가 `all`이거나 `all=true`이면 모든 데이터를 반환
+
 
 ---
 
