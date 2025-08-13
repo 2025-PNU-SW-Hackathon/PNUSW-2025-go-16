@@ -7,13 +7,12 @@ const reviewRoutes = require('./routes/review_routes');
 const userRoutes = require('./routes/user_routes');
 const chatRoutes = require('./routes/chat_routes');
 const storeRoutes = require('./routes/store_routes');
-const authRoutes = require('./routes/auth_routes');
 const { Server } = require('socket.io');
 const handleSocket = require('./controllers/socket_controller');
 const http = require('http');
 const path = require('path');
 const paymentRoutes = require('./routes/payment_routes');
-
+const matchRoutes = require('./routes/match_routes');
 dotenv.config({ path: path.resolve(__dirname, '../.env') }); 
 
 const app = express();
@@ -39,11 +38,13 @@ app.use(express.json());
 app.use(requestLogger);
 
 // 내부 라우팅 등록
-app.use('/api/v1/users', authRoutes);
 app.use('/api/v1/reservations', reservationRoutes);
 app.use('/api/v1/reviews', reviewRoutes);
 app.use('/api/v1/users', userRoutes);
-app.use('/api/v1/chats', chatRoutes);
+app.use('/api/v1/stores', storeRoutes);
+app.use('/api/v1/chats/rooms', chatRoutes);
+app.use('/api/v1/payment', paymentRoutes);
+app.use('/api/v1/matches', matchRoutes);
 
 // 404 및 에러 핸들러 등록
 //app.use(notFound);
@@ -58,7 +59,7 @@ handleSocket(io);
 
 const test_token = jwt.sign(
     {
-      user_id: "yejun",
+      user_id: "yejun2",
     },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '2h' }

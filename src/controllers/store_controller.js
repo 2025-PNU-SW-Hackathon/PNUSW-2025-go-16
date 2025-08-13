@@ -87,4 +87,211 @@ exports.getBankCodes = async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+};
+
+// 🆕 매장 정보 조회 (사장님 전용)
+exports.getMyStoreInfo = async (req, res, next) => {
+  try {
+    const store_id = req.user.store_id; // JWT에서 추출된 store_id
+    
+    if (!store_id) {
+      return res.status(401).json({
+        success: false,
+        message: '사장님 계정으로만 접근 가능합니다.'
+      });
+    }
+
+    const storeInfo = await storeService.getMyStoreInfo(store_id);
+    res.json({
+      success: true,
+      data: storeInfo
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 🆕 매장 기본 정보 수정 (사장님 전용)
+exports.updateMyStoreBasicInfo = async (req, res, next) => {
+  try {
+    const store_id = req.user.store_id;
+    
+    if (!store_id) {
+      return res.status(401).json({
+        success: false,
+        message: '사장님 계정으로만 접근 가능합니다.'
+      });
+    }
+
+    const {
+      store_name,
+      address_main,
+      address_detail,
+      phone_number,
+      business_reg_no,
+      owner_name,
+      email,
+      bio
+    } = req.body;
+
+    // 필수 필드 검증
+    if (!store_name || !address_main || !phone_number) {
+      return res.status(400).json({
+        success: false,
+        message: '가게명, 주소, 전화번호는 필수입니다.'
+      });
+    }
+
+    const result = await storeService.updateMyStoreBasicInfo(store_id, {
+      store_name,
+      address_main,
+      address_detail,
+      phone_number,
+      business_reg_no,
+      owner_name,
+      email,
+      bio
+    });
+
+    res.json({
+      success: true,
+      message: '매장 기본 정보가 수정되었습니다.',
+      data: result
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 🆕 매장 상세 정보 수정 (사장님 전용)
+exports.updateMyStoreDetails = async (req, res, next) => {
+  try {
+    const store_id = req.user.store_id;
+    
+    if (!store_id) {
+      return res.status(401).json({
+        success: false,
+        message: '사장님 계정으로만 접근 가능합니다.'
+      });
+    }
+
+    const {
+      menu,
+      facilities,
+      photos,
+      sports_categories
+    } = req.body;
+
+    const result = await storeService.updateMyStoreDetails(store_id, {
+      menu,
+      facilities,
+      photos,
+      sports_categories
+    });
+
+    res.json({
+      success: true,
+      message: '매장 상세 정보가 수정되었습니다.',
+      data: result
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 🆕 예약 설정 수정 (사장님 전용)
+exports.updateMyStoreReservationSettings = async (req, res, next) => {
+  try {
+    const store_id = req.user.store_id;
+    
+    if (!store_id) {
+      return res.status(401).json({
+        success: false,
+        message: '사장님 계정으로만 접근 가능합니다.'
+      });
+    }
+
+    const {
+      cancellation_policy,
+      deposit_amount,
+      available_times
+    } = req.body;
+
+    const result = await storeService.updateMyStoreReservationSettings(store_id, {
+      cancellation_policy,
+      deposit_amount,
+      available_times
+    });
+
+    res.json({
+      success: true,
+      message: '예약 설정이 수정되었습니다.',
+      data: result
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 🏪 사장님 회원가입 컨트롤러
+exports.registerStore = async (req, res, next) => {
+  try {
+    const {
+      store_id,
+      store_pwd,
+      store_name,
+      business_number,
+      store_address,
+      store_phonenumber,
+      store_open_hour,
+      store_close_hour,
+      store_max_people_cnt,
+      store_max_table_cnt,
+      store_max_parking_cnt,
+      store_max_screen_cnt,
+      store_bio,
+      store_holiday
+    } = req.body;
+
+    // 필수 필드 검증
+    if (!store_id || !store_pwd || !store_name || !business_number || !store_address || !store_phonenumber) {
+      return res.status(400).json({
+        success: false,
+        message: '필수 필드가 누락되었습니다. (store_id, store_pwd, store_name, business_number, store_address, store_phonenumber)'
+      });
+    }
+
+    const storeData = {
+      store_id,
+      store_pwd,
+      store_name,
+      business_number,
+      store_address,
+      store_phonenumber,
+      store_open_hour: store_open_hour || 9,
+      store_close_hour: store_close_hour || 22,
+      store_max_people_cnt: store_max_people_cnt || 50,
+      store_max_table_cnt: store_max_table_cnt || 10,
+      store_max_parking_cnt: store_max_parking_cnt || 20,
+      store_max_screen_cnt: store_max_screen_cnt || 5,
+      store_bio: store_bio || '좋은 가게입니다.',
+      store_holiday: store_holiday || 0,
+      store_review_cnt: 0,
+      store_rating: 0
+    };
+
+    const result = await storeService.registerStore(storeData);
+    
+    res.status(201).json({
+      success: true,
+      message: '사장님 회원가입이 완료되었습니다.',
+      data: {
+        store_id: result.store_id,
+        store_name: result.store_name,
+        business_number: result.business_number
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
 }; 

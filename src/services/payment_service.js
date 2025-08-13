@@ -27,6 +27,7 @@ const bankCodes = [
   { name: "우체국예금보험", code: "71" },
   { name: "산림조합", code: "64" }
 ];
+
 exports.createPaymentRequest = async ({ chat_room_id, requester_id, amount, message }) => {
   const conn = await getConnection();
   console.log(requester_id + " request payment");

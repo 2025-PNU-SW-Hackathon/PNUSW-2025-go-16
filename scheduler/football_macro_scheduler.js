@@ -42,8 +42,8 @@ const fetchMatches = async (competition, dateFrom, dateTo) => {
 // 3. DB 저장 함수
 const saveMatchesToDB = async (matches, conn) => {
     const insertQuery = `
-    INSERT IGNORE INTO matches (id, competition_code, match_date, status, home_team, away_team, venue)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT IGNORE INTO matches (id, competition_code, match_date, status, home_team, away_team, venue, category)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 1)
   `;
 
     for (const match of matches) {
