@@ -11,6 +11,8 @@ import SettingSection from '@/components/business/SettingSection';
 import StoreInfoCard from '@/components/business/StoreInfoCard';
 import MinReservationModal from '@/components/business/MinReservationModal';
 import ReservationDepositModal from '@/components/business/ReservationDepositModal';
+import LogoutConfirmModal from '@/components/business/LogoutConfirmModal';
+import WithdrawConfirmModal from '@/components/business/WithdrawConfirmModal';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'StoreBasicInfo'>;
 
@@ -18,6 +20,8 @@ export default function SettingScreen() {
   const navigation = useNavigation<NavigationProp>();
   const [showMinReservationModal, setShowMinReservationModal] = useState(false);
   const [showReservationDepositModal, setShowReservationDepositModal] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [minReservationCapacity, setMinReservationCapacity] = useState(4);
   const [reservationDeposit, setReservationDeposit] = useState(1000);
   
@@ -36,17 +40,25 @@ export default function SettingScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert('로그아웃', '정말 로그아웃 하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      { text: '로그아웃', style: 'destructive', onPress: () => console.log('로그아웃') },
-    ]);
+    setShowLogoutModal(true);
+  };
+
+  const handleConfirmLogout = () => {
+    // 실제 로그아웃 로직
+    console.log('로그아웃 실행');
+    setShowLogoutModal(false);
+    // TODO: 로그아웃 API 호출 및 상태 정리
   };
 
   const handleWithdraw = () => {
-    Alert.alert('회원 탈퇴', '정말 회원을 탈퇴하시겠습니까? 이 작업은 되돌릴 수 없습니다.', [
-      { text: '취소', style: 'cancel' },
-      { text: '탈퇴', style: 'destructive', onPress: () => console.log('회원 탈퇴') },
-    ]);
+    setShowWithdrawModal(true);
+  };
+
+  const handleConfirmWithdraw = () => {
+    // 실제 회원 탈퇴 로직
+    console.log('회원 탈퇴 실행');
+    setShowWithdrawModal(false);
+    // TODO: 회원 탈퇴 API 호출 및 상태 정리
   };
 
   return (
@@ -274,6 +286,16 @@ export default function SettingScreen() {
         currentDeposit={reservationDeposit}
         onClose={() => setShowReservationDepositModal(false)}
         onSave={setReservationDeposit}
+      />
+      <LogoutConfirmModal
+        visible={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleConfirmLogout}
+      />
+      <WithdrawConfirmModal
+        visible={showWithdrawModal}
+        onClose={() => setShowWithdrawModal(false)}
+        onConfirm={handleConfirmWithdraw}
       />
     </View>
   );
