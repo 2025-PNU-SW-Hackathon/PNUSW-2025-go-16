@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { useMatches, useStoreSchedule } from './queries/useUserQueries';
 import type { MatchDTO, ScheduleEventDTO } from '../types/DTO/users';
 
-export const useCalenderScreen = () => {
+export const useCalendarScreen = () => {
   // 현재 선택된 날짜 범위 (7일)
   const [selectedDateRange, setSelectedDateRange] = useState({
     start: new Date(),

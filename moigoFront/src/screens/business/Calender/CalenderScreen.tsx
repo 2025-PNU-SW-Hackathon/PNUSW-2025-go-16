@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Text, View, ScrollView, TouchableOpacity } from 'react-native';
 import { COLORS } from '@/constants/colors';
 import ScheduleEventBlock from '@/components/business/ScheduleEventBlock';
-import { useCalenderScreen } from '../../../hooks/useCalenderScreen';
+import { useCalendarScreen } from '../../../hooks/useCalendarScreen';
 import type { MatchDTO, ScheduleEventDTO } from '../../../types/DTO/users';
 
 interface ScheduleEvent {
@@ -24,7 +24,7 @@ export default function CalenderScreen() {
     isLoading,
     hasError,
     handleRefresh,
-  } = useCalenderScreen();
+  } = useCalendarScreen();
   
   // API 데이터를 기존 UI 형식에 맞게 변환
   const convertApiDataToEvents = (): ScheduleEvent[] => {
