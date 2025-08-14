@@ -195,3 +195,96 @@ export interface MatchesResponseDTO {
     filters?: Record<string, any>;
   };
 }
+
+// 가게 정보 관련 DTO
+export interface StoreInfoDTO {
+  store_name: string;
+  address_main: string;
+  address_detail?: string;
+  phone_number: string;
+  business_reg_no: string;
+  owner_name: string;
+  email: string;
+  bio?: string;
+  menu?: MenuItemDTO[]; // 🆕 메뉴 정보 추가
+  facilities?: FacilitiesDTO; // 🆕 편의시설 정보 추가
+  photos?: string[]; // 🆕 사진 정보 추가
+  sports_categories?: string[]; // 🆕 스포츠 카테고리 추가
+}
+
+export interface StoreBasicInfoRequestDTO {
+  store_name: string;
+  address_main: string;
+  address_detail?: string;
+  phone_number: string;
+  business_reg_no: string;
+  owner_name: string;
+  email: string;
+  bio?: string;
+}
+
+export interface StoreBasicInfoResponseDTO {
+  success: boolean;
+  message: string;
+  data: {
+    store_id: string;
+    store_name: string;
+    address_main: string;
+    phone_number: string;
+  };
+}
+
+export interface StoreInfoResponseDTO {
+  success: boolean;
+  data: {
+    store_info: StoreInfoDTO;
+    reservation_settings?: any;
+    notification_settings?: any;
+    payment_info?: any;
+  };
+}
+
+// 가게 상세 정보 관련 DTO
+export interface StoreDetailInfoDTO {
+  menu: MenuItemDTO[];
+  facilities: FacilitiesDTO;
+  photos: string[];
+  sports_categories: string[];
+}
+
+export interface MenuItemDTO {
+  name: string;
+  price: number;
+  description: string;
+}
+
+export interface FacilitiesDTO {
+  wifi: boolean;
+  parking: boolean;
+  restroom: boolean;
+  no_smoking: boolean;
+  sound_system: boolean;
+  private_room: boolean;
+  tv_screen: boolean;
+  booth_seating: boolean;
+}
+
+export interface StoreDetailInfoRequestDTO {
+  menu: MenuItemDTO[];
+  facilities: FacilitiesDTO;
+  photos: string[];
+  sports_categories: string[];
+  bio: string; // 🆕 매장 소개 필드 추가!
+}
+
+export interface StoreDetailInfoResponseDTO {
+  success: boolean;
+  message: string;
+  data: {
+    store_id: string;
+    menu: MenuItemDTO[];
+    facilities: FacilitiesDTO;
+    photos: string[];
+    sports_categories: string[];
+  };
+}

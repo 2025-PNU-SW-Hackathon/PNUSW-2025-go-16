@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -15,6 +15,9 @@ import LogoutConfirmModal from '@/components/business/LogoutConfirmModal';
 import WithdrawConfirmModal from '@/components/business/WithdrawConfirmModal';
 import { useAuthStore } from '@/store/authStore';
 import { useMyStore } from '@/store/myStore';
+import { useStoreInfo } from '@/hooks/queries/useUserQueries';
+import { useUpdateStoreBasicInfo, useUpdateNotificationSettings, useUpdateReservationSettings } from '@/hooks/queries/useUserQueries';
+import Toast from '@/components/common/Toast';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'StoreBasicInfo'>;
 
@@ -22,13 +25,45 @@ export default function SettingScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { logout: authLogout } = useAuthStore();
   const { resetUserProfile } = useMyStore();
+  
+  // API 훅 사용
+  const { data: storeInfoData, isLoading: isStoreInfoLoading } = useStoreInfo();
+  const { mutate: updateStoreBasicInfo, isPending: isUpdating } = useUpdateStoreBasicInfo();
+  const { mutate: updateNotificationSettings, isSuccess: isNotificationSettingsUpdated, isError: isNotificationSettingsError } = useUpdateNotificationSettings();
+  const { mutate: updateReservationSettings, isSuccess: isReservationSettingsUpdated, isError: isReservationSettingsError } = useUpdateReservationSettings();
+  
+  // API 호출 성공/실패 콜백 설정
+  useEffect(() => {
+    if (isNotificationSettingsUpdated) {
+      showSuccessMessage('알림 설정이 업데이트되었습니다.');
+    }
+    if (isNotificationSettingsError) {
+      showErrorMessage('알림 설정 업데이트에 실패했습니다.');
+    }
+  }, [isNotificationSettingsUpdated, isNotificationSettingsError]);
+
+  useEffect(() => {
+    if (isReservationSettingsUpdated) {
+      showSuccessMessage('예약 설정이 업데이트되었습니다.');
+    }
+    if (isReservationSettingsError) {
+      showErrorMessage('예약 설정 업데이트에 실패했습니다.');
+    }
+  }, [isReservationSettingsUpdated, isReservationSettingsError]);
+  
   const [showMinReservationModal, setShowMinReservationModal] = useState(false);
   const [showReservationDepositModal, setShowReservationDepositModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  
+  // Toast 메시지 상태
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  const [showToast, setShowToast] = useState(false);
+  
+  // API에서 가져온 데이터로 상태 초기화
   const [minReservationCapacity, setMinReservationCapacity] = useState(4);
   const [reservationDeposit, setReservationDeposit] = useState(1000);
-  
   const [notificationSettings, setNotificationSettings] = useState({
     reservation: true,
     payment: true,
@@ -36,11 +71,72 @@ export default function SettingScreen() {
     marketing: false,
   });
 
+  // API 데이터로 상태 업데이트
+  useEffect(() => {
+    if (storeInfoData?.data?.reservation_settings) {
+      const settings = storeInfoData.data.reservation_settings;
+      if (settings.deposit_amount) {
+        setReservationDeposit(settings.deposit_amount);
+      }
+    }
+    
+    if (storeInfoData?.data?.notification_settings) {
+      const notifSettings = storeInfoData.data.notification_settings;
+      setNotificationSettings({
+        reservation: notifSettings.reservation_alerts ?? true,
+        payment: notifSettings.payment_alerts ?? true,
+        system: notifSettings.system_alerts ?? true,
+        marketing: notifSettings.marketing_alerts ?? false,
+      });
+    }
+  }, [storeInfoData]);
+
   const handleToggleNotification = (key: keyof typeof notificationSettings) => {
+    const newValue = !notificationSettings[key];
     setNotificationSettings(prev => ({
       ...prev,
-      [key]: !prev[key],
+      [key]: newValue,
     }));
+    
+    // API로 알림 설정 업데이트
+    if (storeInfoData?.data?.store_info) {
+      const currentSettings = storeInfoData.data.notification_settings || {};
+      const updatedSettings = {
+        reservation_alerts: key === 'reservation' ? newValue : currentSettings.reservation_alerts ?? true,
+        payment_alerts: key === 'payment' ? newValue : currentSettings.payment_alerts ?? true,
+        system_alerts: key === 'system' ? newValue : currentSettings.system_alerts ?? true,
+        marketing_alerts: key === 'marketing' ? newValue : currentSettings.marketing_alerts ?? false,
+      };
+      
+      updateNotificationSettings(updatedSettings);
+    }
+  };
+
+  const handleMinReservationSave = (newCapacity: number) => {
+    setMinReservationCapacity(newCapacity);
+    updateReservationSettings({ min_participants: newCapacity });
+  };
+
+  const handleReservationDepositSave = (newDeposit: number) => {
+    setReservationDeposit(newDeposit);
+    updateReservationSettings({ deposit_amount: newDeposit });
+  };
+
+  // 성공/실패 메시지 표시
+  const showSuccessMessage = (message: string) => {
+    setToastMessage(message);
+    setToastType('success');
+    setShowToast(true);
+  };
+
+  const showErrorMessage = (message: string) => {
+    setToastMessage(message);
+    setToastType('error');
+    setShowToast(true);
+  };
+
+  const hideToast = () => {
+    setShowToast(false);
   };
 
   const handleLogout = () => {
@@ -79,13 +175,23 @@ export default function SettingScreen() {
     <View className="flex-1 bg-white">
       <ScrollView className="flex-1 pt-4" showsVerticalScrollIndicator={false}>
         {/* 매장 정보 카드 */}
-        <StoreInfoCard
-          storeName="스포츠 팬 클럽"
-          address="강남역 2번 출구 도보 3분"
-          businessNumber="123-45-67890"
-          iconName="home"
-          iconColor="#f97316"
-        />
+        {storeInfoData?.data?.store_info ? (
+          <StoreInfoCard
+            storeName={storeInfoData.data.store_info.store_name || "가게명"}
+            address={storeInfoData.data.store_info.address_main || "주소"}
+            businessNumber={storeInfoData.data.store_info.business_reg_no || "사업자번호"}
+            iconName="home"
+            iconColor="#f97316"
+          />
+        ) : (
+          <StoreInfoCard
+            storeName="로딩 중..."
+            address="로딩 중..."
+            businessNumber="로딩 중..."
+            iconName="home"
+            iconColor="#f97316"
+          />
+        )}
 
         {/* 매장 정보 관리 섹션 */}
         <SettingSection title="매장 정보 관리">
@@ -217,7 +323,7 @@ export default function SettingScreen() {
             title="사업자 정보 수정"
             icon="file-text"
             iconColor="#8B5CF6"
-            onPress={() => navigation.navigate('BusinessInfoEdit')}
+            onPress={() => navigation.navigate('StoreBasicInfo')}
             className="mb-0 rounded-t-2xl border-2 border-mainGray"
           />
           
@@ -293,13 +399,13 @@ export default function SettingScreen() {
         visible={showMinReservationModal}
         currentMinCapacity={minReservationCapacity}
         onClose={() => setShowMinReservationModal(false)}
-        onSave={setMinReservationCapacity}
+        onSave={handleMinReservationSave}
       />
       <ReservationDepositModal
         visible={showReservationDepositModal}
         currentDeposit={reservationDeposit}
         onClose={() => setShowReservationDepositModal(false)}
-        onSave={setReservationDeposit}
+        onSave={handleReservationDepositSave}
       />
       <LogoutConfirmModal
         visible={showLogoutModal}
@@ -311,6 +417,12 @@ export default function SettingScreen() {
         onClose={() => setShowWithdrawModal(false)}
         onConfirm={handleConfirmWithdraw}
       />
+             <Toast
+         message={toastMessage}
+         type={toastType}
+         visible={showToast}
+         onHide={hideToast}
+       />
     </View>
   );
 }

@@ -39,4 +39,13 @@ export { useHomeScreen } from '../useHomeScreen';
 export {
   useMatches,
   useStoreSchedule,
+} from './useUserQueries';
+
+// 가게 정보 관련 훅
+export {
+  useStoreInfo,
+  useUpdateStoreBasicInfo,
+  useUpdateNotificationSettings,
+  useUpdateReservationSettings,
+  useUpdateStoreDetailInfo,
 } from './useUserQueries'; 

@@ -16,6 +16,11 @@ import type {
   ReservationActionResponseDTO,
   MatchesResponseDTO,
   ScheduleResponseDTO,
+  StoreInfoResponseDTO,
+  StoreBasicInfoRequestDTO,
+  StoreBasicInfoResponseDTO,
+  StoreDetailInfoRequestDTO,
+  StoreDetailInfoResponseDTO,
 } from '../../types/DTO/users';
 import type { GetUserProfileResponseDTO } from '../../types/DTO/chat';
 
@@ -164,10 +169,8 @@ export const getMatches = async (params?: {
   }
   
   const url = `/matches${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-  console.log('🎯 [API] getMatches 호출:', url);
   
   const response = await apiClient.get<MatchesResponseDTO>(url);
-  console.log('✅ [API] getMatches 성공:', response.data);
   return response.data;
 };
 
@@ -190,9 +193,60 @@ export const getStoreSchedule = async (params?: {
   }
   
   const url = `/stores/me/reservations${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-  console.log('📅 [API] getStoreSchedule 호출:', url);
   
   const response = await apiClient.get<ScheduleResponseDTO>(url);
-  console.log('✅ [API] getStoreSchedule 성공:', response.data);
+  return response.data;
+};
+
+// 가게 정보 관련 API
+
+// 매장 정보 조회 - GET /api/v1/stores/me
+export const getStoreInfo = async (): Promise<StoreInfoResponseDTO> => {
+  const response = await apiClient.get<StoreInfoResponseDTO>('/stores/me');
+  return response.data;
+};
+
+// 매장 기본 정보 수정 - PUT /api/v1/stores/me/basic-info
+export const updateStoreBasicInfo = async (
+  data: StoreBasicInfoRequestDTO
+): Promise<StoreBasicInfoResponseDTO> => {
+  const response = await apiClient.put<StoreBasicInfoResponseDTO>('/stores/me/basic-info', data);
+  return response.data;
+};
+
+// 알림 설정 업데이트 - PUT /api/v1/stores/me/settings/notification
+export const updateNotificationSettings = async (
+  data: {
+    reservation_alerts: boolean;
+    payment_alerts: boolean;
+    system_alerts: boolean;
+    marketing_alerts: boolean;
+  }
+): Promise<{ success: boolean; message: string }> => {
+  const response = await apiClient.put('/stores/me/settings/notification', data);
+  return response.data;
+};
+
+// 예약 설정 업데이트 - PUT /api/v1/stores/me/settings/reservation
+export const updateReservationSettings = async (
+  data: {
+    deposit_amount?: number;
+    min_participants?: number;
+    available_times?: Array<{ day: string; start: string; end: string }>;
+  }
+): Promise<{ success: boolean; message: string }> => {
+  const response = await apiClient.put('/stores/me/settings/reservation', data);
+  return response.data;
+};
+
+// 가게 상세 정보 관련 API
+
+// 매장 상세 정보 수정 - PUT /api/v1/stores/me/details
+export const updateStoreDetailInfo = async (
+  data: StoreDetailInfoRequestDTO
+): Promise<StoreDetailInfoResponseDTO> => {
+
+  const response = await apiClient.put<StoreDetailInfoResponseDTO>('/stores/me/details', data);
+
   return response.data;
 };

@@ -17,11 +17,11 @@ export default function Toast({
   message, 
   type = 'success', 
   onHide, 
-  duration = 3000,
+  duration = 2000,
   className
 }: ToastProps) {
   const fadeAnim = new Animated.Value(0);
-  const slideAnim = new Animated.Value(-100);
+  const slideAnim = new Animated.Value(100);
 
   useEffect(() => {
     if (visible) {
@@ -29,12 +29,12 @@ export default function Toast({
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 300,
+          duration: 200,
           useNativeDriver: true,
         }),
         Animated.timing(slideAnim, {
           toValue: 0,
-          duration: 300,
+          duration: 200,
           useNativeDriver: true,
         }),
       ]).start();
@@ -52,12 +52,12 @@ export default function Toast({
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 0,
-        duration: 300,
+        duration: 200,
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
-        toValue: -100,
-        duration: 300,
+        toValue: 100,
+        duration: 200,
         useNativeDriver: true,
       }),
     ]).start(() => {
@@ -115,12 +115,6 @@ export default function Toast({
         <Text className="flex-1 text-base font-medium text-white">
           {message}
         </Text>
-        {/* <Feather 
-          name="x" 
-          size={20} 
-          color="white" 
-          onPress={hideToast}
-        /> */}
       </View>
     </Animated.View>
   );

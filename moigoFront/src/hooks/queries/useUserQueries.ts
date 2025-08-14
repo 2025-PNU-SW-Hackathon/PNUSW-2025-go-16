@@ -9,11 +9,18 @@ import {
   getReservationHistory,
   getMatches,
   getStoreSchedule,
+  getStoreInfo,
+  updateStoreBasicInfo,
+  updateNotificationSettings,
+  updateReservationSettings,
+  updateStoreDetailInfo,
 } from '../../apis/users';
 import type {
   UpdateProfileRequestDTO,
   ChangePasswordRequestDTO,
   UpdateUserSettingsRequestDTO,
+  StoreBasicInfoRequestDTO,
+  StoreDetailInfoRequestDTO,
 } from '../../types/DTO/users';
 
 // GET /users/me - 마이페이지 정보 조회 훅
@@ -142,6 +149,92 @@ export const useUpdateUserSettings = () => {
     },
     onError: (error) => {
       console.error('사용자 설정 변경 실패:', error);
+    },
+  });
+};
+
+// 가게 정보 관련 훅
+export const useStoreInfo = () => {
+  return useQuery({
+    queryKey: ['storeInfo'],
+    queryFn: () => getStoreInfo(),
+    staleTime: 5 * 60 * 1000, // 5분
+    gcTime: 10 * 60 * 1000, // 10분
+  });
+};
+
+export const useUpdateStoreBasicInfo = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (data: StoreBasicInfoRequestDTO) => updateStoreBasicInfo(data),
+    onSuccess: () => {
+      // 매장 정보 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: ['storeInfo'] });
+      console.log('✅ [훅] 매장 기본 정보 수정 성공');
+    },
+    onError: (error) => {
+      console.error('❌ [훅] 매장 기본 정보 수정 실패:', error);
+    },
+  });
+}; 
+
+// 알림 설정 업데이트 훅
+export const useUpdateNotificationSettings = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: {
+      reservation_alerts: boolean;
+      payment_alerts: boolean;
+      system_alerts: boolean;
+      marketing_alerts: boolean;
+    }) => updateNotificationSettings(data),
+    onSuccess: () => {
+      // 매장 정보 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: ['storeInfo'] });
+      console.log('✅ [훅] 알림 설정 업데이트 성공');
+    },
+    onError: (error) => {
+      console.error('❌ [훅] 알림 설정 업데이트 실패:', error);
+    },
+  });
+};
+
+// 예약 설정 업데이트 훅
+export const useUpdateReservationSettings = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: {
+      deposit_amount?: number;
+      min_participants?: number;
+      available_times?: Array<{ day: string; start: string; end: string }>;
+    }) => updateReservationSettings(data),
+    onSuccess: () => {
+      // 매장 정보 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: ['storeInfo'] });
+      console.log('✅ [훅] 예약 설정 업데이트 성공');
+    },
+    onError: (error) => {
+      console.error('❌ [훅] 예약 설정 업데이트 실패:', error);
+    },
+  });
+}; 
+
+// 가게 상세 정보 수정 훅
+export const useUpdateStoreDetailInfo = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: StoreDetailInfoRequestDTO) => updateStoreDetailInfo(data),
+    onSuccess: () => {
+      // 매장 정보 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: ['storeInfo'] });
+      console.log('✅ [훅] 매장 상세 정보 수정 성공');
+    },
+    onError: (error) => {
+      console.error('❌ [훅] 매장 상세 정보 수정 실패:', error);
     },
   });
 }; 
