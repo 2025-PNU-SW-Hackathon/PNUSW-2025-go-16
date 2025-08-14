@@ -2,7 +2,9 @@
 const axios = require('axios');
 const { getConnection } = require('../config/db_config');
 require('dotenv').config();
-
+const socketService = require('./socket_service');
+const { getIO } = require('../config/socket_hub');
+const messageService = require('./message_service');
 const TOSS_SECRET_KEY = process.env.TOSS_SECRET_KEY;
 const bankCodes = [
   { name: "KB국민은행", code: "04" },
@@ -47,11 +49,29 @@ exports.createPaymentRequest = async ({ chat_room_id, requester_id, amount, mess
   );
 
   await conn.query(
-  `UPDATE reservation_table 
+    `UPDATE reservation_table 
    SET reservation_status = 1 
    WHERE reservation_id = ?`,
-  [chat_room_id]
-);
+    [chat_room_id]
+  );
+
+  const io = getIO(); // 전역 등록된 io 가져오기
+
+  try {
+    // 메시지를 db에 저장
+    const new_message_result = await messageService.saveNewMessage('admin', chat_room_id, '결제를 요청하였습니다.');
+
+    // 메시지를 해당 방에 브로드캐스트
+    io.to(chat_room_id).emit('newMessage', new_message_result);
+
+    // 읽음 처리
+    const socketsInRoom = await io.in(chat_room_id).fetchSockets();
+    for (const socket of socketsInRoom) {
+      await messageService.markAllMessagesAsRead(socket.user.user_id, chat_room_id);
+    }
+  } catch (err) {
+    console.error('메시지 저장 오류:', err);
+  }
 
   return { payment_request_id: result.insertId, status: 'pending' };
 };
@@ -178,11 +198,11 @@ exports.releasePayments = async (chat_room_id) => {
     });
   }
   await conn.query(
-  `UPDATE reservation_table 
+    `UPDATE reservation_table 
    SET reservation_status = 2 
    WHERE reservation_id = ?`,
-  [chat_room_id]
-);
+    [chat_room_id]
+  );
   return { released_payments: released };
 };
 

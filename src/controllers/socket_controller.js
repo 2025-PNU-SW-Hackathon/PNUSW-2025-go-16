@@ -27,14 +27,13 @@ module.exports = async function handleSocket(io) {
         // 클라이언트가 연결되면 socket이 필수
         // 채팅방에 참여
         socket.on('joinRoom', async (room_id) => {
-            //const result = await messageService.authRoom(room_id);
-            //if (result.length > 0) {
+            const result = await messageService.authRoom(room_id);
+            if (result.length > 0) {
                 console.log('joined', room_id);
                 socket.join(room_id); // 여기 반드시 socket 사용
 
                 // api 요청 시 읽음 처리를 구현함.
-                //await messageService.markAllMessagesAsRead(socket.user.user_id, room_id);
-            /*
+                await messageService.markAllMessagesAsRead(socket.user.user_id, room_id);
             }
             else {
                 socket.emit('errorMessage', {
@@ -42,7 +41,6 @@ module.exports = async function handleSocket(io) {
                     message: '참여하지 않은 채팅방입니다.'
                 });
             }
-                */
         });
 
         // 클라이언트가 메시지 전송 시

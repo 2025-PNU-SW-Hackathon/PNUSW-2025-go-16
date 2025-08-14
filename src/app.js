@@ -13,6 +13,7 @@ const http = require('http');
 const path = require('path');
 const paymentRoutes = require('./routes/payment_routes');
 const matchRoutes = require('./routes/match_routes');
+const { setIO } = require('./config/socket_hub');
 dotenv.config({ path: path.resolve(__dirname, '../.env') }); 
 
 const app = express();
@@ -54,12 +55,22 @@ app.get('/', (req, res) => {
   res.send('API is running...');
 });
 
+setIO(io);
 // 👇 소켓 핸들러 등록
 handleSocket(io);
-
+/*
 const test_token = jwt.sign(
     {
-      user_id: "yejun2",
+      store_id: "store_123",
+      store_name: "챔피언 스포츠 펍"
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '2h' }
+  );
+*/
+  const test_token = jwt.sign(
+    {
+      user_id : 'yejun2'
     },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '2h' }

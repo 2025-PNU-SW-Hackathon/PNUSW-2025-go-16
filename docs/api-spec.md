@@ -384,13 +384,13 @@
 - **Request Body**:
 ```json
 {
-  "reservation_match_category": 1,
-  "reservation_match_name": "축구 모임",
-  "reservation_start_time": "2025-01-20 19:00:00",
-  "reservation_end_time": "2025-01-20 22:00:00",
-  "reservation_max_people": 10,
-  "reservation_deposit": 5000,
-  "reservation_description": "축구 보면서 치킨 먹는 모임입니다."
+  "store_id": "store_123" or null,
+  "reservation_start_time": "2025-07-28T19:00:00",
+  "reservation_end_time": "2025-07-28T21:00:00",
+  "reservation_match": "맨시티 vs 첼시" (경기 정보),
+  "reservation_bio": "맥주한잔하며 즐겁게 보실분들!" (모임 설명),
+  "reservation_max_participant_cnt": 6,
+  "reservation_match_category": 1
 }
 ```
 - **Response**:
@@ -446,17 +446,20 @@
 - **Response**:
 ```json
 {
-  "success": true,
-  "data": {
-    "reservation_id": 1,
-    "reservation_match_name": "축구 모임",
-    "reservation_start_time": "2025-01-20 19:00:00",
-    "reservation_end_time": "2025-01-20 22:00:00",
-    "reservation_max_people": 10,
-    "reservation_current_people": 5,
-    "reservation_deposit": 5000,
-    "reservation_description": "축구 보면서 치킨 먹는 모임입니다."
-  }
+    "success": true,
+    "data": {
+        "reservation_id": 13,
+        "store_id": "store_123",
+        "store_name": null,
+        "reservation_start_time": "2025-07-28T10:00:00.000Z",
+        "reservation_end_time": "2025-07-28T12:00:00.000Z",
+        "reservation_match": "맨시티 vs 첼시",
+        "reservation_bio": "치킨에 맥주까지 마시면서 친해져요!",
+        "reservation_status": 0,
+        "reservation_participant_cnt": 2,
+        "reservation_max_participant_cnt": 6,
+        "participants": []
+    }
 }
 ```
 
