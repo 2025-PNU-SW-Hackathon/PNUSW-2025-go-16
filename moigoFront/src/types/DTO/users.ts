@@ -299,7 +299,7 @@ export interface BusinessHoursDTO {
 export interface ReservationSettingsDTO {
   cancellation_policy?: string;
   deposit_amount?: number;
-  min_participants?: number;
+  min_participants: number;
   max_participants?: number;
   available_times: BusinessHoursDTO[];
 }
@@ -307,7 +307,7 @@ export interface ReservationSettingsDTO {
 export interface ReservationSettingsRequestDTO {
   cancellation_policy?: string;
   deposit_amount?: number;
-  min_participants?: number;
+  min_participants: number;
   max_participants?: number;
   available_times: BusinessHoursDTO[];
 }

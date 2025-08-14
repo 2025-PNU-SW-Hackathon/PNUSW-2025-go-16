@@ -279,3 +279,11 @@ export const updateStoreDetailInfo = async (
 
   return response.data;
 };
+
+// 예약 설정 조회
+export const getReservationSettings = async () => {
+  const response = await apiClient.get('/stores/me/settings/reservation');
+  return response.data;
+};
+
+

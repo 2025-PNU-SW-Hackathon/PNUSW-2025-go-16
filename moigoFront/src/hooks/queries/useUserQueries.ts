@@ -18,6 +18,7 @@ import {
   addSportsCategory,
   getSportsCategories,
   updateBusinessHours,
+  getReservationSettings,
 } from '../../apis/users';
 import type {
   UpdateProfileRequestDTO,
@@ -205,23 +206,29 @@ export const useUpdateNotificationSettings = () => {
   });
 };
 
-// 예약 설정 업데이트 훅
+// 예약 설정 조회
+export const useReservationSettings = () => {
+  return useQuery({
+    queryKey: ['reservationSettings'],
+    queryFn: getReservationSettings,
+    staleTime: 5 * 60 * 1000, // 5분
+  });
+};
+
+// 예약 설정 수정
 export const useUpdateReservationSettings = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: (data: {
-      deposit_amount?: number;
-      min_participants?: number;
-      available_times?: Array<{ day: string; start: string; end: string }>;
-    }) => updateReservationSettings(data),
-    onSuccess: () => {
-      // 매장 정보 캐시 무효화
+    mutationFn: updateReservationSettings,
+    onSuccess: (data) => {
+      console.log('✅ 예약 설정 수정 성공:', data);
+      // 예약 설정 쿼리 무효화
+      queryClient.invalidateQueries({ queryKey: ['reservationSettings'] });
+      // StoreInfo 쿼리도 무효화하여 최신 데이터 반영
       queryClient.invalidateQueries({ queryKey: ['storeInfo'] });
-      console.log('✅ [훅] 예약 설정 업데이트 성공');
     },
     onError: (error) => {
-      console.error('❌ [훅] 예약 설정 업데이트 실패:', error);
+      console.error('❌ 예약 설정 수정 실패:', error);
     },
   });
 }; 

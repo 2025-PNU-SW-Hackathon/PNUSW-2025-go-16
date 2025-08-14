@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { 
+  View, 
+  Text, 
+  ScrollView, 
+  TouchableOpacity, 
+  RefreshControl,
+  Alert 
+} from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -16,7 +23,7 @@ import WithdrawConfirmModal from '@/components/business/WithdrawConfirmModal';
 import { useAuthStore } from '@/store/authStore';
 import { useMyStore } from '@/store/myStore';
 import { useStoreInfo } from '@/hooks/queries/useUserQueries';
-import { useUpdateStoreBasicInfo, useUpdateNotificationSettings, useUpdateReservationSettings } from '@/hooks/queries/useUserQueries';
+import { useUpdateStoreBasicInfo, useUpdateNotificationSettings, useUpdateReservationSettings, useReservationSettings } from '@/hooks/queries/useUserQueries';
 import Toast from '@/components/common/Toast';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'StoreBasicInfo'>;
@@ -27,10 +34,24 @@ export default function SettingScreen() {
   const { resetUserProfile } = useMyStore();
   
   // API 훅 사용
-  const { data: storeInfoData, isLoading: isStoreInfoLoading } = useStoreInfo();
+  const { data: storeInfoData, isLoading: isStoreInfoLoading, refetch: refetchStoreInfo } = useStoreInfo();
+  const { data: reservationSettingsData, refetch: refetchReservationSettings } = useReservationSettings();
   const { mutate: updateStoreBasicInfo, isPending: isUpdating } = useUpdateStoreBasicInfo();
   const { mutate: updateNotificationSettings, isSuccess: isNotificationSettingsUpdated, isError: isNotificationSettingsError } = useUpdateNotificationSettings();
   const { mutate: updateReservationSettings, isSuccess: isReservationSettingsUpdated, isError: isReservationSettingsError } = useUpdateReservationSettings();
+
+  // 새로고침 함수
+  const handleRefresh = async () => {
+    try {
+      await Promise.all([
+        refetchStoreInfo(),
+        refetchReservationSettings()
+      ]);
+      console.log('🔄 [SettingScreen] 새로고침 완료');
+    } catch (error) {
+      console.error('❌ [SettingScreen] 새로고침 실패:', error);
+    }
+  };
   
   // API 호출 성공/실패 콜백 설정
   useEffect(() => {
@@ -42,16 +63,48 @@ export default function SettingScreen() {
     }
   }, [isNotificationSettingsUpdated, isNotificationSettingsError]);
 
+  // 예약 설정 수정 성공/실패 처리
   useEffect(() => {
     if (isReservationSettingsUpdated) {
-      showSuccessMessage('예약 설정이 업데이트되었습니다.');
+      console.log('✅ [SettingScreen] 예약 설정 수정 성공!');
+      setToastMessage('예약 설정이 성공적으로 저장되었습니다!');
+      setToastType('success');
+      setShowToast(true);
+      
+      // 데이터 새로고침
+      handleRefresh();
     }
+  }, [isReservationSettingsUpdated]);
+
+  useEffect(() => {
     if (isReservationSettingsError) {
-      showErrorMessage('예약 설정 업데이트에 실패했습니다.');
+      console.log('❌ [SettingScreen] 예약 설정 수정 실패!');
+      setToastMessage('예약 설정 저장에 실패했습니다.');
+      setToastType('error');
+      setShowToast(true);
     }
-  }, [isReservationSettingsUpdated, isReservationSettingsError]);
+  }, [isReservationSettingsError]);
   
+  // 최소 예약 인원수 모달 관련
   const [showMinReservationModal, setShowMinReservationModal] = useState(false);
+  const [minReservationCapacity, setMinReservationCapacity] = useState(4);
+
+  // 최소 예약 인원수 저장
+  const handleMinReservationSave = (newCapacity: number) => {
+    console.log('🔧 [SettingScreen] 최소 예약 인원수 변경:', newCapacity);
+    
+    // API 호출
+    updateReservationSettings({
+      min_participants: newCapacity,
+      // 기존 설정 유지
+      deposit_amount: reservationDeposit,
+      available_times: storeInfoData?.data?.reservation_settings?.available_times || []
+    });
+    
+    setMinReservationCapacity(newCapacity);
+    setShowMinReservationModal(false);
+  };
+
   const [showReservationDepositModal, setShowReservationDepositModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -62,7 +115,6 @@ export default function SettingScreen() {
   const [showToast, setShowToast] = useState(false);
   
   // API에서 가져온 데이터로 상태 초기화
-  const [minReservationCapacity, setMinReservationCapacity] = useState(4);
   const [reservationDeposit, setReservationDeposit] = useState(1000);
   const [notificationSettings, setNotificationSettings] = useState({
     reservation: true,
@@ -78,6 +130,9 @@ export default function SettingScreen() {
       if (settings.deposit_amount) {
         setReservationDeposit(settings.deposit_amount);
       }
+      if (settings.min_participants) {
+        setMinReservationCapacity(settings.min_participants);
+      }
     }
     
     if (storeInfoData?.data?.notification_settings) {
@@ -90,6 +145,24 @@ export default function SettingScreen() {
       });
     }
   }, [storeInfoData]);
+
+  // 예약 설정 데이터로 상태 업데이트
+  useEffect(() => {
+    if (reservationSettingsData?.success && reservationSettingsData?.data) {
+      const settings = reservationSettingsData.data;
+      console.log('🔍 [SettingScreen] 예약 설정 조회 성공:', settings);
+      
+      if (settings.min_participants) {
+        setMinReservationCapacity(settings.min_participants);
+        console.log('🔍 [SettingScreen] 최소 인원수 설정:', settings.min_participants);
+      }
+      
+      if (settings.deposit_amount) {
+        setReservationDeposit(settings.deposit_amount);
+        console.log('🔍 [SettingScreen] 예약금 설정:', settings.deposit_amount);
+      }
+    }
+  }, [reservationSettingsData]);
 
   const handleToggleNotification = (key: keyof typeof notificationSettings) => {
     const newValue = !notificationSettings[key];
@@ -110,11 +183,6 @@ export default function SettingScreen() {
       
       updateNotificationSettings(updatedSettings);
     }
-  };
-
-  const handleMinReservationSave = (newCapacity: number) => {
-    setMinReservationCapacity(newCapacity);
-    updateReservationSettings({ min_participants: newCapacity });
   };
 
   const handleReservationDepositSave = (newDeposit: number) => {
@@ -173,7 +241,16 @@ export default function SettingScreen() {
 
   return (
     <View className="flex-1 bg-white">
-      <ScrollView className="flex-1 pt-4" showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        className="flex-1 pt-4" 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isStoreInfoLoading}
+            onRefresh={handleRefresh}
+          />
+        }
+      >
         {/* 매장 정보 카드 */}
         {storeInfoData?.data?.store_info ? (
           <StoreInfoCard
