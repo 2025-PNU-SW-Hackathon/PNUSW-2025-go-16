@@ -21,6 +21,7 @@ import type {
   StoreBasicInfoResponseDTO,
   StoreDetailInfoRequestDTO,
   StoreDetailInfoResponseDTO,
+  BusinessHoursDTO,
 } from '../../types/DTO/users';
 import type { GetUserProfileResponseDTO } from '../../types/DTO/chat';
 
@@ -239,15 +240,11 @@ export const updateReservationSettings = async (
   return response.data;
 };
 
-// 가게 상세 정보 관련 API
-
-// 매장 상세 정보 수정 - PUT /api/v1/stores/me/details
-export const updateStoreDetailInfo = async (
-  data: StoreDetailInfoRequestDTO
-): Promise<StoreDetailInfoResponseDTO> => {
-
-  const response = await apiClient.put<StoreDetailInfoResponseDTO>('/stores/me/details', data);
-
+// 영업 시간 설정 수정
+export const updateBusinessHours = async (businessHours: BusinessHoursDTO[]) => {
+  const response = await apiClient.put('/stores/me/settings/reservation', {
+    available_times: businessHours
+  });
   return response.data;
 };
 
@@ -268,5 +265,17 @@ export const addSportsCategory = async (categoryName: string) => {
 // 스포츠 카테고리 삭제
 export const deleteSportsCategory = async (categoryName: string) => {
   const response = await apiClient.delete(`/stores/me/sports-categories/${categoryName}`);
+  return response.data;
+};
+
+// 가게 상세 정보 관련 API
+
+// 매장 상세 정보 수정 - PUT /api/v1/stores/me/details
+export const updateStoreDetailInfo = async (
+  data: StoreDetailInfoRequestDTO
+): Promise<StoreDetailInfoResponseDTO> => {
+
+  const response = await apiClient.put<StoreDetailInfoResponseDTO>('/stores/me/details', data);
+
   return response.data;
 };

@@ -17,6 +17,7 @@ import {
   deleteSportsCategory,
   addSportsCategory,
   getSportsCategories,
+  updateBusinessHours,
 } from '../../apis/users';
 import type {
   UpdateProfileRequestDTO,
@@ -238,6 +239,22 @@ export const useUpdateStoreDetailInfo = () => {
     },
     onError: (error) => {
       console.error('❌ [훅] 매장 상세 정보 수정 실패:', error);
+    },
+  });
+}; 
+
+// 영업 시간 설정 수정
+export const useUpdateBusinessHours = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: updateBusinessHours,
+    onSuccess: (data) => {
+      console.log('✅ 영업 시간 설정 수정 성공:', data);
+      // StoreInfo 쿼리 무효화하여 최신 데이터 반영
+      queryClient.invalidateQueries({ queryKey: ['storeInfo'] });
+    },
+    onError: (error) => {
+      console.error('❌ 영업 시간 설정 수정 실패:', error);
     },
   });
 }; 

@@ -288,3 +288,73 @@ export interface StoreDetailInfoResponseDTO {
     sports_categories: string[];
   };
 }
+
+// 영업 시간 설정 DTO
+export interface BusinessHoursDTO {
+  day: string;
+  start: string;
+  end: string;
+}
+
+export interface ReservationSettingsDTO {
+  cancellation_policy?: string;
+  deposit_amount?: number;
+  min_participants?: number;
+  max_participants?: number;
+  available_times: BusinessHoursDTO[];
+}
+
+export interface ReservationSettingsRequestDTO {
+  cancellation_policy?: string;
+  deposit_amount?: number;
+  min_participants?: number;
+  max_participants?: number;
+  available_times: BusinessHoursDTO[];
+}
+
+export interface ReservationSettingsResponseDTO {
+  success: boolean;
+  message: string;
+  data: {
+    cancellation_policy: string;
+    deposit_amount: number;
+    min_participants: number;
+    max_participants: number;
+    available_times: BusinessHoursDTO[];
+  };
+}
+
+// 스포츠 카테고리 DTO
+export interface SportsCategoryDTO {
+  name: string;
+  created_at: string;
+}
+
+export interface SportsCategoriesResponseDTO {
+  success: boolean;
+  data: SportsCategoryDTO[];
+}
+
+export interface AddSportsCategoryRequestDTO {
+  category_name: string;
+}
+
+export interface AddSportsCategoryResponseDTO {
+  success: boolean;
+  message: string;
+  data: {
+    store_id: string;
+    category_name: string;
+    message: string;
+  };
+}
+
+export interface DeleteSportsCategoryResponseDTO {
+  success: boolean;
+  message: string;
+  data: {
+    success: boolean;
+    message: string;
+    deleted_category: string;
+  };
+}
