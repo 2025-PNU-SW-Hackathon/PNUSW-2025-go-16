@@ -39,4 +39,13 @@ router.get('/me/dashboard', authMiddleware, storeController.getMyStoreDashboard)
 // 🆕 사장님 예약 목록 현황 조회 (GET /stores/me/reservations) - 사장님만 접근 가능
 router.get('/me/reservations', authMiddleware, storeController.getMyStoreReservations);
 
+// 🆕 스포츠 카테고리 개별 삭제 (DELETE /stores/me/sports-categories/:category_name) - 사장님만 접근 가능
+router.delete('/me/sports-categories/:category_name', authMiddleware, storeController.deleteSportsCategory);
+
+// 🆕 사업자 정보 수정 (PUT /stores/me/business-info) - 사장님만 접근 가능
+router.put('/me/business-info', authMiddleware, storeController.updateMyStoreBusinessInfo);
+
+// 🆕 매장 회원 탈퇴 (DELETE /stores/me) - 사장님만 접근 가능
+router.delete('/me', authMiddleware, storeController.deleteMyStore);
+
 module.exports = router; 

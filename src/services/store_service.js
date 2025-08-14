@@ -780,3 +780,202 @@ exports.getMyStoreReservations = async (store_id) => {
     throw error;
   }
 }; 
+
+// 🆕 스포츠 카테고리 개별 삭제
+exports.deleteSportsCategory = async (store_id, category_name) => {
+  const conn = getConnection();
+  try {
+    // store_sports_categories 테이블에서 해당 카테고리 삭제
+    const [result] = await conn.query(
+      'DELETE FROM store_sports_categories WHERE store_id = ? AND category_name = ?',
+      [store_id, category_name]
+    );
+    
+    if (result.affectedRows === 0) {
+      const err = new Error('삭제할 스포츠 카테고리를 찾을 수 없습니다.');
+      err.statusCode = 404;
+      throw err;
+    }
+    
+    return {
+      success: true,
+      message: '스포츠 카테고리가 삭제되었습니다.',
+      deleted_category: category_name
+    };
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '스포츠 카테고리 삭제 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
+
+// 🆕 예약 설정 수정 (최소 인원수 포함)
+exports.updateMyStoreReservationSettings = async (store_id, settings) => {
+  const conn = getConnection();
+  const {
+    cancellation_policy,
+    deposit_amount,
+    min_participants,
+    max_participants,
+    available_times
+  } = settings;
+  
+  try {
+    // store_table의 관련 필드 업데이트
+    const [result] = await conn.query(
+      `UPDATE store_table 
+       SET cancellation_policy = ?, deposit_amount = ?, 
+           store_max_people_cnt = ?, ex1 = ?
+       WHERE store_id = ?`,
+      [cancellation_policy, deposit_amount, max_participants || 50, min_participants || 2, store_id]
+    );
+    
+    if (result.affectedRows === 0) {
+      const err = new Error('가게를 찾을 수 없습니다.');
+      err.statusCode = 404;
+      throw err;
+    }
+    
+    return {
+      store_id,
+      cancellation_policy,
+      deposit_amount,
+      min_participants: min_participants || 2,
+      max_participants: max_participants || 50,
+      available_times
+    };
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '예약 설정 수정 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
+
+// 🆕 사업자 정보 수정
+exports.updateMyStoreBusinessInfo = async (store_id, businessInfo) => {
+  const conn = getConnection();
+  const {
+    store_name,
+    owner_name,
+    business_number,
+    postal_code,
+    store_address,
+    address_detail,
+    business_certificate_url
+  } = businessInfo;
+  
+  try {
+    // 사업자등록번호 중복 확인 (자신 제외)
+    if (business_number) {
+      const [existingStores] = await conn.query(
+        'SELECT store_id FROM store_table WHERE business_number = ? AND store_id != ?',
+        [business_number, store_id]
+      );
+      
+      if (existingStores.length > 0) {
+        const err = new Error('이미 등록된 사업자등록번호입니다.');
+        err.statusCode = 400;
+        err.errorCode = 'BUSINESS_NUMBER_ALREADY_EXISTS';
+        throw err;
+      }
+    }
+    
+    // 사업자 정보 업데이트
+    const [result] = await conn.query(
+      `UPDATE store_table SET 
+        store_name = ?, owner_name = ?, business_number = ?,
+        postal_code = ?, store_address = ?, address_detail = ?,
+        business_certificate_url = ?
+       WHERE store_id = ?`,
+      [
+        store_name, owner_name, business_number,
+        postal_code, store_address, address_detail,
+        business_certificate_url, store_id
+      ]
+    );
+    
+    if (result.affectedRows === 0) {
+      const err = new Error('업데이트할 가게를 찾을 수 없습니다.');
+      err.statusCode = 404;
+      throw err;
+    }
+    
+    return {
+      store_id,
+      store_name,
+      owner_name,
+      business_number,
+      postal_code,
+      store_address,
+      address_detail,
+      business_certificate_url
+    };
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '사업자 정보 수정 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
+
+// 🆕 매장 회원 탈퇴
+exports.deleteMyStore = async (store_id) => {
+  const conn = getConnection();
+  try {
+    // 트랜잭션 시작
+    await conn.beginTransaction();
+    
+    try {
+      // 1. 관련된 예약 데이터 삭제
+      await conn.query('DELETE FROM reservation_participant_table WHERE reservation_id IN (SELECT reservation_id FROM reservation_table WHERE store_id = ?)', [store_id]);
+      await conn.query('DELETE FROM reservation_table WHERE store_id = ?', [store_id]);
+      
+      // 2. 리뷰 데이터 삭제
+      await conn.query('DELETE FROM review_table WHERE store_id = ?', [store_id]);
+      
+      // 3. 채팅방 관련 데이터 삭제
+      await conn.query('DELETE FROM chat_room_users WHERE reservation_id IN (SELECT reservation_id FROM reservation_table WHERE store_id = ?)', [store_id]);
+      await conn.query('DELETE FROM chat_rooms WHERE reservation_id IN (SELECT reservation_id FROM reservation_table WHERE store_id = ?)', [store_id]);
+      await conn.query('DELETE FROM chat_messages WHERE chat_room_id IN (SELECT id FROM chat_rooms WHERE reservation_id IN (SELECT reservation_id FROM reservation_table WHERE store_id = ?))', [store_id]);
+      
+      // 4. 결제 관련 데이터 삭제
+      await conn.query('DELETE FROM payment_table WHERE chat_room_id IN (SELECT id FROM chat_rooms WHERE reservation_id IN (SELECT reservation_id FROM reservation_table WHERE store_id = ?))', [store_id]);
+      await conn.query('DELETE FROM payment_request_table WHERE chat_room_id IN (SELECT id FROM chat_rooms WHERE reservation_id IN (SELECT reservation_id FROM reservation_table WHERE store_id = ?))', [store_id]);
+      
+      // 5. 매장 관련 테이블 데이터 삭제
+      await conn.query('DELETE FROM store_menu WHERE store_id = ?', [store_id]);
+      await conn.query('DELETE FROM store_facilities WHERE store_id = ?', [store_id]);
+      await conn.query('DELETE FROM store_photos WHERE store_id = ?', [store_id]);
+      await conn.query('DELETE FROM store_sports_categories WHERE store_id = ?', [store_id]);
+      await conn.query('DELETE FROM store_payment_info WHERE store_id = ?', [store_id]);
+      
+      // 6. 매장 테이블에서 삭제
+      await conn.query('DELETE FROM store_table WHERE store_id = ?', [store_id]);
+      
+      // 트랜잭션 커밋
+      await conn.commit();
+      
+      return {
+        success: true,
+        message: '매장 계정이 완전히 삭제되었습니다.'
+      };
+      
+    } catch (error) {
+      // 오류 발생 시 롤백
+      await conn.rollback();
+      throw error;
+    }
+    
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '매장 탈퇴 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+}; 

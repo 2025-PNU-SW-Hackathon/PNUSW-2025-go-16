@@ -49,7 +49,6 @@ CREATE TABLE `reservation_table` (
   UNIQUE KEY `reservation_id_UNIQUE` (`reservation_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-
 CREATE TABLE `review_table` (
   `review_id` int NOT NULL,
   `review_text` varchar(300) NOT NULL,
@@ -67,7 +66,7 @@ CREATE TABLE `review_table` (
   UNIQUE KEY `review_id_UNIQUE` (`review_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-
+-- 🏪 매장 정보 테이블 (최신 구조)
 CREATE TABLE `store_table` (
   `store_id` varchar(64) NOT NULL,
   `store_pwd` varchar(64) NOT NULL,
@@ -75,8 +74,6 @@ CREATE TABLE `store_table` (
   `store_bio` varchar(45) NOT NULL,
   `store_open_hour` int NOT NULL,
   `store_close_hour` int NOT NULL,
-  `ex1` varchar(45) NOT NULL,
-  `ex2` varchar(45) NOT NULL,
   `store_max_people_cnt` int NOT NULL,
   `store_max_table_cnt` int NOT NULL,
   `store_max_parking_cnt` int NOT NULL,
@@ -87,9 +84,19 @@ CREATE TABLE `store_table` (
   `store_review_cnt` int NOT NULL,
   `store_rating` int NOT NULL,
   `store_name` varchar(45) NOT NULL,
+  `business_number` varchar(64) NOT NULL COMMENT '사업자등록번호',
+  `owner_name` varchar(45) NOT NULL COMMENT '사장님 이름',
+  `email` varchar(100) NOT NULL COMMENT '이메일',
+  `address_detail` varchar(100) DEFAULT NULL COMMENT '상세 주소',
+  `cancellation_policy` text COMMENT '취소/환불 규정',
+  `deposit_amount` int DEFAULT '0' COMMENT '예약금 금액',
+  `available_times` json DEFAULT NULL COMMENT '예약 가능 시간대',
+  `business_registration_status` enum('pending','completed') DEFAULT 'pending' COMMENT '사업자 등록 상태',
+  `postal_code` varchar(10) DEFAULT NULL COMMENT '우편번호',
+  `business_certificate_url` varchar(256) DEFAULT NULL COMMENT '사업자등록증 URL',
+  `registration_completed_at` timestamp NULL DEFAULT NULL COMMENT '사업자 등록 완료 시간',
   PRIMARY KEY (`store_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
 
 CREATE TABLE `user_table` (
   `user_id` varchar(64) NOT NULL,
@@ -108,7 +115,6 @@ CREATE TABLE `user_table` (
   PRIMARY KEY (`user_id`),
   UNIQUE KEY `iduser_table_UNIQUE` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
 
 CREATE TABLE `chat_messages` (
   `message_id` int NOT NULL,
@@ -137,7 +143,6 @@ CREATE TABLE `chat_rooms` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-
 CREATE TABLE `chat_room_users` (
   `id` int NOT NULL AUTO_INCREMENT,
   `reservation_id` int NOT NULL,
@@ -145,8 +150,7 @@ CREATE TABLE `chat_room_users` (
   `is_kicked` tinyint(1) DEFAULT '0',
   `joined_at` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `payment_request_table` (
   `payment_request_id` int NOT NULL AUTO_INCREMENT,
@@ -158,7 +162,6 @@ CREATE TABLE `payment_request_table` (
   `status` enum('pending','completed','cancelled') DEFAULT 'pending',
   PRIMARY KEY (`payment_request_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
 
 CREATE TABLE `payment_table` (
   `payment_id` int NOT NULL AUTO_INCREMENT,
@@ -250,3 +253,33 @@ CREATE TABLE `store_payment_info` (
   UNIQUE KEY `uk_store_id` (`store_id`),
   CONSTRAINT `fk_store_payment_info_store` FOREIGN KEY (`store_id`) REFERENCES `store_table` (`store_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 🍽️ 매장 메뉴 정보 테이블
+CREATE TABLE `store_menu` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `store_id` varchar(64) NOT NULL,
+  `name` varchar(100) NOT NULL COMMENT '메뉴명',
+  `price` int NOT NULL COMMENT '가격',
+  `description` text COMMENT '메뉴 설명',
+  `category` varchar(50) DEFAULT NULL COMMENT '메뉴 카테고리',
+  `is_available` tinyint(1) DEFAULT '1' COMMENT '판매 가능 여부',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_store_id` (`store_id`),
+  CONSTRAINT `fk_store_menu_store` FOREIGN KEY (`store_id`) REFERENCES `store_table` (`store_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- ⚽ 경기 정보 테이블
+CREATE TABLE `matches` (
+  `id` int NOT NULL,
+  `competition_code` varchar(10) DEFAULT NULL,
+  `match_date` datetime DEFAULT NULL,
+  `status` varchar(20) DEFAULT NULL,
+  `home_team` varchar(100) DEFAULT NULL,
+  `away_team` varchar(100) DEFAULT NULL,
+  `venue` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `id` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+

@@ -438,3 +438,132 @@ exports.checkBusinessRegistrationStatus = async (req, res, next) => {
     next(err);
   }
 };
+
+// 🆕 스포츠 카테고리 개별 삭제
+exports.deleteSportsCategory = async (req, res, next) => {
+  try {
+    const store_id = req.user.store_id;
+    const { category_name } = req.params;
+    
+    if (!store_id) {
+      return res.status(401).json({
+        success: false,
+        message: '사장님 계정으로만 접근 가능합니다.'
+      });
+    }
+    
+    const result = await storeService.deleteSportsCategory(store_id, category_name);
+    
+    res.json({
+      success: true,
+      message: '스포츠 카테고리가 삭제되었습니다.',
+      data: result
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 🆕 예약 설정 수정 (최소 인원수 포함)
+exports.updateMyStoreReservationSettings = async (req, res, next) => {
+  try {
+    const store_id = req.user.store_id;
+    
+    if (!store_id) {
+      return res.status(401).json({
+        success: false,
+        message: '사장님 계정으로만 접근 가능합니다.'
+      });
+    }
+    
+    const {
+      cancellation_policy,
+      deposit_amount,
+      min_participants,
+      max_participants,
+      available_times
+    } = req.body;
+    
+    const result = await storeService.updateMyStoreReservationSettings(store_id, {
+      cancellation_policy,
+      deposit_amount,
+      min_participants,
+      max_participants,
+      available_times
+    });
+    
+    res.json({
+      success: true,
+      message: '예약 설정이 수정되었습니다.',
+      data: result
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 🆕 사업자 정보 수정
+exports.updateMyStoreBusinessInfo = async (req, res, next) => {
+  try {
+    const store_id = req.user.store_id;
+    
+    if (!store_id) {
+      return res.status(401).json({
+        success: false,
+        message: '사장님 계정으로만 접근 가능합니다.'
+      });
+    }
+    
+    const {
+      store_name,
+      owner_name,
+      business_number,
+      postal_code,
+      store_address,
+      address_detail,
+      business_certificate_url
+    } = req.body;
+    
+    const result = await storeService.updateMyStoreBusinessInfo(store_id, {
+      store_name,
+      owner_name,
+      business_number,
+      postal_code,
+      store_address,
+      address_detail,
+      business_certificate_url
+    });
+    
+    res.json({
+      success: true,
+      message: '사업자 정보가 수정되었습니다.',
+      data: result
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 🆕 매장 회원 탈퇴
+exports.deleteMyStore = async (req, res, next) => {
+  try {
+    const store_id = req.user.store_id;
+    
+    if (!store_id) {
+      return res.status(401).json({
+        success: false,
+        message: '사장님 계정으로만 접근 가능합니다.'
+      });
+    }
+    
+    const result = await storeService.deleteMyStore(store_id);
+    
+    res.json({
+      success: true,
+      message: '매장 계정이 완전히 삭제되었습니다.',
+      data: result
+    });
+  } catch (err) {
+    next(err);
+  }
+};
