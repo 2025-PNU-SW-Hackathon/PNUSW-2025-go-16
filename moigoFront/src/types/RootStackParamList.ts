@@ -10,7 +10,7 @@ export type RootStackParamList = {
   SportsRegistration: undefined;
   BusinessHours: undefined;
   ReservationTime: undefined;
-  BusinessInfoEdit: undefined;
+  BusinessInfoEdit: { storeId?: string; isSignup?: boolean };
   Chat: undefined;
   ChatRoom: { chatId: string };
   CreateMeeting: undefined;
