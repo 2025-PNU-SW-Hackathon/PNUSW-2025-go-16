@@ -178,7 +178,7 @@ export default function BusinessHoursScreen() {
       console.log('✅ [화면] 영업 시간 설정 수정 성공!');
       
       // 성공 토스트 표시
-      setToastMessage('영업 시간이 저장되었습니다!');
+      setToastMessage('✅ 영업 시간이 성공적으로 저장되었습니다!');
       setToastType('success');
       setShowToast(true);
       
@@ -260,8 +260,15 @@ export default function BusinessHoursScreen() {
 
     console.log('🏪 [화면] 저장할 영업 시간:', businessHours);
     
-    // API 호출
-    updateBusinessHours(businessHours);
+    // 저장 완료 토스트 표시
+    setToastMessage('영업 시간이 저장되었습니다!');
+    setToastType('success');
+    setShowToast(true);
+    
+    // 2초 후 이전 화면으로 이동
+    setTimeout(() => {
+      navigation.goBack();
+    }, 2000);
   };
 
   const handleCancel = () => {
