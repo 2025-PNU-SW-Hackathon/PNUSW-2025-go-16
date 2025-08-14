@@ -14,6 +14,8 @@ import type {
   StoreReservationsResponseDTO,
   ReservationActionRequestDTO,
   ReservationActionResponseDTO,
+  MatchesResponseDTO,
+  ScheduleResponseDTO,
 } from '../../types/DTO/users';
 import type { GetUserProfileResponseDTO } from '../../types/DTO/chat';
 
@@ -124,5 +126,73 @@ export const rejectReservation = async (
     }
   );
   
+  return response.data;
+};
+
+// 일정 관련 API (명세서 기반)
+
+// 경기 정보 조회 - GET /api/v1/matches
+export const getMatches = async (params?: {
+  competition_code?: string;
+  status?: string;
+  date_from?: string;
+  date_to?: string;
+  home?: string;
+  away?: string;
+  team?: string;
+  venue?: string;
+  category?: number;
+  sort?: string;
+  page?: number;
+  page_size?: number | 'all';
+  all?: boolean;
+}): Promise<MatchesResponseDTO> => {
+  const queryParams = new URLSearchParams();
+  
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        if (key === 'all' && value === true) {
+          queryParams.append('all', 'true');
+        } else if (key === 'page_size' && value === 'all') {
+          queryParams.append('page_size', 'all');
+        } else {
+          queryParams.append(key, value.toString());
+        }
+      }
+    });
+  }
+  
+  const url = `/matches${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+  console.log('🎯 [API] getMatches 호출:', url);
+  
+  const response = await apiClient.get<MatchesResponseDTO>(url);
+  console.log('✅ [API] getMatches 성공:', response.data);
+  return response.data;
+};
+
+// 매장 일정 조회 (예약 목록) - GET /api/v1/stores/me/reservations
+export const getStoreSchedule = async (params?: {
+  date_from?: string;
+  date_to?: string;
+  status?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<ScheduleResponseDTO> => {
+  const queryParams = new URLSearchParams();
+  
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        queryParams.append(key, value.toString());
+      }
+    });
+  }
+  
+  const url = `/stores/me/reservations${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+  console.log('📅 [API] getStoreSchedule 호출:', url);
+  
+  const response = await apiClient.get<ScheduleResponseDTO>(url);
+  console.log('✅ [API] getStoreSchedule 성공:', response.data);
   return response.data;
 };

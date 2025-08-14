@@ -7,6 +7,8 @@ import {
   updateUserSettings,
   getUserProfile,
   getReservationHistory,
+  getMatches,
+  getStoreSchedule,
 } from '../../apis/users';
 import type {
   UpdateProfileRequestDTO,
@@ -50,6 +52,49 @@ export const useGetReservationHistory = () => {
   return useQuery({
     queryKey: ['reservation-history'],
     queryFn: () => getReservationHistory(),
+  });
+};
+
+// 일정 관련 훅 (명세서 기반)
+export const useMatches = (params?: {
+  competition_code?: string;
+  status?: string;
+  date_from?: string;
+  date_to?: string;
+  home?: string;
+  away?: string;
+  team?: string;
+  venue?: string;
+  category?: number;
+  sort?: string;
+  page?: number;
+  page_size?: number | 'all';
+  all?: boolean;
+}) => {
+  return useQuery({
+    queryKey: ['matches', params],
+    queryFn: () => getMatches(params),
+    staleTime: 5 * 60 * 1000, // 5분
+    gcTime: 10 * 60 * 1000, // 10분
+    retry: 3, // 재시도 3회
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // 지수 백오프
+  });
+};
+
+export const useStoreSchedule = (params?: {
+  date_from?: string;
+  date_to?: string;
+  status?: string;
+  page?: number;
+  page_size?: number;
+}) => {
+  return useQuery({
+    queryKey: ['storeSchedule', params],
+    queryFn: () => getStoreSchedule(params),
+    staleTime: 2 * 60 * 1000, // 2분
+    gcTime: 5 * 60 * 1000, // 5분
+    retry: 3, // 재시도 3회
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // 지수 백오프
   });
 };
 

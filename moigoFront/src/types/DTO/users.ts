@@ -146,3 +146,52 @@ export interface ReservationActionResponseDTO {
     status: string;
   };
 }
+
+// 일정 관련 DTO (명세서 기반)
+export interface MatchDTO {
+  id: number;
+  competition_code: string;
+  match_date: string;
+  status: string;
+  home_team: string;
+  away_team: string;
+  venue: string;
+  category: number;
+}
+
+export interface ScheduleEventDTO {
+  reservation_id: number;
+  reservation_match: string;
+  reservation_start_time: string;
+  reservation_end_time?: string;
+  reservation_participant_info: string;
+  reservation_status: string;
+  reservation_table_info: string;
+  // 실제 API 응답에 맞는 필드명으로 수정
+  participants_count?: number;  // API에서 제공되지 않을 수 있음
+  max_participants?: number;   // API에서 제공되지 않을 수 있음
+}
+
+export interface ScheduleResponseDTO {
+  success: boolean;
+  data: ScheduleEventDTO[];
+  meta?: {
+    page: number;
+    page_size: number;
+    total: number;
+    total_pages: number;
+  };
+}
+
+export interface MatchesResponseDTO {
+  success: boolean;
+  data: MatchDTO[];
+  meta?: {
+    page: number;
+    page_size: number;
+    total: number;
+    total_pages: number;
+    sort: string;
+    filters?: Record<string, any>;
+  };
+}
