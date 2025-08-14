@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -8,6 +8,7 @@ import Toast from '@/components/common/Toast';
 import DeleteSportModal from '@/components/business/DeleteSportModal';
 import EditSportModal from '@/components/business/EditSportModal';
 import PlusSportModal from '@/components/business/PlusSportModal';
+import { useSportsCategories, useDeleteSportsCategory, useAddSportsCategory } from '@/hooks/queries/useUserQueries';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'SportsRegistration'>;
 
@@ -20,8 +21,15 @@ interface Sport {
 
 export default function SportsRegistrationScreen() {
   const navigation = useNavigation<NavigationProp>();
+  
+  // API 훅 사용
+  const { data: sportsCategoriesData, isLoading: isSportsCategoriesLoading } = useSportsCategories();
+  const { mutate: deleteSportsCategory, isSuccess: isDeleteSuccess, isError: isDeleteError } = useDeleteSportsCategory();
+  const { mutate: addSportsCategory, isSuccess: isAddSuccess, isError: isAddError } = useAddSportsCategory();
+  
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPlusModal, setShowPlusModal] = useState(false);
@@ -61,6 +69,108 @@ export default function SportsRegistrationScreen() {
     },
   ]);
 
+  // API 데이터로 초기화
+  useEffect(() => {
+    if (sportsCategoriesData?.success && sportsCategoriesData?.data) {
+      const apiSportsCategories = sportsCategoriesData.data;
+      
+      // API에서 받은 스포츠 카테고리를 기존 UI 형식에 맞게 변환
+      const convertedSports: Sport[] = apiSportsCategories.map((category: any, index: number) => ({
+        id: (index + 1).toString(),
+        name: category.name,
+        platforms: getDefaultPlatforms(category.name), // 기본 플랫폼 설정
+        availableSeats: getDefaultSeats(category.name), // 기본 좌석 수 설정
+      }));
+      
+      setSports(convertedSports);
+    }
+  }, [sportsCategoriesData]);
+
+  // 스포츠별 기본 플랫폼 설정
+  const getDefaultPlatforms = (sportName: string): string[] => {
+    switch (sportName) {
+      case '축구':
+        return ['SBS Sports', 'MBC Sports'];
+      case '농구':
+        return ['KBS Sports', 'SPOTV'];
+      case '야구':
+        return ['KBS N Sports', 'MBC Sports+'];
+      case '격투기':
+        return ['SPOTV', 'ESPN'];
+      case '게임':
+        return ['Twitch', 'AfreecaTV'];
+      default:
+        return ['SBS Sports'];
+    }
+  };
+
+  // 스포츠별 기본 좌석 수 설정
+  const getDefaultSeats = (sportName: string): number => {
+    switch (sportName) {
+      case '축구':
+        return 12;
+      case '농구':
+        return 8;
+      case '야구':
+        return 15;
+      case '격투기':
+        return 8;
+      case '게임':
+        return 10;
+      default:
+        return 10;
+    }
+  };
+
+  // 토스트 표시 함수들
+  const showSuccessMessage = (message: string) => {
+    setToastMessage(message);
+    setToastType('success');
+    setShowToast(true);
+  };
+
+  const showErrorMessage = (message: string) => {
+    setToastMessage(message);
+    setToastType('error');
+    setShowToast(true);
+  };
+
+  const hideToast = () => {
+    setShowToast(false);
+  };
+
+  // 삭제 성공 시 처리
+  useEffect(() => {
+    if (isDeleteSuccess) {
+      console.log('✅ [화면] 스포츠 카테고리 삭제 성공!');
+      showSuccessMessage('스포츠 카테고리가 삭제되었습니다!');
+    }
+  }, [isDeleteSuccess]);
+
+  // 삭제 실패 시 처리
+  useEffect(() => {
+    if (isDeleteError) {
+      console.log('❌ [화면] 스포츠 카테고리 삭제 실패!');
+      showErrorMessage('스포츠 카테고리 삭제에 실패했습니다.');
+    }
+  }, [isDeleteError]);
+
+  // 추가 성공 시 처리
+  useEffect(() => {
+    if (isAddSuccess) {
+      console.log('✅ [화면] 스포츠 카테고리 추가 성공!');
+      showSuccessMessage('스포츠 카테고리가 추가되었습니다!');
+    }
+  }, [isAddSuccess]);
+
+  // 추가 실패 시 처리
+  useEffect(() => {
+    if (isAddError) {
+      console.log('❌ [화면] 스포츠 카테고리 추가 실패!');
+      showErrorMessage('스포츠 카테고리 추가에 실패했습니다.');
+    }
+  }, [isAddError]);
+
   const handleEditSport = (sport: Sport) => {
     setSportToEdit(sport);
     setShowEditModal(true);
@@ -72,11 +182,7 @@ export default function SportsRegistrationScreen() {
     setSportToEdit(null);
     
     // 수정 완료 토스트 표시
-    setShowToast(true);
-    setToastMessage('수정되었습니다');
-    setTimeout(() => {
-      setShowToast(false);
-    }, 2000);
+    showSuccessMessage('수정되었습니다');
   };
 
   const handleDeleteSport = (sport: Sport) => {
@@ -86,16 +192,13 @@ export default function SportsRegistrationScreen() {
 
   const confirmDeleteSport = () => {
     if (sportToDelete) {
+      // API 호출하여 스포츠 카테고리 삭제
+      deleteSportsCategory(sportToDelete.name);
+      
+      // 로컬 상태 업데이트
       setSports(prev => prev.filter(s => s.id !== sportToDelete.id));
       setShowDeleteModal(false);
       setSportToDelete(null);
-      
-      // 삭제 완료 토스트 표시
-      setShowToast(true);
-      setToastMessage('삭제되었습니다');
-      setTimeout(() => {
-        setShowToast(false);
-      }, 2000);
     }
   };
 
@@ -126,26 +229,22 @@ export default function SportsRegistrationScreen() {
       ...newSport,
     };
     
+    // 로컬 상태 업데이트
     setSports(prev => [...prev, sportToAdd]);
     
-    // 추가 완료 토스트 표시
-    setShowToast(true);
-    setToastMessage('추가되었습니다');
-    setTimeout(() => {
-      setShowToast(false);
-    }, 2000);
+    // API 호출하여 스포츠 카테고리 추가
+    addSportsCategory(newSport.name);
+    
+    // 모달 닫기
+    setShowPlusModal(false);
   };
 
   const handleSave = () => {
-    // 저장 로직
-    console.log('저장된 스포츠 데이터:', sports);
-    
-    // 토스트 표시
-    setShowToast(true);
+    // 저장 완료 토스트 표시
+    showSuccessMessage('저장되었습니다');
     
     // 2초 후 이전 화면으로 이동
     setTimeout(() => {
-      setShowToast(false);
       navigation.goBack();
     }, 2000);
   };
@@ -209,6 +308,15 @@ export default function SportsRegistrationScreen() {
             <Feather name="plus" size={24} color="white" />
             <Text className="ml-3 text-lg font-medium text-white">새로운 스포츠 추가</Text>
           </TouchableOpacity>
+          
+          {/* 저장 버튼 */}
+          <TouchableOpacity 
+            className="flex-row justify-center items-center px-6 py-4 w-full bg-orange-500 rounded-xl"
+            onPress={handleSave}
+            activeOpacity={0.7}
+          >
+            <Text className="text-lg font-medium text-white">저장</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -236,14 +344,13 @@ export default function SportsRegistrationScreen() {
       />
 
       {/* 토스트 */}
-      {showToast && (
-        <Toast 
-          visible={showToast}
-          message={toastMessage} 
-          type="success"
-          onHide={() => setShowToast(false)}
-        />
-      )}
+      <Toast 
+        visible={showToast}
+        message={toastMessage} 
+        type={toastType}
+        onHide={hideToast}
+        duration={2000}
+      />
     </View>
   );
 }

@@ -14,6 +14,9 @@ import {
   updateNotificationSettings,
   updateReservationSettings,
   updateStoreDetailInfo,
+  deleteSportsCategory,
+  addSportsCategory,
+  getSportsCategories,
 } from '../../apis/users';
 import type {
   UpdateProfileRequestDTO,
@@ -235,6 +238,47 @@ export const useUpdateStoreDetailInfo = () => {
     },
     onError: (error) => {
       console.error('❌ [훅] 매장 상세 정보 수정 실패:', error);
+    },
+  });
+}; 
+
+// 스포츠 카테고리 조회
+export const useSportsCategories = () => {
+  return useQuery({
+    queryKey: ['sportsCategories'],
+    queryFn: getSportsCategories,
+    staleTime: 5 * 60 * 1000, // 5분
+  });
+};
+
+// 스포츠 카테고리 추가
+export const useAddSportsCategory = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: addSportsCategory,
+    onSuccess: (data) => {
+      console.log('✅ 스포츠 카테고리 추가 성공:', data);
+      // 스포츠 카테고리 쿼리 무효화
+      queryClient.invalidateQueries({ queryKey: ['sportsCategories'] });
+    },
+    onError: (error) => {
+      console.error('❌ 스포츠 카테고리 추가 실패:', error);
+    },
+  });
+};
+
+// 스포츠 카테고리 삭제
+export const useDeleteSportsCategory = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteSportsCategory,
+    onSuccess: (data) => {
+      console.log('✅ 스포츠 카테고리 삭제 성공:', data);
+      // 스포츠 카테고리 쿼리 무효화
+      queryClient.invalidateQueries({ queryKey: ['sportsCategories'] });
+    },
+    onError: (error) => {
+      console.error('❌ 스포츠 카테고리 삭제 실패:', error);
     },
   });
 }; 

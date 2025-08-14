@@ -250,3 +250,23 @@ export const updateStoreDetailInfo = async (
 
   return response.data;
 };
+
+// 스포츠 카테고리 조회
+export const getSportsCategories = async () => {
+  const response = await apiClient.get('/stores/me/sports-categories');
+  return response.data;
+};
+
+// 스포츠 카테고리 추가
+export const addSportsCategory = async (categoryName: string) => {
+  const response = await apiClient.post('/stores/me/sports-categories', {
+    category_name: categoryName
+  });
+  return response.data;
+};
+
+// 스포츠 카테고리 삭제
+export const deleteSportsCategory = async (categoryName: string) => {
+  const response = await apiClient.delete(`/stores/me/sports-categories/${categoryName}`);
+  return response.data;
+};
