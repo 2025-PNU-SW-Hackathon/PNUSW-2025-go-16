@@ -33,4 +33,10 @@ router.put('/me/details', authMiddleware, storeController.updateMyStoreDetails);
 // 🆕 예약 설정 수정 (PUT /stores/me/settings/reservation) - 사장님만 접근 가능
 router.put('/me/settings/reservation', authMiddleware, storeController.updateMyStoreReservationSettings);
 
+// 🆕 사장님 대시보드 현황 조회 (GET /stores/me/dashboard) - 사장님만 접근 가능
+router.get('/me/dashboard', authMiddleware, storeController.getMyStoreDashboard);
+
+// 🆕 사장님 예약 목록 현황 조회 (GET /stores/me/reservations) - 사장님만 접근 가능
+router.get('/me/reservations', authMiddleware, storeController.getMyStoreReservations);
+
 module.exports = router; 

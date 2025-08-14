@@ -92,6 +92,19 @@ exports.storeLogin = async (store_id, store_pwd) => {
       };
     }
 
+    // 사업자 등록 상태 확인
+    if (store.business_registration_status !== 'completed') {
+      return {
+        success: false,
+        message: '사업자 정보 등록이 완료되지 않았습니다. 사업자 정보를 먼저 등록해주세요.',
+        errorCode: 'BUSINESS_REGISTRATION_INCOMPLETE',
+        data: {
+          store_id: store.store_id,
+          business_registration_status: store.business_registration_status
+        }
+      };
+    }
+
     // JWT 토큰 생성
     const payload = {
       store_id: store.store_id,

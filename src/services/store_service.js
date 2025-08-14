@@ -183,6 +183,169 @@ exports.getBankCodes = async () => {
   }
 };
 
+// 🆕 1단계: 기본 사업자 회원가입 (아이디/비번/이메일/휴대폰번호)
+exports.registerStoreBasic = async (store_id, store_pwd, email, store_phonenumber) => {
+  const conn = getConnection();
+  
+  try {
+    // 아이디 중복 확인
+    const [existingStores] = await conn.query(
+      'SELECT store_id FROM store_table WHERE store_id = ?',
+      [store_id]
+    );
+
+    if (existingStores.length > 0) {
+      const err = new Error('이미 사용 중인 아이디입니다.');
+      err.statusCode = 400;
+      err.errorCode = 'STORE_ID_ALREADY_EXISTS';
+      throw err;
+    }
+
+    // 비밀번호 해싱
+    const bcrypt = require('bcryptjs');
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(store_pwd, salt);
+
+    // 기본 정보만으로 가게 등록 (기본값 설정)
+    const [result] = await conn.query(
+      `INSERT INTO store_table (
+        store_id, store_pwd, business_registration_status,
+        store_name, owner_name, business_number, store_address, store_bio,
+        store_open_hour, store_close_hour,
+        store_max_people_cnt, store_max_table_cnt, store_max_parking_cnt, store_max_screen_cnt,
+        store_phonenumber, store_holiday, store_thumbnail, store_review_cnt, store_rating,
+        email, address_detail, postal_code,
+        cancellation_policy, deposit_amount, available_times
+      ) VALUES (?, ?, 'pending', 
+        '새로운 매장', '사장님', '000-00-00000', '주소 미입력', '매장 소개를 입력해주세요',
+        9, 22,
+        50, 10, 20, 5,
+        ?, '0', NULL, 0, 0,
+        ?, '상세주소 미입력', '00000',
+        '취소/환불 규정을 입력해주세요', 0, NULL
+      )`,
+      [store_id, hashedPassword, store_phonenumber, email]
+    );
+
+    return {
+      store_id,
+      business_registration_status: 'pending'
+    };
+
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '기본 회원가입 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
+
+// 🆕 2단계: 사업자 정보 등록
+exports.completeBusinessRegistration = async (store_id, businessData) => {
+  const conn = getConnection();
+  
+  try {
+    console.log('🔍 사업자 정보 등록 시작:', { store_id, businessData });
+    
+    const {
+      store_name,
+      owner_name,
+      business_number,
+      postal_code,
+      store_address,
+      address_detail,
+      business_certificate_url
+    } = businessData;
+
+    // 사업자등록번호 중복 확인
+    const [existingStores] = await conn.query(
+      'SELECT store_id FROM store_table WHERE business_number = ? AND store_id != ?',
+      [business_number, store_id]
+    );
+
+    if (existingStores.length > 0) {
+      const err = new Error('이미 등록된 사업자등록번호입니다.');
+      err.statusCode = 400;
+      err.errorCode = 'BUSINESS_NUMBER_ALREADY_EXISTS';
+      throw err;
+    }
+
+    console.log('✅ 사업자등록번호 중복 확인 완료');
+
+    // 사업자 정보 업데이트
+    console.log('🔄 UPDATE 쿼리 실행 시작');
+    const [updateResult] = await conn.query(
+      `UPDATE store_table SET 
+        store_name = ?, owner_name = ?, business_number = ?,
+        postal_code = ?, store_address = ?, address_detail = ?,
+        business_certificate_url = ?, business_registration_status = 'completed',
+        registration_completed_at = NOW()
+       WHERE store_id = ?`,
+      [
+        store_name, owner_name, business_number,
+        postal_code, store_address, address_detail,
+        business_certificate_url, store_id
+      ]
+    );
+
+    console.log('📊 UPDATE 결과:', updateResult);
+    console.log('📊 affectedRows:', updateResult.affectedRows);
+
+    if (updateResult.affectedRows === 0) {
+      const err = new Error('업데이트할 가게를 찾을 수 없습니다.');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    console.log('✅ 사업자 정보 업데이트 완료');
+
+    return {
+      store_id,
+      business_registration_status: 'completed'
+    };
+
+  } catch (error) {
+    console.error('❌ 사업자 정보 등록 중 오류:', error);
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '사업자 정보 등록 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
+
+// 🆕 사업자 등록 상태 확인
+exports.checkBusinessRegistrationStatus = async (store_id) => {
+  const conn = getConnection();
+  try {
+    const [rows] = await conn.query(
+      `SELECT 
+        business_registration_status,
+        store_name, owner_name, business_number,
+        postal_code, address_main, address_detail,
+        business_certificate_url, registration_completed_at
+       FROM store_table 
+       WHERE store_id = ?`,
+      [store_id]
+    );
+    
+    if (rows.length === 0) {
+      const err = new Error('가게를 찾을 수 없습니다.');
+      err.statusCode = 404;
+      throw err;
+    }
+    
+    return rows[0];
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '사업자 등록 상태 확인 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
+
 // 🏪 사장님 회원가입 서비스
 exports.registerStore = async (storeData) => {
   const conn = getConnection();
@@ -377,10 +540,10 @@ exports.updateMyStoreBasicInfo = async (store_id, basicInfo) => {
   const conn = getConnection();
   const {
     store_name,
-    address_main,
+    store_address,
     address_detail,
-    phone_number,
-    business_reg_no,
+    store_phonenumber,
+    business_number,
     owner_name,
     email,
     bio
@@ -392,7 +555,7 @@ exports.updateMyStoreBasicInfo = async (store_id, basicInfo) => {
        SET store_name = ?, store_address = ?, store_phonenumber = ?, 
            business_number = ?, store_bio = ?
        WHERE store_id = ?`,
-      [store_name, address_main, phone_number, business_reg_no, bio, store_id]
+      [store_name, store_address, store_phonenumber, business_number, bio, store_id]
     );
     
     if (result.affectedRows === 0) {
@@ -404,9 +567,9 @@ exports.updateMyStoreBasicInfo = async (store_id, basicInfo) => {
     return {
       store_id,
       store_name,
-      address_main,
-      phone_number,
-      business_reg_no,
+      store_address,
+      store_phonenumber,
+      business_number,
       bio
     };
   } catch (error) {
@@ -540,3 +703,80 @@ async function getBankNameByCode(bankCode) {
   
   return bankNames[bankCode] || '미설정';
 } 
+
+// 🆕 사장님 대시보드 현황 조회
+exports.getMyStoreDashboard = async (store_id) => {
+  const conn = getConnection();
+  try {
+    // 오늘 예약 수 조회
+    const [todayResult] = await conn.query(
+      `SELECT COUNT(*) as count FROM reservation_table 
+       WHERE store_id = ? AND DATE(reservation_start_time) = CURDATE()`,
+      [store_id]
+    );
+    
+    // 이번 주 예약 수 조회
+    const [weekResult] = await conn.query(
+      `SELECT COUNT(*) as count FROM reservation_table 
+       WHERE store_id = ? AND YEARWEEK(reservation_start_time) = YEARWEEK(NOW())`,
+      [store_id]
+    );
+    
+    // 평균 평점 조회
+    const [ratingResult] = await conn.query(
+      `SELECT AVG(store_rating) as avg_rating FROM store_table WHERE store_id = ?`,
+      [store_id]
+    );
+    
+    return {
+      today_reservations_count: todayResult[0].count,
+      this_week_reservations_count: weekResult[0].count,
+      average_rating: ratingResult[0].avg_rating || 0
+    };
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '대시보드 정보 조회 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
+
+// 🆕 사장님 예약 목록 현황 조회
+exports.getMyStoreReservations = async (store_id) => {
+  const conn = getConnection();
+  try {
+    const [rows] = await conn.query(
+      `SELECT 
+        r.reservation_id,
+        r.reservation_match,
+        r.reservation_start_time,
+        r.reservation_participant_cnt,
+        r.reservation_max_participant_cnt,
+        r.reservation_status,
+        GROUP_CONCAT(u.user_name SEPARATOR ', ') as participant_names
+       FROM reservation_table r
+       LEFT JOIN reservation_participant_table rp ON r.reservation_id = rp.reservation_id
+       LEFT JOIN user_table u ON rp.user_id = u.user_id
+       WHERE r.store_id = ?
+       GROUP BY r.reservation_id
+       ORDER BY r.reservation_start_time DESC`,
+      [store_id]
+    );
+    
+    return rows.map(row => ({
+      reservation_id: row.reservation_id,
+      reservation_match: row.reservation_match,
+      reservation_start_time: row.reservation_start_time,
+      reservation_participant_info: row.participant_names || '참가자 없음',
+      reservation_table_info: '테이블 정보', // 실제 테이블 정보가 있다면 추가
+      reservation_status: row.reservation_status === 0 ? 'PENDING_APPROVAL' : 'CONFIRMED'
+    }));
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '예약 목록 조회 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+}; 

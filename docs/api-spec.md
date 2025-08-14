@@ -63,35 +63,83 @@
 }
 ```
 
-### 1.3 사장님 회원가입
-- **URL**: `POST /api/v1/users/store/register`
-- **설명**: 새로운 매장을 등록합니다.
-- **Request Body**:
-```json
-{
-  "store_id": "store_123",
-  "store_pwd": "storepass123",
-  "store_name": "챔피언 스포츠 펍",
-  "business_number": "123-45-67890",
-  "store_address": "서울시 강남구 역삼동 123-45",
-  "store_phonenumber": "02-1234-5678",
-  "store_bio": "강남역 근처에 위치한 스포츠 전문 바입니다.",
-  "store_open_hour": 18,
-  "store_close_hour": 24
-}
-```
-- **Response**:
-```json
-{
-  "success": true,
-  "message": "사장님 회원가입이 완료되었습니다.",
-  "data": {
-    "store_id": "store_123",
-    "store_name": "챔피언 스포츠 펍",
-    "business_number": "123-45-67890"
-  }
-}
-```
+### **1.3 사장님 회원가입 (2단계)**
+
+#### **1단계: 기본 회원가입**
+- **URL**: `POST /users/store/register/basic`
+- **Request Body**:JSON
+    
+    ```tsx
+    {
+      "store_id": "store_123",
+      "store_pwd": "storepass123",
+      "email": "store@example.com",
+      "store_phonenumber": "02-1234-5678"
+    }
+    ```
+    
+- **Response**:JSON
+    
+    ```tsx
+    {
+      "success": true,
+      "message": "기본 회원가입이 완료되었습니다. 사업자 정보를 입력해주세요.",
+      "data": {
+        "store_id": "store_123",
+        "business_registration_status": "pending"
+      }
+    }
+    ```
+
+#### **2단계: 사업자 정보 등록**
+- **URL**: `POST /users/store/{storeId}/business-registration`
+- **Request Body**:JSON
+    
+    ```tsx
+    {
+      "store_name": "챔피언 스포츠 펍",
+      "owner_name": "김성훈",
+      "business_number": "123-45-67890",
+      "postal_code": "06123",
+      "store_address": "서울특별시 강남구 강남대로 123길 45",
+      "address_detail": "2층 201호",
+      "business_certificate_url": "https://example.com/cert.pdf"
+    }
+    ```
+    
+- **Response**:JSON
+    
+    ```tsx
+    {
+      "success": true,
+      "message": "사업자 등록이 완료되었습니다. 로그인해주세요.",
+      "data": {
+        "store_id": "store_123",
+        "business_registration_status": "completed"
+      }
+    }
+    ```
+
+#### **사업자 등록 상태 확인**
+- **URL**: `GET /users/store/{storeId}/business-registration/status`
+- **Response**:JSON
+    
+    ```tsx
+    {
+      "success": true,
+      "data": {
+        "business_registration_status": "pending",
+        "store_name": "새로운 매장",
+        "owner_name": "사장님",
+        "business_number": "000-00-00000",
+        "postal_code": "00000",
+        "store_address": "주소 미입력",
+        "address_detail": "상세주소 미입력",
+        "business_certificate_url": null,
+        "registration_completed_at": null
+      }
+    }
+    ```
 
 ### 1.4 사장님 로그인
 - **URL**: `POST /api/v1/users/store/login`

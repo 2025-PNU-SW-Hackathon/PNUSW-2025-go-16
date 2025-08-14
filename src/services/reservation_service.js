@@ -233,3 +233,85 @@ exports.getReservationDetail = async (reservation_id) => {
     participants: participants
   };
 };
+
+// 🆕 예약 승인/거절 (사장님 전용)
+exports.approveReservation = async (reservationId, store_id, action) => {
+  const conn = getConnection();
+  try {
+    // 예약이 해당 매장의 것인지 확인
+    const [reservation] = await conn.query(
+      'SELECT * FROM reservation_table WHERE reservation_id = ? AND store_id = ?',
+      [reservationId, store_id]
+    );
+    
+    if (reservation.length === 0) {
+      const err = new Error('해당 예약을 찾을 수 없습니다.');
+      err.statusCode = 404;
+      throw err;
+    }
+    
+    const newStatus = action === 'APPROVE' ? 1 : 2; // 1: 승인, 2: 거절
+    
+    await conn.query(
+      'UPDATE reservation_table SET reservation_status = ? WHERE reservation_id = ?',
+      [newStatus, reservationId]
+    );
+    
+    const message = action === 'APPROVE' 
+      ? '예약이 성공적으로 승인되었습니다.' 
+      : '예약이 거절되었습니다.';
+    
+    return {
+      message,
+      data: {
+        reservationId,
+        newStatus: newStatus === 1 ? 'RESERVATION_CONFIRMED' : 'RESERVATION_REJECTED'
+      }
+    };
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '예약 승인/거절 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
+
+// 🆕 사장님 주간 일정 현황 조회
+exports.getMyStoreSchedules = async (store_id) => {
+  const conn = getConnection();
+  try {
+    const [rows] = await conn.query(
+      `SELECT 
+        r.reservation_id,
+        r.reservation_match,
+        r.reservation_start_time as match_start_time,
+        r.reservation_end_time as match_end_time,
+        r.reservation_participant_cnt as current_participants,
+        r.reservation_max_participant_cnt as max_participants,
+        r.reservation_status as status
+       FROM reservation_table r
+       WHERE r.store_id = ? 
+       AND r.reservation_start_time >= NOW()
+       AND r.reservation_start_time <= DATE_ADD(NOW(), INTERVAL 7 DAY)
+       ORDER BY r.reservation_start_time ASC`,
+      [store_id]
+    );
+    
+    return rows.map(row => ({
+      reservation_id: row.reservation_id,
+      reservation_match: row.reservation_match,
+      match_start_time: row.match_start_time,
+      match_end_time: row.match_end_time,
+      current_participants: row.current_participants,
+      max_participants: row.max_participants,
+      status: row.status
+    }));
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '주간 일정 조회 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};

@@ -131,3 +131,40 @@ exports.updatePassword = async (req, res, next) => {
     next(err);
   }
 };
+
+// 🆕 사용자 설정 변경
+exports.updateUserSettings = async (req, res, next) => {
+  try {
+    const user_id = req.user.user_id;
+    const { push_notifications_enabled, marketing_opt_in } = req.body;
+    
+    await userService.updateUserSettings(user_id, {
+      push_notifications_enabled,
+      marketing_opt_in
+    });
+    
+    res.json({
+      success: true,
+      message: '설정이 성공적으로 변경되었습니다.'
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 🆕 회원 탈퇴
+exports.deleteUser = async (req, res, next) => {
+  try {
+    const user_id = req.user.user_id;
+    const { password } = req.body; // 비밀번호 확인용
+    
+    await userService.deleteUser(user_id, password);
+    
+    res.json({
+      success: true,
+      message: '회원 탈퇴가 완료되었습니다.'
+    });
+  } catch (err) {
+    next(err);
+  }
+};

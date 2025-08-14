@@ -23,4 +23,19 @@ router.post('/login', authController.login);
 router.post('/register', userController.registerUser);
 router.get('/:userId/profile', authMiddleware, userController.getUserProfile);
 
+// 🆕 사용자 설정 변경 (PATCH /users/me)
+router.patch('/me', authMiddleware, userController.updateUserSettings);
+
+// 🆕 회원 탈퇴 (DELETE /users/me)
+router.delete('/me', authMiddleware, userController.deleteUser);
+
+// 🆕 1단계: 기본 사업자 회원가입 (POST /users/store/register/basic)
+router.post('/store/register/basic', storeController.registerStoreBasic);
+
+// 🆕 2단계: 사업자 정보 등록 (POST /users/store/:storeId/business-registration)
+router.post('/store/:storeId/business-registration', storeController.completeBusinessRegistration);
+
+// 🆕 사업자 등록 상태 확인 (GET /users/store/:storeId/business-registration/status)
+router.get('/store/:storeId/business-registration/status', storeController.checkBusinessRegistrationStatus);
+
 module.exports = router;

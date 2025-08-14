@@ -177,3 +177,71 @@ exports.updatePassword = async (user_id, old_password, new_password) => {
   }
   await conn.query('UPDATE user_table SET user_pwd = ? WHERE user_id = ?', [new_password, user_id]);
 };
+
+// 🆕 사용자 설정 변경
+exports.updateUserSettings = async (user_id, settings) => {
+  const conn = getConnection();
+  try {
+    const { push_notifications_enabled, marketing_opt_in } = settings;
+    
+    // ex1, ex2 필드를 활용하여 설정 저장
+    await conn.query(
+      'UPDATE user_table SET ex1 = ?, ex2 = ? WHERE user_id = ?',
+      [
+        push_notifications_enabled ? '1' : '0',
+        marketing_opt_in ? '1' : '0',
+        user_id
+      ]
+    );
+    
+    return true;
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '사용자 설정 변경 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
+
+// 🆕 회원 탈퇴
+exports.deleteUser = async (user_id, password) => {
+  const conn = getConnection();
+  try {
+    // 비밀번호 확인
+    const [users] = await conn.query(
+      'SELECT user_pwd FROM user_table WHERE user_id = ?',
+      [user_id]
+    );
+    
+    if (users.length === 0) {
+      const err = new Error('사용자를 찾을 수 없습니다.');
+      err.statusCode = 404;
+      throw err;
+    }
+    
+    const bcrypt = require('bcryptjs');
+    const isMatch = await bcrypt.compare(password, users[0].user_pwd);
+    
+    if (!isMatch) {
+      const err = new Error('비밀번호가 일치하지 않습니다.');
+      err.statusCode = 401;
+      throw err;
+    }
+    
+    // 관련 데이터 삭제 (예약 참여, 리뷰 등)
+    await conn.query('DELETE FROM reservation_participant_table WHERE user_id = ?', [user_id]);
+    await conn.query('DELETE FROM review_table WHERE user_id = ?', [user_id]);
+    
+    // 사용자 삭제
+    await conn.query('DELETE FROM user_table WHERE user_id = ?', [user_id]);
+    
+    return true;
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '회원 탈퇴 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};

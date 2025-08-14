@@ -199,3 +199,54 @@ INSERT INTO bank_codes (bank_code, bank_name) VALUES
 ('009', '수협은행'),
 ('010', '케이뱅크'),
 ('011', '카카오뱅크');
+
+-- 🏪 매장 시설 정보 테이블
+CREATE TABLE `store_facilities` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `store_id` varchar(64) NOT NULL,
+  `facility_type` varchar(50) NOT NULL COMMENT '시설 유형 (parking, wifi, etc)',
+  `facility_name` varchar(100) NOT NULL COMMENT '시설명',
+  `is_available` tinyint(1) DEFAULT 1 COMMENT '사용 가능 여부',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_store_id` (`store_id`),
+  CONSTRAINT `fk_store_facilities_store` FOREIGN KEY (`store_id`) REFERENCES `store_table` (`store_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 📸 매장 사진 정보 테이블
+CREATE TABLE `store_photos` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `store_id` varchar(64) NOT NULL,
+  `photo_url` varchar(256) NOT NULL COMMENT '사진 URL',
+  `photo_type` varchar(50) DEFAULT 'general' COMMENT '사진 유형 (thumbnail, interior, etc)',
+  `display_order` int DEFAULT 0 COMMENT '표시 순서',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_store_id` (`store_id`),
+  CONSTRAINT `fk_store_photos_store` FOREIGN KEY (`store_id`) REFERENCES `store_table` (`store_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- ⚽ 매장 스포츠 카테고리 테이블
+CREATE TABLE `store_sports_categories` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `store_id` varchar(64) NOT NULL,
+  `category_name` varchar(50) NOT NULL COMMENT '스포츠 카테고리명',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_store_id` (`store_id`),
+  CONSTRAINT `fk_store_sports_categories_store` FOREIGN KEY (`store_id`) REFERENCES `store_table` (`store_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 💳 매장 결제 정보 테이블
+CREATE TABLE `store_payment_info` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `store_id` varchar(64) NOT NULL,
+  `bank_code` varchar(10) NOT NULL COMMENT '은행 코드',
+  `account_number` varchar(50) NOT NULL COMMENT '계좌번호',
+  `account_holder_name` varchar(100) NOT NULL COMMENT '예금주명',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_store_id` (`store_id`),
+  CONSTRAINT `fk_store_payment_info_store` FOREIGN KEY (`store_id`) REFERENCES `store_table` (`store_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
