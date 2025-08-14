@@ -7,7 +7,7 @@ import { Feather } from '@expo/vector-icons';
 import { COLORS } from '@/constants/colors';
 import ToggleSwitch from '@/components/common/ToggleSwitch';
 import Toast from '@/components/common/Toast';
-import { useStoreInfo, useUpdateBusinessHours } from '@/hooks/queries/useUserQueries';
+import { useStoreInfo, useUpdateReservationSettings } from '@/hooks/queries/useUserQueries';
 import type { BusinessHoursDTO } from '@/types/DTO/users';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'BusinessHours'>;
@@ -32,7 +32,7 @@ export default function BusinessHoursScreen() {
   
   // API 훅 사용
   const { data: storeInfoData, isLoading: isStoreInfoLoading } = useStoreInfo();
-  const { mutate: updateBusinessHours, isSuccess: isUpdateSuccess, isError: isUpdateError, isPending: isUpdating } = useUpdateBusinessHours();
+  const { mutate: updateReservationSettings, isSuccess: isUpdateSuccess, isError: isUpdateError, isPending: isUpdating } = useUpdateReservationSettings();
   
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -176,11 +176,7 @@ export default function BusinessHoursScreen() {
   useEffect(() => {
     if (isUpdateSuccess) {
       console.log('✅ [화면] 영업 시간 설정 수정 성공!');
-      
-      // 성공 토스트 표시
-      setToastMessage('✅ 영업 시간이 성공적으로 저장되었습니다!');
-      setToastType('success');
-      setShowToast(true);
+      showSuccessMessage('영업 시간이 성공적으로 저장되었습니다!');
       
       // 2초 후 이전 화면으로 이동
       setTimeout(() => {
@@ -193,11 +189,7 @@ export default function BusinessHoursScreen() {
   useEffect(() => {
     if (isUpdateError) {
       console.log('❌ [화면] 영업 시간 설정 수정 실패!');
-      
-      // 실패 토스트 표시
-      setToastMessage('영업 시간 저장에 실패했습니다.');
-      setToastType('error');
-      setShowToast(true);
+      showErrorMessage('영업 시간 저장에 실패했습니다.');
     }
   }, [isUpdateError]);
 
@@ -249,6 +241,9 @@ export default function BusinessHoursScreen() {
   };
 
   const handleSave = () => {
+    console.log('🔍 [화면] handleSave 함수 시작');
+    console.log('🔍 [화면] 현재 schedule 상태:', schedule);
+    
     // API 데이터 형식으로 변환
     const businessHours: BusinessHoursDTO[] = schedule
       .filter(day => day.isOpen)
@@ -259,20 +254,39 @@ export default function BusinessHoursScreen() {
       }));
 
     console.log('🏪 [화면] 저장할 영업 시간:', businessHours);
+    console.log('🏪 [화면] API 호출 시작...');
     
-    // 저장 완료 토스트 표시
-    setToastMessage('영업 시간이 저장되었습니다!');
-    setToastType('success');
-    setShowToast(true);
+    // API 호출 - updateReservationSettings 사용
+    const apiData = {
+      available_times: businessHours,
+      // 기존 설정 유지
+      min_participants: 2, // 기본값
+      deposit_amount: 0, // 기본값
+    };
     
-    // 2초 후 이전 화면으로 이동
-    setTimeout(() => {
-      navigation.goBack();
-    }, 2000);
+    console.log('🏪 [화면] API 호출 데이터:', apiData);
+    console.log('🏪 [화면] updateReservationSettings 함수 호출...');
+    
+    updateReservationSettings(apiData);
+    
+    console.log('🏪 [화면] updateReservationSettings 함수 호출 완료');
   };
 
-  const handleCancel = () => {
-    navigation.goBack();
+  // 토스트 표시 함수들
+  const showSuccessMessage = (message: string) => {
+    setToastMessage(message);
+    setToastType('success');
+    setShowToast(true);
+  };
+
+  const showErrorMessage = (message: string) => {
+    setToastMessage(message);
+    setToastType('error');
+    setShowToast(true);
+  };
+
+  const hideToast = () => {
+    setShowToast(false);
   };
 
   return (
@@ -384,7 +398,7 @@ export default function BusinessHoursScreen() {
         visible={showToast}
         message={toastMessage} 
         type={toastType}
-        onHide={() => setShowToast(false)}
+        onHide={hideToast}
         duration={2000}
       />
     </View>

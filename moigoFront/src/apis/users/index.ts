@@ -236,17 +236,16 @@ export const updateReservationSettings = async (
     available_times?: Array<{ day: string; start: string; end: string }>;
   }
 ): Promise<{ success: boolean; message: string }> => {
+  console.log('🌐 [API] updateReservationSettings 호출:', data);
+  console.log('🌐 [API] 요청 URL: /stores/me/settings/reservation');
+  
   const response = await apiClient.put('/stores/me/settings/reservation', data);
+  
+  console.log('🌐 [API] 응답 성공:', response.data);
   return response.data;
 };
 
-// 영업 시간 설정 수정
-export const updateBusinessHours = async (businessHours: BusinessHoursDTO[]) => {
-  const response = await apiClient.put('/stores/me/settings/reservation', {
-    available_times: businessHours
-  });
-  return response.data;
-};
+
 
 // 스포츠 카테고리 조회
 export const getSportsCategories = async () => {

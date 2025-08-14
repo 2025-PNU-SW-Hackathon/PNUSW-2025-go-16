@@ -17,7 +17,6 @@ import {
   deleteSportsCategory,
   addSportsCategory,
   getSportsCategories,
-  updateBusinessHours,
   getReservationSettings,
 } from '../../apis/users';
 import type {
@@ -220,15 +219,18 @@ export const useUpdateReservationSettings = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: updateReservationSettings,
+    onMutate: (data) => {
+      console.log('🚀 [훅] 예약 설정 수정 시작:', data);
+    },
     onSuccess: (data) => {
-      console.log('✅ 예약 설정 수정 성공:', data);
+      console.log('✅ [훅] 예약 설정 수정 성공:', data);
       // 예약 설정 쿼리 무효화
       queryClient.invalidateQueries({ queryKey: ['reservationSettings'] });
       // StoreInfo 쿼리도 무효화하여 최신 데이터 반영
       queryClient.invalidateQueries({ queryKey: ['storeInfo'] });
     },
     onError: (error) => {
-      console.error('❌ 예약 설정 수정 실패:', error);
+      console.error('❌ [훅] 예약 설정 수정 실패:', error);
     },
   });
 }; 
@@ -250,21 +252,7 @@ export const useUpdateStoreDetailInfo = () => {
   });
 }; 
 
-// 영업 시간 설정 수정
-export const useUpdateBusinessHours = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: updateBusinessHours,
-    onSuccess: (data) => {
-      console.log('✅ 영업 시간 설정 수정 성공:', data);
-      // StoreInfo 쿼리 무효화하여 최신 데이터 반영
-      queryClient.invalidateQueries({ queryKey: ['storeInfo'] });
-    },
-    onError: (error) => {
-      console.error('❌ 영업 시간 설정 수정 실패:', error);
-    },
-  });
-}; 
+ 
 
 // 스포츠 카테고리 조회
 export const useSportsCategories = () => {
