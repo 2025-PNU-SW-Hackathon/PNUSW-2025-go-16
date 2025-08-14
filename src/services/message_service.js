@@ -12,7 +12,7 @@ exports.joinRoom = async (user_id, room_id) => {
 exports.authRoom = async (room_id) => {
 
     const conn = getConnection();
-    const [result] = await conn.query('SELECT user_id FROM reservation_participant_table WHERE reservation_id = ?'
+    const [result] = await conn.query('SELECT user_id FROM chat_room_users WHERE reservation_id = ?'
         , [room_id]
     );
     return result;
@@ -22,7 +22,9 @@ exports.authRoom = async (room_id) => {
 exports.markAllMessagesAsRead = async (user_id, room_id) => {
 
     const conn = getConnection();
-    const [last_message_id] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages WHERE chat_room_id = ?',
+
+    const [rows] = await conn.query(
+        'SELECT MAX(message_id) AS maxId FROM chat_messages WHERE chat_room_id = ?',
         [room_id]
     )
     const new_message_id = ((last_message_id[0]?.maxId) ?? 0);

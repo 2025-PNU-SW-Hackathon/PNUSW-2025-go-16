@@ -2,7 +2,7 @@
 const { io } = require('socket.io-client');
 
 // JWT 토큰 (Bearer 포함)
-const token = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidGVzdGlkMiIsImlhdCI6MTc1Mzk4MzcxMSwiZXhwIjoxNzUzOTkwOTExfQ.S0iLOSlEEzrkGQ-CrGzUKk9dNL0HEt1mdITdBDY6P2Q'
+const token = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoieWVqdW4yIiwiaWF0IjoxNzU1MTExNzkyLCJleHAiOjE3NTUxMTg5OTJ9.a2nMtClpGChkVm8XJUv7Uj1vdCvTi7WhCdxlccsGU4M';
 
 
 // socket.io-client 초기화
@@ -21,7 +21,7 @@ socket.on('connect', () => {
   console.log('✅ Connected to server (socket id):', socket.id);
 
   // 방 입장
-  const roomId = 15;
+  const roomId = 13;
   socket.emit('joinRoom', roomId);
 
   // 메시지 전송
