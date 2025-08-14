@@ -105,7 +105,12 @@ export default function SettingScreen() {
     setShowMinReservationModal(false);
   };
 
+  // 예약금 모달 관련
   const [showReservationDepositModal, setShowReservationDepositModal] = useState(false);
+  const [reservationDeposit, setReservationDeposit] = useState(1000);
+
+
+
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   
@@ -115,7 +120,6 @@ export default function SettingScreen() {
   const [showToast, setShowToast] = useState(false);
   
   // API에서 가져온 데이터로 상태 초기화
-  const [reservationDeposit, setReservationDeposit] = useState(1000);
   const [notificationSettings, setNotificationSettings] = useState({
     reservation: true,
     payment: true,
@@ -186,8 +190,18 @@ export default function SettingScreen() {
   };
 
   const handleReservationDepositSave = (newDeposit: number) => {
+    console.log('🔧 [SettingScreen] 예약금 변경:', newDeposit);
+    
+    // API 호출
+    updateReservationSettings({
+      min_participants: minReservationCapacity,
+      deposit_amount: newDeposit,
+      // 기존 설정 유지
+      available_times: storeInfoData?.data?.reservation_settings?.available_times || []
+    });
+    
     setReservationDeposit(newDeposit);
-    updateReservationSettings({ deposit_amount: newDeposit });
+    setShowReservationDepositModal(false);
   };
 
   // 성공/실패 메시지 표시
