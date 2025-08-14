@@ -102,12 +102,12 @@ export default function RootNavigator() {
               header: () => <CustomHeader title="예약 시간 설정" />,
             }} 
           />
-          <Stack.Screen 
+         <Stack.Screen 
             name="BusinessInfoEdit" 
             component={BusinessInfoEditScreen} 
             options={{ 
               headerShown: true,
-              header: () => <CustomHeader title="사업자 정보 수정" />,
+              header: () => <CustomHeader title="사업자 정보 등록" />,
             }} 
           />
           <Stack.Screen 
@@ -130,6 +130,14 @@ export default function RootNavigator() {
             {() => <LoginScreen />}
           </Stack.Screen>
           <Stack.Screen name="Signup" component={SignupScreen} options={{ headerShown: false }} />
+          <Stack.Screen 
+            name="BusinessInfoEdit" 
+            component={BusinessInfoEditScreen} 
+            options={{ 
+              headerShown: true,
+              header: () => <CustomHeader title="사업자 정보 등록" />,
+            }} 
+          />
         </>
       )}
     </Stack.Navigator>

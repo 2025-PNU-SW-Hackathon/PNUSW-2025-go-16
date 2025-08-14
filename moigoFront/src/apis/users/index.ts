@@ -10,6 +10,10 @@ import type {
   UpdateUserSettingsRequestDTO,
   UpdateUserSettingsResponseDTO,
   ReservationHistoryDTO,
+  StoreDashboardResponseDTO,
+  StoreReservationsResponseDTO,
+  ReservationActionRequestDTO,
+  ReservationActionResponseDTO,
 } from '../../types/DTO/users';
 import type { GetUserProfileResponseDTO } from '../../types/DTO/chat';
 
@@ -78,5 +82,47 @@ export const updateUserSettings = async (
 // GET /users/{userId}/profile - 유저 정보 조회
 export const getUserProfile = async (userId: string): Promise<GetUserProfileResponseDTO> => {
   const response = await apiClient.get<GetUserProfileResponseDTO>(`/users/${userId}/profile`);
+  return response.data;
+};
+
+// ===== 사장님 전용 API =====
+
+// GET /api/v1/stores/me - 사장님 대시보드 정보 조회
+export const getStoreDashboard = async (): Promise<StoreDashboardResponseDTO> => {
+  const response = await apiClient.get<StoreDashboardResponseDTO>('/stores/me/dashboard');
+  return response.data;
+};
+
+// GET /api/v1/stores/me/reservations - 사장님 예약 관리 목록 조회
+export const getStoreReservations = async (): Promise<StoreReservationsResponseDTO> => {
+  const response = await apiClient.get<StoreReservationsResponseDTO>('/stores/me/reservations');
+  return response.data;
+};
+
+// POST /api/v1/reservations/{reservationId}/approval - 예약 승인/거절 (올바른 API)
+export const acceptReservation = async (
+  reservationId: number
+): Promise<ReservationActionResponseDTO> => {
+  const response = await apiClient.post<ReservationActionResponseDTO>(
+    `/reservations/${reservationId}/approval`,
+    { action: 'APPROVE' }
+  );
+  
+  return response.data;
+};
+
+// POST /api/v1/reservations/{reservationId}/approval - 예약 승인/거절 (올바른 API)
+export const rejectReservation = async (
+  reservationId: number,
+  reason?: string
+): Promise<ReservationActionResponseDTO> => {  
+  const response = await apiClient.post<ReservationActionResponseDTO>(
+    `/reservations/${reservationId}/approval`,
+    { 
+      action: 'REJECT',
+      reason: reason || '사유 없음'
+    }
+  );
+  
   return response.data;
 };

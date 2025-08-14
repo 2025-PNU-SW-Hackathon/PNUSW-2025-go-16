@@ -101,3 +101,48 @@ export interface ReservationHistoryDTO {
     reservation_max_participant_cnt: number;
   }]
 }
+
+// 사장님 대시보드 정보 DTO (실제 API 응답에 맞게 수정)
+export interface StoreDashboardDTO {
+  average_rating: string;
+  this_week_reservations_count: number;
+  today_reservations_count: number;
+}
+
+// 사장님 대시보드 응답 DTO
+export interface StoreDashboardResponseDTO {
+  success: boolean;
+  data: StoreDashboardDTO;
+}
+
+// 예약 관리 DTO (실제 API 응답에 맞게 수정)
+export interface StoreReservationDTO {
+  reservation_id: number;
+  reservation_match: string;
+  reservation_participant_info: string;        // ✅ 실제 API 응답 필드
+  reservation_start_time: string;
+  reservation_status: string;                  // ✅ 실제 API 응답 필드 ("PENDING_APPROVAL" 등)
+  reservation_table_info: string;              // ✅ 실제 API 응답 필드
+}
+
+// 예약 관리 목록 응답 DTO
+export interface StoreReservationsResponseDTO {
+  success: boolean;
+  data: StoreReservationDTO[];
+}
+
+// 예약 승인/거절 요청 DTO (올바른 API 명세에 맞게 수정)
+export interface ReservationActionRequestDTO {
+  action: 'approve' | 'reject';
+  reason?: string; // 거절 시 사유
+}
+
+// 예약 승인/거절 응답 DTO
+export interface ReservationActionResponseDTO {
+  success: boolean;
+  message: string;
+  data: {
+    reservation_id: number;
+    status: string;
+  };
+}
