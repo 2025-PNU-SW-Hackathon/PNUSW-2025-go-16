@@ -4,7 +4,7 @@ import { View, Text } from "react-native";
 interface StatsCardProps {
   title: string;
   value: string | number;
-  color: "blue" | "green" | "purple";
+  color: "blue" | "green" | "purple" | "yellow";
 }
 
 const StatsCard: React.FC<StatsCardProps> = ({ title, value, color }) => {
@@ -16,6 +16,8 @@ const StatsCard: React.FC<StatsCardProps> = ({ title, value, color }) => {
         return { bg: "bg-green-50", text: "text-green-600" };
       case "purple":
         return { bg: "bg-purple-50", text: "text-purple-600" };
+      case "yellow":
+        return { bg: "bg-yellow-50", text: "text-yellow-600" };
       default:
         return { bg: "bg-blue-50", text: "text-blue-600" };
     }
