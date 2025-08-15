@@ -125,17 +125,17 @@ exports.updateMyStoreBasicInfo = async (req, res, next) => {
 
     const {
       store_name,
-      store_address,
+      address_main,        // ✅ API 명세서와 일치
       address_detail,
-      store_phonenumber,
-      business_number,
+      phone_number,        // ✅ API 명세서와 일치
+      business_reg_no,     // ✅ API 명세서와 일치
       owner_name,
       email,
       bio
     } = req.body;
 
     // 필수 필드 검증
-    if (!store_name || !store_address || !store_phonenumber) {
+    if (!store_name || !address_main || !phone_number) {
       return res.status(400).json({
         success: false,
         message: '가게명, 주소, 전화번호는 필수입니다.'
@@ -144,10 +144,10 @@ exports.updateMyStoreBasicInfo = async (req, res, next) => {
 
     const result = await storeService.updateMyStoreBasicInfo(store_id, {
       store_name,
-      store_address,
+      store_address: address_main,        // ✅ 매핑
       address_detail,
-      store_phonenumber,
-      business_number,
+      store_phonenumber: phone_number,    // ✅ 매핑
+      business_number: business_reg_no,   // ✅ 매핑
       owner_name,
       email,
       bio
@@ -179,14 +179,16 @@ exports.updateMyStoreDetails = async (req, res, next) => {
       menu,
       facilities,
       photos,
-      sports_categories
+      sports_categories,
+      bio  // 🆕 매장 소개 필드 추가
     } = req.body;
 
     const result = await storeService.updateMyStoreDetails(store_id, {
       menu,
       facilities,
       photos,
-      sports_categories
+      sports_categories,
+      bio  // 🆕 매장 소개 필드 추가
     });
 
     res.json({
@@ -199,8 +201,8 @@ exports.updateMyStoreDetails = async (req, res, next) => {
   }
 };
 
-// 🆕 예약 설정 수정 (사장님 전용)
-exports.updateMyStoreReservationSettings = async (req, res, next) => {
+// 🆕 예약 설정 조회 (사장님 전용)
+exports.getMyStoreReservationSettings = async (req, res, next) => {
   try {
     const store_id = req.user.store_id;
     
@@ -211,24 +213,18 @@ exports.updateMyStoreReservationSettings = async (req, res, next) => {
       });
     }
 
-    const {
-      cancellation_policy,
-      deposit_amount,
-      available_times
-    } = req.body;
-
-    const result = await storeService.updateMyStoreReservationSettings(store_id, {
-      cancellation_policy,
-      deposit_amount,
-      available_times
-    });
+    const result = await storeService.getMyStoreReservationSettings(store_id);
 
     res.json({
       success: true,
-      message: '예약 설정이 수정되었습니다.',
+      message: '예약 설정 조회가 성공적으로 완료되었습니다.',
       data: result
     });
+
   } catch (err) {
+    console.error('❌ 예약 설정 조회 실패:', err);
+    err.message = '예약 설정 조회 중 오류가 발생했습니다.';
+    err.statusCode = 500;
     next(err);
   }
 };
@@ -439,6 +435,61 @@ exports.checkBusinessRegistrationStatus = async (req, res, next) => {
   }
 };
 
+// 🆕 스포츠 카테고리 조회
+exports.getSportsCategories = async (req, res, next) => {
+  try {
+    const store_id = req.user.store_id;
+    
+    if (!store_id) {
+      return res.status(401).json({
+        success: false,
+        message: '사장님 계정으로만 접근 가능합니다.'
+      });
+    }
+    
+    const categories = await storeService.getSportsCategories(store_id);
+    
+    res.json({
+      success: true,
+      data: categories
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 🆕 스포츠 카테고리 추가
+exports.addSportsCategory = async (req, res, next) => {
+  try {
+    const store_id = req.user.store_id;
+    const { category_name } = req.body;
+    
+    if (!store_id) {
+      return res.status(401).json({
+        success: false,
+        message: '사장님 계정으로만 접근 가능합니다.'
+      });
+    }
+    
+    if (!category_name) {
+      return res.status(400).json({
+        success: false,
+        message: '카테고리명은 필수입니다.'
+      });
+    }
+    
+    const result = await storeService.addSportsCategory(store_id, category_name);
+    
+    res.json({
+      success: true,
+      message: '스포츠 카테고리가 추가되었습니다.',
+      data: result
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // 🆕 스포츠 카테고리 개별 삭제
 exports.deleteSportsCategory = async (req, res, next) => {
   try {
@@ -540,6 +591,33 @@ exports.updateMyStoreBusinessInfo = async (req, res, next) => {
       data: result
     });
   } catch (err) {
+    next(err);
+  }
+};
+
+// 🆕 사장님 비밀번호 변경
+exports.updateStorePassword = async (req, res, next) => {
+  try {
+    const store_id = req.user.store_id;
+    const { old_password, new_password } = req.body;
+    const current_password = old_password;  // old_password를 current_password로 매핑
+
+    if (!current_password || !new_password) {
+      return res.status(400).json({
+        success: false,
+        message: '현재 비밀번호와 새 비밀번호를 모두 입력해주세요.'
+      });
+    }
+
+    await storeService.updateStorePassword(store_id, current_password, new_password);
+
+    res.json({
+      success: true,
+      message: '비밀번호가 성공적으로 변경되었습니다.'
+    });
+
+  } catch (err) {
+    console.error('비밀번호 변경 중 오류:', err);
     next(err);
   }
 };

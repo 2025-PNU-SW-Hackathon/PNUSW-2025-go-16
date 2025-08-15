@@ -75,6 +75,7 @@ CREATE TABLE `store_table` (
   `store_open_hour` int NOT NULL,
   `store_close_hour` int NOT NULL,
   `store_max_people_cnt` int NOT NULL,
+  `store_min_people_cnt` int NOT NULL DEFAULT '2' COMMENT '최소 참여자 수',
   `store_max_table_cnt` int NOT NULL,
   `store_max_parking_cnt` int NOT NULL,
   `store_max_screen_cnt` int NOT NULL,
@@ -96,7 +97,7 @@ CREATE TABLE `store_table` (
   `business_certificate_url` varchar(256) DEFAULT NULL COMMENT '사업자등록증 URL',
   `registration_completed_at` timestamp NULL DEFAULT NULL COMMENT '사업자 등록 완료 시간',
   PRIMARY KEY (`store_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 
 CREATE TABLE `user_table` (
   `user_id` varchar(64) NOT NULL,

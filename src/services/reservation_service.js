@@ -7,15 +7,85 @@ const chatService = require('../services/chat_service');
 // 🧾 1. 모임 생성 서비스
 exports.createReservation = async (user_id, data) => {
   const conn = getConnection();
+  
+  console.log(`🔍 [DEBUG] 모임 생성 요청 - user_id: ${user_id}`);
+  console.log(`🔍 [DEBUG] 전송된 데이터:`, data);
+  
   const {
     store_id,
+    match_id,  // 🆕 경기 ID 기반
+    reservation_bio,
+    reservation_max_participant_cnt,
+    // 기존 수동 입력 방식도 지원
     reservation_start_time,
     reservation_end_time,
     reservation_match,
-    reservation_bio,
-    reservation_max_participant_cnt,
     reservation_match_category,
+    reservation_title,  // 🆕 추가
+    reservation_description,  // 🆕 추가
+    reservation_date,  // 🆕 추가
   } = data;
+  
+  let finalStartTime, finalEndTime, finalMatch, finalCategory;
+  
+  // 경기 ID가 있으면 경기 정보에서 가져오기
+  if (match_id) {
+    console.log(`🔍 [DEBUG] match_id 기반 모임 생성: ${match_id}`);
+    
+    const [matchRows] = await conn.query(
+      'SELECT match_date, home_team, away_team, competition_code FROM matches WHERE id = ?',
+      [match_id]
+    );
+    
+    if (matchRows.length === 0) {
+      const err = new Error('존재하지 않는 경기입니다.');
+      err.statusCode = 400;
+      throw err;
+    }
+    
+    const match = matchRows[0];
+    finalStartTime = match.match_date;  // 경기 시작 시간
+    finalEndTime = new Date(new Date(match.match_date).getTime() + 2 * 60 * 60 * 1000); // 2시간 후
+    finalMatch = `${match.home_team} vs ${match.away_team}`;
+    // competition_code를 정수로 매핑
+    const categoryMap = {
+      'PD': 1,     // 프리미어리그
+      'FL1': 2,    // 리그 1
+      'PL': 3,     // 기타 리그
+      'Unknown': 0
+    };
+    finalCategory = categoryMap[match.competition_code] || 0;  // 정수값으로 변환
+    
+    console.log(`🔍 [DEBUG] 경기 정보로 설정 - 시작: ${finalStartTime}, 종료: ${finalEndTime}`);
+  } else {
+    // 기존 수동 입력 방식
+    console.log(`🔍 [DEBUG] 수동 입력 방식`);
+    
+    // 새로운 프론트엔드 필드들 처리
+    if (reservation_title && reservation_date) {
+      // 새로운 방식: reservation_title, reservation_date, reservation_start_time 사용
+      const dateStr = reservation_date; // YYYY-MM-DD
+      finalStartTime = `${dateStr} ${reservation_start_time}`;
+      finalEndTime = `${dateStr} ${reservation_end_time}`;
+      finalMatch = reservation_title || '모임';  // NULL 방지
+      finalCategory = parseInt(reservation_match_category) || 0;  // 정수형으로 변환, NULL 방지
+      console.log(`🔍 [DEBUG] 새로운 형식 - 제목: ${finalMatch}, 시간: ${finalStartTime} - ${finalEndTime}`);
+    } else if (reservation_start_time && /^\d{2}:\d{2}:\d{2}$/.test(reservation_start_time)) {
+      // 기존 방식: 시간만 들어온 경우 오늘 날짜와 합치기
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      finalStartTime = `${today} ${reservation_start_time}`;
+      finalEndTime = `${today} ${reservation_end_time}`;
+      finalMatch = reservation_match || '모임';  // NULL 방지
+      finalCategory = parseInt(reservation_match_category) || 0;  // 정수형으로 변환, NULL 방지
+      console.log(`🔍 [DEBUG] 시간 형식 변환됨 - 시작: ${finalStartTime}, 종료: ${finalEndTime}`);
+    } else {
+      // 완전한 datetime이 들어온 경우
+      finalStartTime = reservation_start_time;
+      finalEndTime = reservation_end_time;
+      finalMatch = reservation_match || reservation_title || '모임';  // NULL 방지
+      finalCategory = parseInt(reservation_match_category) || 0;  // 정수형으로 변환, NULL 방지
+    }
+  }
 
   const createdAt = new Date(); // MySQL DATETIME 타입과 호환
   const [rows] = await conn.query('SELECT MAX(reservation_id) as maxId FROM reservation_table');
@@ -32,14 +102,14 @@ exports.createReservation = async (user_id, data) => {
       reservation_current_id,
       user_id,
       store_id,
-      reservation_start_time,
-      reservation_end_time,
-      reservation_match,
-      reservation_bio,
+      finalStartTime,  // 🆕 경기 날짜 또는 수동 입력 날짜
+      finalEndTime,    // 🆕 경기 날짜 + 2시간 또는 수동 입력 날짜
+      finalMatch,      // 🆕 "팀A vs 팀B" 또는 수동 입력 매치명
+      reservation_bio || reservation_description || '',  // NULL 방지
       reservation_max_participant_cnt,
-      reservation_match_category,
+      finalCategory,   // 🆕 경기 카테고리 또는 수동 입력 카테고리
       createdAt,
-      user_id,      // participant_id 초기값 = user_id
+      user_id,         // participant_id 초기값 = user_id
       '알수없음',
     ]
   );
@@ -251,6 +321,12 @@ exports.approveReservation = async (reservationId, store_id, action) => {
     }
     
     const newStatus = action === 'APPROVE' ? 1 : 2; // 1: 승인, 2: 거절
+    
+    // 🐛 디버그 로그 추가
+    console.log('🔍 [DEBUG] action:', action);
+    console.log('🔍 [DEBUG] action === "APPROVE":', action === 'APPROVE');
+    console.log('🔍 [DEBUG] newStatus:', newStatus);
+    console.log('🔍 [DEBUG] reservationId:', reservationId);
     
     await conn.query(
       'UPDATE reservation_table SET reservation_status = ? WHERE reservation_id = ?',

@@ -1,6 +1,7 @@
 // 📦 storeService.js
 
 const { getConnection } = require('../config/db_config');
+const bcrypt = require('bcryptjs');
 
 // 🔍 가게 목록 조회 서비스
 exports.getStoreList = async (filters) => {
@@ -425,6 +426,8 @@ exports.registerStore = async (storeData) => {
 exports.getMyStoreInfo = async (store_id) => {
   const conn = getConnection();
   try {
+    // 🐛 디버그 로그 추가
+    console.log('🔍 [getMyStoreInfo] store_id:', store_id);
     // 기본 매장 정보 조회
     const [storeRows] = await conn.query(
       `SELECT 
@@ -432,7 +435,8 @@ exports.getMyStoreInfo = async (store_id) => {
         store_bio, store_open_hour, store_close_hour, store_holiday,
         store_max_people_cnt, store_max_table_cnt, store_max_parking_cnt, store_max_screen_cnt,
         store_thumbnail, store_review_cnt, store_rating,
-        bank_code, account_number, account_holder_name
+        owner_name, email, address_detail, cancellation_policy, deposit_amount,
+        available_times, postal_code, business_certificate_url
        FROM store_table 
        WHERE store_id = ?`,
       [store_id]
@@ -477,19 +481,35 @@ exports.getMyStoreInfo = async (store_id) => {
     // 스포츠 카테고리 (기본값)
     const sports_categories = ['축구', '야구', '농구'];
     
-    // 예약 설정 (기본값)
+    // 예약 설정 (DB에서 가져온 값 사용)
     const reservation_settings = {
-      cancellation_policy: '취소/환불 규정',
-      deposit_amount: 5000,
-      available_times: [
-        { day: 'MON', start: '18:00', end: '24:00' },
-        { day: 'TUE', start: '18:00', end: '24:00' },
-        { day: 'WED', start: '18:00', end: '24:00' },
-        { day: 'THU', start: '18:00', end: '24:00' },
-        { day: 'FRI', start: '18:00', end: '24:00' },
-        { day: 'SAT', start: '12:00', end: '24:00' },
-        { day: 'SUN', start: '12:00', end: '22:00' }
-      ]
+      cancellation_policy: store.cancellation_policy || '취소/환불 규정',
+      deposit_amount: store.deposit_amount || 0,
+      available_times: (() => {
+        if (!store.available_times) {
+          return [
+            { day: 'MON', start: '18:00', end: '24:00' },
+            { day: 'TUE', start: '18:00', end: '24:00' },
+            { day: 'WED', start: '18:00', end: '24:00' },
+            { day: 'THU', start: '18:00', end: '24:00' },
+            { day: 'FRI', start: '18:00', end: '24:00' },
+            { day: 'SAT', start: '12:00', end: '24:00' },
+            { day: 'SUN', start: '12:00', end: '22:00' }
+          ];
+        }
+        
+        // 이미 객체라면 그대로 반환, 문자열이라면 파싱
+        if (typeof store.available_times === 'string') {
+          try {
+            return JSON.parse(store.available_times);
+          } catch (e) {
+            console.error('❌ available_times JSON 파싱 에러:', e);
+            return [];
+          }
+        }
+        
+        return store.available_times;
+      })()
     };
     
     // 알림 설정 (기본값)
@@ -500,21 +520,21 @@ exports.getMyStoreInfo = async (store_id) => {
       marketing_alerts: false
     };
     
-    // 결제 정보
+    // 결제 정보 (현재 테이블에 bank 정보가 없어서 기본값 설정)
     const payment_info = {
-      bank_account_number: store.account_number || '000000000000',
-      bank_name: await getBankNameByCode(store.bank_code || '000')
+      bank_account_number: '미설정',
+      bank_name: '미설정'
     };
     
     return {
       store_info: {
         store_name: store.store_name,
         address_main: store.store_address,
-        address_detail: store.store_address,
+        address_detail: store.address_detail || store.store_address,
         phone_number: store.store_phonenumber,
         business_reg_no: store.business_number,
-        owner_name: store.store_name,
-        email: 'store@example.com',
+        owner_name: store.owner_name,
+        email: store.email,
         bio: store.store_bio,
         menu: menu,
         facilities: facilities,
@@ -527,9 +547,13 @@ exports.getMyStoreInfo = async (store_id) => {
     };
     
   } catch (error) {
+    console.error('❌ [getMyStoreInfo] 에러 발생:', error);
+    console.error('❌ [getMyStoreInfo] 에러 스택:', error.stack);
+    console.error('❌ [getMyStoreInfo] SQL 에러:', error.sqlMessage);
+    
     if (!error.statusCode) {
       error.statusCode = 500;
-      error.message = '매장 정보 조회 중 오류가 발생했습니다.';
+      error.message = `매장 정보 조회 중 오류가 발생했습니다: ${error.sqlMessage || error.message}`;
     }
     throw error;
   }
@@ -584,7 +608,7 @@ exports.updateMyStoreBasicInfo = async (store_id, basicInfo) => {
 // 🆕 매장 상세 정보 수정 (사장님 전용)
 exports.updateMyStoreDetails = async (store_id, details) => {
   const conn = getConnection();
-  const { menu, facilities, photos, sports_categories } = details;
+  const { menu, facilities, photos, sports_categories, bio } = details;
   
   try {
     // 메뉴 정보 업데이트 (store_menu 테이블이 있다고 가정)
@@ -621,12 +645,32 @@ exports.updateMyStoreDetails = async (store_id, details) => {
       );
     }
     
+    // 🆕 매장 소개 업데이트
+    if (bio !== undefined) {
+      console.log('🔍 [updateMyStoreDetails] bio 업데이트:', bio);
+      await conn.query(
+        'UPDATE store_table SET store_bio = ? WHERE store_id = ?',
+        [bio, store_id]
+      );
+      console.log('✅ [updateMyStoreDetails] bio 업데이트 완료');
+    }
+    
+    // 🔍 실제 저장된 데이터 조회해서 반환
+    const [updatedStore] = await conn.query(
+      'SELECT store_bio FROM store_table WHERE store_id = ?',
+      [store_id]
+    );
+    
+    const finalBio = updatedStore[0]?.store_bio || '';
+    console.log('🔍 [updateMyStoreDetails] 저장된 bio 값:', finalBio);
+    
     return {
       store_id,
       menu: menu || [],
       facilities: facilities || {},
       photos: photos || [],
-      sports_categories: sports_categories || []
+      sports_categories: sports_categories || [],
+      bio: finalBio  // ✅ 실제 저장된 bio 값 반환
     };
   } catch (error) {
     if (!error.statusCode) {
@@ -638,47 +682,69 @@ exports.updateMyStoreDetails = async (store_id, details) => {
 };
 
 // 🆕 예약 설정 수정 (사장님 전용)
-exports.updateMyStoreReservationSettings = async (store_id, settings) => {
+// 🆕 예약 설정 조회
+exports.getMyStoreReservationSettings = async (store_id) => {
   const conn = getConnection();
-  const { cancellation_policy, deposit_amount, available_times } = settings;
   
   try {
-    console.log('🔍 예약 설정 수정 시작:', { store_id, settings });
-    
-    // 예약 설정을 기존 필드들에 저장
-    // store_bio에 취소 정책, store_holiday에 예약금 정보 저장
-    const bioUpdate = cancellation_policy || '취소/환불 규정';
-    const holidayUpdate = deposit_amount || 0;
-    
-    console.log('📝 저장할 데이터:', { bioUpdate, holidayUpdate });
-    
-    const [result] = await conn.query(
-      `UPDATE store_table 
-       SET store_bio = ?, store_holiday = ?
+    const [stores] = await conn.query(
+      `SELECT 
+         cancellation_policy, 
+         deposit_amount, 
+         available_times,
+         store_max_people_cnt as max_participants,
+         store_min_people_cnt as min_participants
+       FROM store_table 
        WHERE store_id = ?`,
-      [bioUpdate, holidayUpdate, store_id]
+      [store_id]
     );
     
-    console.log('✅ 쿼리 실행 결과:', result);
+    console.log('🔍 [DEBUG] 조회된 매장 정보:', stores[0]);
     
-    if (result.affectedRows === 0) {
+    if (stores.length === 0) {
       const err = new Error('가게를 찾을 수 없습니다.');
       err.statusCode = 404;
       throw err;
     }
     
+    const store = stores[0];
+    
     return {
-      cancellation_policy: bioUpdate,
-      deposit_amount: holidayUpdate,
-      available_times: available_times || []
+      cancellation_policy: store.cancellation_policy || '취소/환불 규정',
+      deposit_amount: store.deposit_amount || 0,
+      min_participants: store.min_participants || 2,
+      max_participants: store.max_participants || 50,
+      available_times: (() => {
+        if (!store.available_times) {
+          return [
+            { day: 'MON', start: '09:00', end: '22:00' },
+            { day: 'TUE', start: '09:00', end: '22:00' },
+            { day: 'WED', start: '09:00', end: '22:00' },
+            { day: 'THU', start: '09:00', end: '22:00' },
+            { day: 'FRI', start: '09:00', end: '22:00' },
+            { day: 'SAT', start: '09:00', end: '22:00' },
+            { day: 'SUN', start: '09:00', end: '22:00' }
+          ];
+        }
+        
+        // 이미 객체라면 그대로 반환, 문자열이라면 파싱
+        if (typeof store.available_times === 'string') {
+          try {
+            return JSON.parse(store.available_times);
+          } catch (e) {
+            console.error('❌ available_times JSON 파싱 에러:', e);
+            return [];
+          }
+        }
+        
+        return store.available_times;
+      })()
     };
   } catch (error) {
-    console.error('❌ 예약 설정 수정 에러 상세:', error);
-    console.error('❌ 에러 스택:', error.stack);
-    
+    console.error('❌ 예약 설정 조회 에러:', error);
     if (!error.statusCode) {
       error.statusCode = 500;
-      error.message = '예약 설정 수정 중 오류가 발생했습니다.';
+      error.message = '예약 설정 조회 중 오류가 발생했습니다.';
     }
     throw error;
   }
@@ -708,17 +774,28 @@ async function getBankNameByCode(bankCode) {
 exports.getMyStoreDashboard = async (store_id) => {
   const conn = getConnection();
   try {
-    // 오늘 예약 수 조회
+    // 오늘 승인된 예약 수 조회
     const [todayResult] = await conn.query(
       `SELECT COUNT(*) as count FROM reservation_table 
-       WHERE store_id = ? AND DATE(reservation_start_time) = CURDATE()`,
+       WHERE store_id = ? AND DATE(reservation_start_time) = CURDATE() AND reservation_status = 1`,
       [store_id]
     );
     
-    // 이번 주 예약 수 조회
+    // 🐛 디버그 로그 추가
+    console.log('🔍 [DASHBOARD DEBUG] store_id:', store_id);
+    console.log('🔍 [DASHBOARD DEBUG] 오늘 승인된 예약 수:', todayResult[0].count);
+    
+    // 이번 주 승인된 예약 수 조회
     const [weekResult] = await conn.query(
       `SELECT COUNT(*) as count FROM reservation_table 
-       WHERE store_id = ? AND YEARWEEK(reservation_start_time) = YEARWEEK(NOW())`,
+       WHERE store_id = ? AND YEARWEEK(reservation_start_time) = YEARWEEK(NOW()) AND reservation_status = 1`,
+      [store_id]
+    );
+    
+    // 승인 대기 중인 예약 수 조회
+    const [pendingResult] = await conn.query(
+      `SELECT COUNT(*) as count FROM reservation_table 
+       WHERE store_id = ? AND reservation_status = 0`,
       [store_id]
     );
     
@@ -729,8 +806,9 @@ exports.getMyStoreDashboard = async (store_id) => {
     );
     
     return {
-      today_reservations_count: todayResult[0].count,
-      this_week_reservations_count: weekResult[0].count,
+      today_reservations_count: todayResult[0].count,        // 오늘 승인된 예약
+      this_week_reservations_count: weekResult[0].count,     // 이번 주 승인된 예약
+      pending_reservations_count: pendingResult[0].count,    // 승인 대기 중
       average_rating: ratingResult[0].avg_rating || 0
     };
   } catch (error) {
@@ -770,7 +848,9 @@ exports.getMyStoreReservations = async (store_id) => {
       reservation_start_time: row.reservation_start_time,
       reservation_participant_info: row.participant_names || '참가자 없음',
       reservation_table_info: '테이블 정보', // 실제 테이블 정보가 있다면 추가
-      reservation_status: row.reservation_status === 0 ? 'PENDING_APPROVAL' : 'CONFIRMED'
+      reservation_status: 
+        row.reservation_status === 0 ? 'PENDING_APPROVAL' :
+        row.reservation_status === 1 ? 'APPROVED' : 'REJECTED'
     }));
   } catch (error) {
     if (!error.statusCode) {
@@ -780,6 +860,82 @@ exports.getMyStoreReservations = async (store_id) => {
     throw error;
   }
 }; 
+
+// 🆕 스포츠 카테고리 조회
+exports.getSportsCategories = async (store_id) => {
+  const conn = getConnection();
+  try {
+    const [rows] = await conn.query(
+      'SELECT category_name, created_at FROM store_sports_categories WHERE store_id = ? ORDER BY created_at ASC',
+      [store_id]
+    );
+    
+    return rows.map(row => ({
+      name: row.category_name,
+      created_at: row.created_at
+    }));
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '스포츠 카테고리 조회 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
+
+// 🆕 새 매장에 기본 스포츠 카테고리 추가
+exports.initializeDefaultSportsCategories = async (store_id) => {
+  const conn = getConnection();
+  const defaultCategories = ['축구', '야구', '농구', '배구', '테니스'];
+  
+  try {
+    for (const category of defaultCategories) {
+      await conn.query(
+        'INSERT IGNORE INTO store_sports_categories (store_id, category_name, created_at) VALUES (?, ?, NOW())',
+        [store_id, category]
+      );
+    }
+    console.log(`✅ [${store_id}] 기본 스포츠 카테고리 초기화 완료`);
+  } catch (error) {
+    console.error(`❌ [${store_id}] 기본 스포츠 카테고리 초기화 실패:`, error);
+  }
+};
+
+// 🆕 스포츠 카테고리 추가
+exports.addSportsCategory = async (store_id, category_name) => {
+  const conn = getConnection();
+  try {
+    // 중복 체크
+    const [existing] = await conn.query(
+      'SELECT * FROM store_sports_categories WHERE store_id = ? AND category_name = ?',
+      [store_id, category_name]
+    );
+    
+    if (existing.length > 0) {
+      const err = new Error(`'${category_name}' 카테고리가 이미 등록되어 있습니다.`);
+      err.statusCode = 409;
+      throw err;
+    }
+    
+    // 카테고리 추가
+    await conn.query(
+      'INSERT INTO store_sports_categories (store_id, category_name, created_at) VALUES (?, ?, NOW())',
+      [store_id, category_name]
+    );
+    
+    return {
+      store_id,
+      category_name,
+      message: '스포츠 카테고리가 추가되었습니다.'
+    };
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '스포츠 카테고리 추가 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
 
 // 🆕 스포츠 카테고리 개별 삭제
 exports.deleteSportsCategory = async (store_id, category_name) => {
@@ -792,7 +948,8 @@ exports.deleteSportsCategory = async (store_id, category_name) => {
     );
     
     if (result.affectedRows === 0) {
-      const err = new Error('삭제할 스포츠 카테고리를 찾을 수 없습니다.');
+      // 🔍 더 자세한 에러 메시지 제공
+      const err = new Error(`삭제할 스포츠 카테고리 '${category_name}'를 찾을 수 없습니다. 등록된 카테고리를 확인해주세요.`);
       err.statusCode = 404;
       throw err;
     }
@@ -823,13 +980,32 @@ exports.updateMyStoreReservationSettings = async (store_id, settings) => {
   } = settings;
   
   try {
+    console.log('🔍 [DEBUG] 예약 설정 수정 시작:', { store_id, settings });
+    console.log('🔍 [DEBUG] 파라미터들:', {
+      cancellation_policy,
+      deposit_amount,
+      min_participants,
+      max_participants,
+      available_times
+    });
+    
     // store_table의 관련 필드 업데이트
     const [result] = await conn.query(
       `UPDATE store_table 
-       SET cancellation_policy = ?, deposit_amount = ?, 
-           store_max_people_cnt = ?, ex1 = ?
+       SET cancellation_policy = ?, 
+           deposit_amount = ?, 
+           store_max_people_cnt = ?,
+           store_min_people_cnt = ?, 
+           available_times = ?
        WHERE store_id = ?`,
-      [cancellation_policy, deposit_amount, max_participants || 50, min_participants || 2, store_id]
+      [
+        cancellation_policy || '취소/환불 규정', 
+        deposit_amount || 0, 
+        max_participants || 50,
+        min_participants || 2,
+        available_times ? JSON.stringify(available_times) : null,
+        store_id
+      ]
     );
     
     if (result.affectedRows === 0) {
@@ -847,9 +1023,15 @@ exports.updateMyStoreReservationSettings = async (store_id, settings) => {
       available_times
     };
   } catch (error) {
+    console.error('❌ [DEBUG] 예약 설정 수정 에러:', error);
+    console.error('❌ [DEBUG] 에러 코드:', error.code);
+    console.error('❌ [DEBUG] 에러 메시지:', error.message);
+    console.error('❌ [DEBUG] SQL 상태:', error.sqlState);
+    console.error('❌ [DEBUG] SQL 메시지:', error.sqlMessage);
+    
     if (!error.statusCode) {
       error.statusCode = 500;
-      error.message = '예약 설정 수정 중 오류가 발생했습니다.';
+      error.message = `예약 설정 수정 중 오류가 발생했습니다: ${error.sqlMessage || error.message}`;
     }
     throw error;
   }
@@ -923,58 +1105,81 @@ exports.updateMyStoreBusinessInfo = async (store_id, businessInfo) => {
   }
 };
 
+// 🆕 사장님 비밀번호 변경
+exports.updateStorePassword = async (store_id, current_password, new_password) => {
+  const conn = getConnection();
+  
+  // 현재 비밀번호 확인
+  const [rows] = await conn.query(
+    'SELECT store_pwd FROM store_table WHERE store_id = ?', 
+    [store_id]
+  );
+  
+  if (rows.length === 0) {
+    const err = new Error('매장을 찾을 수 없습니다.');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // bcrypt로 비밀번호 확인
+  const isMatch = await bcrypt.compare(current_password, rows[0].store_pwd);
+  if (!isMatch) {
+    const err = new Error('기존 비밀번호가 일치하지 않습니다.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // 새 비밀번호 해시화
+  const salt = await bcrypt.genSalt(10);
+  const hashedNewPassword = await bcrypt.hash(new_password, salt);
+
+  // 비밀번호 업데이트
+  await conn.query(
+    'UPDATE store_table SET store_pwd = ? WHERE store_id = ?',
+    [hashedNewPassword, store_id]
+  );
+};
+
 // 🆕 매장 회원 탈퇴
 exports.deleteMyStore = async (store_id) => {
   const conn = getConnection();
   try {
-    // 트랜잭션 시작
-    await conn.beginTransaction();
+    console.log(`🔍 [DEBUG] 매장 탈퇴 시작 - store_id: ${store_id}`);
     
-    try {
-      // 1. 관련된 예약 데이터 삭제
-      await conn.query('DELETE FROM reservation_participant_table WHERE reservation_id IN (SELECT reservation_id FROM reservation_table WHERE store_id = ?)', [store_id]);
-      await conn.query('DELETE FROM reservation_table WHERE store_id = ?', [store_id]);
-      
-      // 2. 리뷰 데이터 삭제
-      await conn.query('DELETE FROM review_table WHERE store_id = ?', [store_id]);
-      
-      // 3. 채팅방 관련 데이터 삭제
-      await conn.query('DELETE FROM chat_room_users WHERE reservation_id IN (SELECT reservation_id FROM reservation_table WHERE store_id = ?)', [store_id]);
-      await conn.query('DELETE FROM chat_rooms WHERE reservation_id IN (SELECT reservation_id FROM reservation_table WHERE store_id = ?)', [store_id]);
-      await conn.query('DELETE FROM chat_messages WHERE chat_room_id IN (SELECT id FROM chat_rooms WHERE reservation_id IN (SELECT reservation_id FROM reservation_table WHERE store_id = ?))', [store_id]);
-      
-      // 4. 결제 관련 데이터 삭제
-      await conn.query('DELETE FROM payment_table WHERE chat_room_id IN (SELECT id FROM chat_rooms WHERE reservation_id IN (SELECT reservation_id FROM reservation_table WHERE store_id = ?))', [store_id]);
-      await conn.query('DELETE FROM payment_request_table WHERE chat_room_id IN (SELECT id FROM chat_rooms WHERE reservation_id IN (SELECT reservation_id FROM reservation_table WHERE store_id = ?))', [store_id]);
-      
-      // 5. 매장 관련 테이블 데이터 삭제
-      await conn.query('DELETE FROM store_menu WHERE store_id = ?', [store_id]);
-      await conn.query('DELETE FROM store_facilities WHERE store_id = ?', [store_id]);
-      await conn.query('DELETE FROM store_photos WHERE store_id = ?', [store_id]);
-      await conn.query('DELETE FROM store_sports_categories WHERE store_id = ?', [store_id]);
-      await conn.query('DELETE FROM store_payment_info WHERE store_id = ?', [store_id]);
-      
-      // 6. 매장 테이블에서 삭제
-      await conn.query('DELETE FROM store_table WHERE store_id = ?', [store_id]);
-      
-      // 트랜잭션 커밋
-      await conn.commit();
-      
-      return {
-        success: true,
-        message: '매장 계정이 완전히 삭제되었습니다.'
-      };
-      
-    } catch (error) {
-      // 오류 발생 시 롤백
-      await conn.rollback();
-      throw error;
-    }
+    // 1. 관련된 예약 데이터 삭제
+    console.log('🔍 [DEBUG] 예약 참여자 데이터 삭제 중...');
+    await conn.query('DELETE FROM reservation_participant_table WHERE reservation_id IN (SELECT reservation_id FROM reservation_table WHERE store_id = ?)', [store_id]);
+    
+    console.log('🔍 [DEBUG] 예약 데이터 삭제 중...');
+    await conn.query('DELETE FROM reservation_table WHERE store_id = ?', [store_id]);
+    
+    // 2. 리뷰 데이터 삭제
+    console.log('🔍 [DEBUG] 리뷰 데이터 삭제 중...');
+    await conn.query('DELETE FROM review_table WHERE store_id = ?', [store_id]);
+    
+    // 3. 스포츠 카테고리 삭제
+    console.log('🔍 [DEBUG] 스포츠 카테고리 삭제 중...');
+    await conn.query('DELETE FROM store_sports_categories WHERE store_id = ?', [store_id]);
+    
+    // 4. 매장 테이블에서 삭제
+    console.log('🔍 [DEBUG] 매장 정보 삭제 중...');
+    await conn.query('DELETE FROM store_table WHERE store_id = ?', [store_id]);
+    
+    console.log('✅ [DEBUG] 매장 탈퇴 완료');
+    
+    return {
+      success: true,
+      message: '매장 계정이 완전히 삭제되었습니다.'
+    };
     
   } catch (error) {
+    console.error('❌ [deleteMyStore] 에러 발생:', error);
+    console.error('❌ [deleteMyStore] 에러 스택:', error.stack);
+    console.error('❌ [deleteMyStore] SQL 에러:', error.sqlMessage);
+    
     if (!error.statusCode) {
       error.statusCode = 500;
-      error.message = '매장 탈퇴 중 오류가 발생했습니다.';
+      error.message = `매장 탈퇴 중 오류가 발생했습니다: ${error.sqlMessage || error.message}`;
     }
     throw error;
   }
