@@ -206,6 +206,7 @@ export interface StoreInfoDTO {
   owner_name: string;
   email: string;
   bio?: string;
+  postal_code?: string; // 🆕 우편번호 필드 추가
   menu?: MenuItemDTO[]; // 🆕 메뉴 정보 추가
   facilities?: FacilitiesDTO; // 🆕 편의시설 정보 추가
   photos?: string[]; // 🆕 사진 정보 추가
@@ -213,14 +214,15 @@ export interface StoreInfoDTO {
 }
 
 export interface StoreBasicInfoRequestDTO {
-  store_name: string;
-  address_main: string;
-  address_detail?: string;
-  phone_number: string;
-  business_reg_no: string;
-  owner_name: string;
-  email: string;
-  bio?: string;
+  store_name: string;           // 상호명 (필수)
+  owner_name: string;           // 대표자명 (필수)
+  business_number: string;      // 사업자 등록번호 (필수)
+  store_phonenumber: string;    // 연락처 (필수)
+  store_address: string;        // 사업장 주소 (필수)
+  postal_code: string;          // 우편번호 (필수)
+  address_detail?: string;      // 상세주소 (선택)
+  email?: string;               // 이메일 (선택)
+  bio?: string;                 // 매장소개 (선택)
 }
 
 export interface StoreBasicInfoResponseDTO {

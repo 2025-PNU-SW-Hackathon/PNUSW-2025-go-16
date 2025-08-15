@@ -426,7 +426,9 @@ export default function SettingScreen() {
             title="사업자 정보 수정"
             icon="file-text"
             iconColor="#8B5CF6"
-            onPress={() => navigation.navigate('StoreBasicInfo')}
+            onPress={() => navigation.navigate('BusinessInfoEdit', { 
+              isSignup: false 
+            })}
             className="mb-0 rounded-t-2xl border-2 border-mainGray"
           />
           
