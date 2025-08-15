@@ -39,6 +39,7 @@ app.use(express.json());
 app.use(requestLogger);
 
 // 내부 라우팅 등록
+app.use('/api/v1/auth', require('./routes/auth_routes'));
 app.use('/api/v1/reservations', reservationRoutes);
 app.use('/api/v1/reviews', reviewRoutes);
 app.use('/api/v1/users', userRoutes);

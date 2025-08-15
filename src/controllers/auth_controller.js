@@ -49,3 +49,17 @@ exports.storeLogin = async (req, res, next) => {
     next(err);
   }
 }; 
+
+// 로그아웃
+exports.logout = async (req, res, next) => {
+  try {
+    // JWT 토큰은 클라이언트에서 삭제하도록 처리
+    // 서버에서는 토큰 블랙리스트 처리나 세션 무효화 로직을 추가할 수 있음
+    res.json({ 
+      success: true, 
+      message: '로그아웃 되었습니다.' 
+    });
+  } catch (err) {
+    next(err);
+  }
+};

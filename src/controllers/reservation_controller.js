@@ -93,3 +93,50 @@ exports.getReservationList = async (req, res, next) => {
     next(err);
   }
 };
+
+// src/controllers/reservation_controller.js에 추가
+exports.approveReservation = async (req, res, next) => {
+  try {
+    const { reservationId } = req.params;
+    const { action } = req.body; // 'APPROVE' or 'REJECT'
+    const store_id = req.user.store_id;
+    
+    if (!store_id) {
+      return res.status(401).json({
+        success: false,
+        message: '사장님 계정으로만 접근 가능합니다.'
+      });
+    }
+
+    const result = await reservationService.approveReservation(reservationId, store_id, action);
+    res.json({ 
+      success: true, 
+      message: result.message, 
+      data: result.data 
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 🆕 주간 일정 현황 조회 (사장님 전용)
+exports.getMyStoreSchedules = async (req, res, next) => {
+  try {
+    const store_id = req.user.store_id;
+    
+    if (!store_id) {
+      return res.status(401).json({
+        success: false,
+        message: '사장님 계정으로만 접근 가능합니다.'
+      });
+    }
+
+    const schedules = await reservationService.getMyStoreSchedules(store_id);
+    res.json({
+      success: true,
+      data: schedules
+    });
+  } catch (err) {
+    next(err);
+  }
+};
