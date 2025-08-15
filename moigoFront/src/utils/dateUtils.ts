@@ -52,3 +52,4 @@ export function formatDate(dateString: string): string {
   const day = date.getDate().toString().padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
