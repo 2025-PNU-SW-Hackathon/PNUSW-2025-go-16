@@ -279,6 +279,41 @@ export const updateStoreDetailInfo = async (
   return response.data;
 };
 
+// 편의시설 관련 API
+
+// 편의시설 목록 조회 - GET /api/v1/stores/me/facilities
+export const getStoreFacilities = async () => {
+  const response = await apiClient.get('/stores/me/facilities');
+  return response.data;
+};
+
+// 편의시설 추가 - POST /api/v1/stores/me/facilities
+export const addStoreFacility = async (data: { facility_type: string; facility_name: string }) => {
+  const response = await apiClient.post('/stores/me/facilities', data);
+  return response.data;
+};
+
+// 편의시설 수정 - PUT /api/v1/stores/me/facilities/{facility_id}
+export const updateStoreFacility = async (
+  facilityId: number, 
+  data: { facility_type: string; facility_name: string; is_available: boolean }
+) => {
+  const response = await apiClient.put(`/stores/me/facilities/${facilityId}`, data);
+  return response.data;
+};
+
+// 편의시설 삭제 - DELETE /api/v1/stores/me/facilities/{facility_id}
+export const deleteStoreFacility = async (facilityId: number) => {
+  const response = await apiClient.delete(`/stores/me/facilities/${facilityId}`);
+  return response.data;
+};
+
+// 편의시설 사용 가능 여부 토글 - PUT /api/v1/stores/me/facilities/{facility_id}/toggle
+export const toggleStoreFacility = async (facilityId: number) => {
+  const response = await apiClient.put(`/stores/me/facilities/${facilityId}/toggle`);
+  return response.data;
+};
+
 // 예약 설정 조회
 export const getReservationSettings = async () => {
   const response = await apiClient.get('/stores/me/settings/reservation');

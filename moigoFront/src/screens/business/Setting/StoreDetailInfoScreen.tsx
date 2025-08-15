@@ -5,8 +5,14 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/types/RootStackParamList';
 import { Feather } from '@expo/vector-icons';
 import Toast from '@/components/common/Toast';
-import { useStoreInfo } from '@/hooks/queries/useUserQueries';
-import { useUpdateStoreDetailInfo } from '@/hooks/queries/useUserQueries';
+import { 
+  useStoreInfo, 
+  useUpdateStoreDetailInfo,
+  useToggleStoreFacility,
+  useAddStoreFacility,
+  useStoreFacilities,
+  useDeleteStoreFacility
+} from '@/hooks/queries/useUserQueries';
 import type { MenuItemDTO, FacilitiesDTO } from '@/types/DTO/users';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'StoreDetailInfo'>;
@@ -22,6 +28,7 @@ interface Facility {
   id: string;
   name: string;
   checked: boolean;
+  type: string;
 }
 
 export default function StoreDetailInfoScreen() {
@@ -30,6 +37,14 @@ export default function StoreDetailInfoScreen() {
   // API 훅 사용
   const { data: storeInfoData, isLoading: isStoreInfoLoading } = useStoreInfo();
   const { mutate: updateStoreDetailInfo, isSuccess: isSaveSuccess, isError: isSaveError, isPending: isUpdating } = useUpdateStoreDetailInfo();
+  const { mutate: toggleFacilityMutation } = useToggleStoreFacility();
+  const { mutate: addFacilityMutation } = useAddStoreFacility();
+  
+  // 편의시설 데이터를 별도로 조회
+  const { data: facilitiesData, isLoading: isFacilitiesLoading } = useStoreFacilities();
+  
+  // 편의시설 삭제 훅
+  const { mutate: deleteFacilityMutation } = useDeleteStoreFacility();
   
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -60,17 +75,7 @@ export default function StoreDetailInfoScreen() {
     },
   ]);
 
-  const [facilities, setFacilities] = useState<Facility[]>([
-    { id: '1', name: 'WiFi', checked: true },
-    { id: '2', name: '화장실', checked: true },
-    { id: '3', name: 'TV/스크린', checked: true },
-    { id: '4', name: '콘센트', checked: true },
-    { id: '5', name: '주차장', checked: true },
-    { id: '6', name: '금연구역', checked: true },
-    { id: '7', name: '단체석', checked: true },
-    { id: '8', name: '흡연구역', checked: false },
-    { id: '9', name: '무선충전', checked: false },
-  ]);
+  const [facilities, setFacilities] = useState<Facility[] | null>(null);
 
   const [photos, setPhotos] = useState<string[]>([
     'photo1', 'photo2', 'photo3', 'photo4'
@@ -80,6 +85,10 @@ export default function StoreDetailInfoScreen() {
   useEffect(() => {
     if (storeInfoData?.data?.store_info) {
       const info = storeInfoData.data.store_info;
+      
+      console.log('🏪 [화면] 전체 storeInfoData:', storeInfoData);
+      console.log('🏪 [화면] store_info:', info);
+      console.log('🏪 [화면] facilities 필드:', info.facilities);
       
       // 매장 소개
       if (info.bio) {
@@ -97,21 +106,8 @@ export default function StoreDetailInfoScreen() {
         setMenuItems(apiMenuItems);
       }
       
-      // 편의시설
-      if (info.facilities) {
-        const apiFacilities: Facility[] = [
-          { id: '1', name: 'WiFi', checked: info.facilities.wifi || false },
-          { id: '2', name: '화장실', checked: info.facilities.restroom || false },
-          { id: '3', name: 'TV/스크린', checked: info.facilities.tv_screen || false },
-          { id: '4', name: '콘센트', checked: info.facilities.sound_system || false },
-          { id: '5', name: '주차장', checked: info.facilities.parking || false },
-          { id: '6', name: '금연구역', checked: info.facilities.no_smoking || false },
-          { id: '7', name: '단체석', checked: info.facilities.booth_seating || false },
-          { id: '8', name: '흡연구역', checked: !info.facilities.no_smoking || false },
-          { id: '9', name: '무선충전', checked: info.facilities.private_room || false },
-        ];
-        setFacilities(apiFacilities);
-      }
+      // 편의시설은 별도 API에서 조회하므로 여기서는 설정하지 않음
+      console.log('🏪 [화면] 편의시설은 별도 API에서 조회됨');
       
       // 사진
       if (info.photos && Array.isArray(info.photos)) {
@@ -119,6 +115,43 @@ export default function StoreDetailInfoScreen() {
       }
     }
   }, [storeInfoData]);
+
+  // 편의시설 데이터가 로드되면 상태 업데이트 (한 번만 실행)
+  useEffect(() => {
+    if (facilitiesData?.data) {
+      console.log('🏪 [화면] 편의시설 API 데이터 로드됨:', facilitiesData.data);
+      
+      // 기본 편의시설 목록 생성
+      const defaultFacilities: Facility[] = [
+        { id: 'wifi', name: 'WiFi', checked: false, type: 'wifi' },
+        { id: 'restroom', name: '화장실', checked: false, type: 'restroom' },
+        { id: 'tv_screen', name: 'TV/스크린', checked: false, type: 'tv_screen' },
+        { id: 'outlet', name: '콘센트', checked: false, type: 'outlet' },
+        { id: 'parking', name: '주차장', checked: false, type: 'parking' },
+        { id: 'no_smoking', name: '금연구역', checked: false, type: 'no_smoking' },
+        { id: 'group_seating', name: '단체석', checked: false, type: 'group_seating' },
+        { id: 'smoking_area', name: '흡연구역', checked: false, type: 'smoking_area' },
+        { id: 'wireless_charging', name: '무선충전', checked: false, type: 'wireless_charging' },
+      ];
+      
+      // API 데이터를 기반으로 상태 업데이트
+      const updatedFacilities = defaultFacilities.map(facility => {
+        const apiFacility = facilitiesData.data.find(
+          (apiFacility: any) => apiFacility.facility_type === facility.type
+        );
+        
+        if (apiFacility) {
+          console.log(`🏪 [화면] ${facility.name} 상태:`, apiFacility.is_available === 1);
+          return { ...facility, checked: apiFacility.is_available === 1 };
+        }
+        
+        return { ...facility, checked: false };
+      });
+      
+      setFacilities(updatedFacilities);
+      console.log('✅ [화면] 편의시설 상태 업데이트 완료');
+    }
+  }, [facilitiesData]); // facilities 의존성 제거
 
   // 토스트 표시 함수들
   const showSuccessMessage = (message: string) => {
@@ -145,12 +178,17 @@ export default function StoreDetailInfoScreen() {
       // 성공 토스트 표시
       showSuccessMessage('가게 상세 정보가 성공적으로 저장되었습니다!');
       
+      // 저장된 데이터 확인을 위해 즉시 새로고침
+      if (storeInfoData?.data?.store_info) {
+        console.log('🔄 [화면] 저장된 편의시설 확인:', storeInfoData.data.store_info.facilities);
+      }
+      
       // 2초 후 이전 화면으로 이동
       setTimeout(() => {
         navigation.goBack();
       }, 2000);
     }
-  }, [isSaveSuccess, navigation]);
+  }, [isSaveSuccess, navigation, storeInfoData]);
 
   // 저장 실패 시 처리
   useEffect(() => {
@@ -177,15 +215,94 @@ export default function StoreDetailInfoScreen() {
   };
 
   const toggleFacility = (id: string) => {
-    const facility = facilities.find(f => f.id === id);
+    if (!facilities) return;
     
-    setFacilities(prev => 
-      prev.map(f => 
-        f.id === id 
-          ? { ...f, checked: !f.checked }
-          : f
-      )
-    );
+    const facility = facilities.find(f => f.id === id);
+    if (!facility) return;
+    
+    console.log('🏪 [화면] 편의시설 토글 시작:', facility);
+    
+    // 편의시설이 체크되어 있으면 체크 해제, 없으면 체크
+    if (facility.checked) {
+      // 편의시설 체크 해제 (삭제)
+      console.log('❌ [화면] 편의시설 체크 해제:', facility.name);
+      
+      // 편의시설 삭제를 위해 facilitiesData에서 해당 편의시설 찾기
+      if (facilitiesData?.data) {
+        const apiFacility = facilitiesData.data.find(
+          (apiFacility: any) => apiFacility.facility_type === facility.type
+        );
+        
+        if (apiFacility) {
+          console.log('🗑️ [화면] 편의시설 삭제 API 호출:', apiFacility.id);
+          
+          // 편의시설 삭제 API 호출
+          deleteFacilityMutation(apiFacility.id, {
+            onSuccess: (response) => {
+              console.log('✅ [화면] 편의시설 삭제 성공:', response);
+              // 로컬 상태 업데이트
+              setFacilities(prev => 
+                prev ? prev.map(f => 
+                  f.id === id 
+                    ? { ...f, checked: false }
+                    : f
+                ) : []
+              );
+            },
+            onError: (error) => {
+              console.error('❌ [화면] 편의시설 삭제 실패:', error);
+              showErrorMessage('편의시설 삭제에 실패했습니다.');
+            }
+          });
+        } else {
+          console.log('⚠️ [화면] 삭제할 편의시설을 찾을 수 없음:', facility.type);
+          // 로컬 상태만 업데이트
+          setFacilities(prev => 
+            prev ? prev.map(f => 
+              f.id === id 
+                ? { ...f, checked: false }
+                : f
+            ) : []
+          );
+        }
+      } else {
+        // facilitiesData가 없으면 로컬 상태만 업데이트
+        setFacilities(prev => 
+          prev ? prev.map(f => 
+            f.id === id 
+              ? { ...f, checked: false }
+              : f
+          ) : []
+        );
+      }
+    } else {
+      // 편의시설 체크 (추가)
+      console.log('✅ [화면] 편의시설 체크:', facility.name);
+      
+      // 편의시설 추가 API 호출
+      addFacilityMutation({
+        facility_type: facility.type,
+        facility_name: facility.name
+      }, {
+        onSuccess: (response) => {
+          console.log('✅ [화면] 편의시설 추가 성공:', response);
+          // 로컬 상태 업데이트
+          setFacilities(prev => 
+            prev ? prev.map(f => 
+              f.id === id 
+                ? { ...f, checked: true }
+                : f
+            ) : []
+          );
+        },
+        onError: (error) => {
+          console.error('❌ [화면] 편의시설 추가 실패:', error);
+          showErrorMessage('편의시설 추가에 실패했습니다.');
+        }
+      });
+    }
+    
+    console.log('🏪 [화면] 편의시설 상태 업데이트 완료');
   };
 
   const removeMenuItem = (id: string) => {
@@ -223,35 +340,24 @@ export default function StoreDetailInfoScreen() {
   };
 
   const handleSave = () => {
-    // API 데이터 형식으로 변환
+    // API 데이터 형식으로 변환 (편의시설 제외)
     const apiMenuItems: MenuItemDTO[] = menuItems.map(item => ({
       name: item.name,
       price: parseInt(item.price.replace(/[^0-9]/g, '')),
       description: item.description,
     }));
 
-    const apiFacilities: FacilitiesDTO = {
-      wifi: facilities.find(f => f.name === 'WiFi')?.checked || false,
-      parking: facilities.find(f => f.name === '주차장')?.checked || false,
-      restroom: facilities.find(f => f.name === '화장실')?.checked || false,
-      no_smoking: facilities.find(f => f.name === '금연구역')?.checked || false,
-      sound_system: facilities.find(f => f.name === '콘센트')?.checked || false,
-      private_room: facilities.find(f => f.name === '무선충전')?.checked || false,
-      tv_screen: facilities.find(f => f.name === 'TV/스크린')?.checked || false,
-      booth_seating: facilities.find(f => f.name === '단체석')?.checked || false,
-    };
-
     const apiData = {
       menu: apiMenuItems,
-      facilities: apiFacilities,
       photos: photos,
       sports_categories: [],
       bio: formData.introduction,
     };
 
-    console.log('🏪 [화면] 저장할 데이터:', apiData);
+    console.log('🏪 [화면] 저장할 데이터 (편의시설 제외):', apiData);
+    console.log('🏪 [화면] 편의시설은 별도 API로 관리됨');
     
-    // API 호출
+    // API 호출 (편의시설 제외)
     updateStoreDetailInfo(apiData);
   };
 
@@ -336,32 +442,48 @@ export default function StoreDetailInfoScreen() {
         {/* 편의시설 */}
         <View className="mb-8">
           <Text className="mb-3 text-lg font-bold text-gray-800">편의시설</Text>
-          <View className="flex-row flex-wrap gap-3">
-            {facilities.map((facility) => (
-              <TouchableOpacity
-                key={facility.id}
-                className={`flex-row items-center px-3 py-2 rounded-full border ${
-                  facility.checked 
-                    ? 'bg-orange-500 border-orange-500' 
-                    : 'bg-white border-gray-300'
-                }`}
-                onPress={() => toggleFacility(facility.id)}
-              >
-                <View className={`w-5 h-5 rounded-full justify-center items-center mr-2 ${
-                  facility.checked ? 'bg-white' : 'bg-gray-300'
-                }`}>
-                  {facility.checked && (
-                    <Feather name="check" size={12} color="#f97316" />
-                  )}
+          {isStoreInfoLoading || !facilities ? (
+            <View className="flex-row flex-wrap gap-3">
+              {Array.from({ length: 9 }).map((_, index) => (
+                <View
+                  key={index}
+                  className="flex-row items-center px-3 py-2 rounded-full border border-gray-300 bg-gray-100"
+                >
+                  <View className="w-5 h-5 rounded-full bg-gray-300 mr-2" />
+                  <Text className="text-sm font-medium text-gray-400">
+                    {['WiFi', '화장실', 'TV/스크린', '콘센트', '주차장', '금연구역', '단체석', '흡연구역', '무선충전'][index]}
+                  </Text>
                 </View>
-                <Text className={`text-sm font-medium ${
-                  facility.checked ? 'text-white' : 'text-gray-600'
-                }`}>
-                  {facility.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+              ))}
+            </View>
+          ) : (
+            <View className="flex-row flex-wrap gap-3">
+              {facilities.map((facility) => (
+                <TouchableOpacity
+                  key={facility.id}
+                  className={`flex-row items-center px-3 py-2 rounded-full border ${
+                    facility.checked 
+                      ? 'bg-orange-500 border-orange-500' 
+                      : 'bg-white border-gray-300'
+                  }`}
+                  onPress={() => toggleFacility(facility.id)}
+                >
+                  <View className={`w-5 h-5 rounded-full justify-center items-center mr-2 ${
+                    facility.checked ? 'bg-white' : 'bg-gray-300'
+                  }`}>
+                    {facility.checked && (
+                      <Feather name="check" size={12} color="#f97316" />
+                    )}
+                  </View>
+                  <Text className={`text-sm font-medium ${
+                    facility.checked ? 'text-white' : 'text-gray-600'
+                  }`}>
+                    {facility.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* 매장 사진 */}

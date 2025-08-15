@@ -271,7 +271,7 @@ export interface FacilitiesDTO {
 
 export interface StoreDetailInfoRequestDTO {
   menu: MenuItemDTO[];
-  facilities: FacilitiesDTO;
+  facilities?: FacilitiesDTO; // 편의시설은 선택적으로 변경
   photos: string[];
   sports_categories: string[];
   bio: string; // 🆕 매장 소개 필드 추가!

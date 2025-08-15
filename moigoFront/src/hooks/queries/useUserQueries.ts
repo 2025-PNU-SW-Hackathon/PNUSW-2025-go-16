@@ -19,6 +19,11 @@ import {
   addSportsCategory,
   getSportsCategories,
   getReservationSettings,
+  getStoreFacilities,
+  addStoreFacility,
+  updateStoreFacility,
+  deleteStoreFacility,
+  toggleStoreFacility,
 } from '../../apis/users';
 import { deleteUser, deleteStore } from '../../apis/users';
 import type {
@@ -298,15 +303,114 @@ export const useUpdateStoreDetailInfo = () => {
       if (user?.userType !== 'business') {
         throw new Error('사장님 계정으로만 접근 가능합니다.');
       }
+      console.log('🏪 [훅] 매장 상세 정보 수정 요청:', data);
+      console.log('🏪 [훅] 편의시설 데이터 확인:', data.facilities);
       return updateStoreDetailInfo(data);
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
       // 매장 정보 캐시 무효화
       queryClient.invalidateQueries({ queryKey: ['storeInfo'] });
-      console.log('✅ [훅] 매장 상세 정보 수정 성공');
+      console.log('✅ [훅] 매장 상세 정보 수정 성공:', response);
+      
+      // 캐시 무효화 후 즉시 새로고침
+      queryClient.refetchQueries({ queryKey: ['storeInfo'] });
     },
     onError: (error) => {
       console.error('❌ [훅] 매장 상세 정보 수정 실패:', error);
+    },
+  });
+};
+
+// 편의시설 관련 훅들
+
+// 편의시설 목록 조회 훅
+export const useStoreFacilities = () => {
+  const { user } = useAuthStore();
+  
+  return useQuery({
+    queryKey: ['storeFacilities'],
+    queryFn: () => getStoreFacilities(),
+    enabled: user?.userType === 'business',
+    staleTime: 5 * 60 * 1000, // 5분
+    gcTime: 10 * 60 * 1000, // 10분
+  });
+};
+
+// 편의시설 추가 훅
+export const useAddStoreFacility = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+
+  return useMutation({
+    mutationFn: (data: { facility_type: string; facility_name: string }) => {
+      if (user?.userType !== 'business') {
+        throw new Error('사장님 계정으로만 접근 가능합니다.');
+      }
+      return addStoreFacility(data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['storeFacilities'] });
+      queryClient.invalidateQueries({ queryKey: ['storeInfo'] });
+    },
+  });
+};
+
+// 편의시설 수정 훅
+export const useUpdateStoreFacility = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+
+  return useMutation({
+    mutationFn: ({ facilityId, data }: { 
+      facilityId: number; 
+      data: { facility_type: string; facility_name: string; is_available: boolean } 
+    }) => {
+      if (user?.userType !== 'business') {
+        throw new Error('사장님 계정으로만 접근 가능합니다.');
+      }
+      return updateStoreFacility(facilityId, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['storeFacilities'] });
+      queryClient.invalidateQueries({ queryKey: ['storeInfo'] });
+    },
+  });
+};
+
+// 편의시설 삭제 훅
+export const useDeleteStoreFacility = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+
+  return useMutation({
+    mutationFn: (facilityId: number) => {
+      if (user?.userType !== 'business') {
+        throw new Error('사장님 계정으로만 접근 가능합니다.');
+      }
+      return deleteStoreFacility(facilityId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['storeFacilities'] });
+      queryClient.invalidateQueries({ queryKey: ['storeInfo'] });
+    },
+  });
+};
+
+// 편의시설 토글 훅
+export const useToggleStoreFacility = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+
+  return useMutation({
+    mutationFn: (facilityId: number) => {
+      if (user?.userType !== 'business') {
+        throw new Error('사장님 계정으로만 접근 가능합니다.');
+      }
+      return toggleStoreFacility(facilityId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['storeFacilities'] });
+      queryClient.invalidateQueries({ queryKey: ['storeInfo'] });
     },
   });
 }; 
