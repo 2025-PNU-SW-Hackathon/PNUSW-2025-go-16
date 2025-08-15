@@ -645,3 +645,142 @@ exports.deleteMyStore = async (req, res, next) => {
     next(err);
   }
 };
+
+// 🆕 편의시설 관리 컨트롤러들
+// 편의시설 목록 조회
+exports.getStoreFacilities = async (req, res, next) => {
+  try {
+    const store_id = req.user.store_id;
+    
+    if (!store_id) {
+      return res.status(401).json({
+        success: false,
+        message: '사장님 계정으로만 접근 가능합니다.'
+      });
+    }
+
+    const facilities = await storeService.getStoreFacilities(store_id);
+    
+    res.json({
+      success: true,
+      data: facilities
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 편의시설 추가
+exports.addStoreFacility = async (req, res, next) => {
+  try {
+    const store_id = req.user.store_id;
+    const { facility_type, facility_name } = req.body;
+    
+    if (!store_id) {
+      return res.status(401).json({
+        success: false,
+        message: '사장님 계정으로만 접근 가능합니다.'
+      });
+    }
+
+    if (!facility_type || !facility_name) {
+      return res.status(400).json({
+        success: false,
+        message: '시설 유형과 시설명은 필수입니다.'
+      });
+    }
+
+    const result = await storeService.addStoreFacility(store_id, facility_type, facility_name);
+    
+    res.json({
+      success: true,
+      message: '편의시설이 추가되었습니다.',
+      data: result
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 편의시설 수정
+exports.updateStoreFacility = async (req, res, next) => {
+  try {
+    const { facility_id } = req.params;
+    const { facility_type, facility_name, is_available } = req.body;
+    const store_id = req.user.store_id;
+    
+    if (!store_id) {
+      return res.status(401).json({
+        success: false,
+        message: '사장님 계정으로만 접근 가능합니다.'
+      });
+    }
+
+    if (!facility_type || !facility_name) {
+      return res.status(400).json({
+        success: false,
+        message: '시설 유형과 시설명은 필수입니다.'
+      });
+    }
+
+    const result = await storeService.updateStoreFacility(facility_id, facility_type, facility_name, is_available);
+    
+    res.json({
+      success: true,
+      message: '편의시설이 수정되었습니다.',
+      data: result
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 편의시설 삭제
+exports.deleteStoreFacility = async (req, res, next) => {
+  try {
+    const { facility_id } = req.params;
+    const store_id = req.user.store_id;
+    
+    if (!store_id) {
+      return res.status(401).json({
+        success: false,
+        message: '사장님 계정으로만 접근 가능합니다.'
+      });
+    }
+
+    const result = await storeService.deleteStoreFacility(facility_id);
+    
+    res.json({
+      success: true,
+      message: result.message,
+      data: result
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 편의시설 사용 가능 여부 토글
+exports.toggleFacilityAvailability = async (req, res, next) => {
+  try {
+    const { facility_id } = req.params;
+    const store_id = req.user.store_id;
+    
+    if (!store_id) {
+      return res.status(401).json({
+        success: false,
+        message: '사장님 계정으로만 접근 가능합니다.'
+      });
+    }
+
+    const result = await storeService.toggleFacilityAvailability(facility_id);
+    
+    res.json({
+      success: true,
+      message: '편의시설 상태가 변경되었습니다.',
+      data: result
+    });
+  } catch (err) {
+    next(err);
+  }
+};

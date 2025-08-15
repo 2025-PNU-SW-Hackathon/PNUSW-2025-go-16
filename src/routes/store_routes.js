@@ -60,4 +60,20 @@ router.put('/me/password', authMiddleware, storeController.updateStorePassword);
 // 🆕 매장 회원 탈퇴 (DELETE /stores/me) - 사장님만 접근 가능
 router.delete('/me', authMiddleware, storeController.deleteMyStore);
 
+// 🆕 편의시설 관리 라우터들 - 사장님만 접근 가능
+// 편의시설 목록 조회 (GET /stores/me/facilities)
+router.get('/me/facilities', authMiddleware, storeController.getStoreFacilities);
+
+// 편의시설 추가 (POST /stores/me/facilities)
+router.post('/me/facilities', authMiddleware, storeController.addStoreFacility);
+
+// 편의시설 수정 (PUT /stores/me/facilities/:facility_id)
+router.put('/me/facilities/:facility_id', authMiddleware, storeController.updateStoreFacility);
+
+// 편의시설 삭제 (DELETE /stores/me/facilities/:facility_id)
+router.delete('/me/facilities/:facility_id', authMiddleware, storeController.deleteStoreFacility);
+
+// 편의시설 사용 가능 여부 토글 (PUT /stores/me/facilities/:facility_id/toggle)
+router.put('/me/facilities/:facility_id/toggle', authMiddleware, storeController.toggleFacilityAvailability);
+
 module.exports = router; 

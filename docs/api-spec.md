@@ -570,7 +570,188 @@
 }
 ```
 
-### 2.15 🆕 스포츠 카테고리 조회 (사장님 전용)
+### 2.15 🆕 편의시설 관리 (사장님 전용)
+
+#### 편의시설 목록 조회
+- **URL**: `GET /api/v1/stores/me/facilities`
+- **설명**: 매장의 편의시설 목록을 조회합니다.
+- **Headers**: `Authorization: Bearer <JWT>` ✅ 필수
+- **Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "facility_type": "wifi",
+      "facility_name": "WiFi",
+      "is_available": 1,
+      "created_at": "2025-08-15T10:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "facility_type": "parking",
+      "facility_name": "주차장",
+      "is_available": 1,
+      "created_at": "2025-08-15T10:00:00.000Z"
+    },
+    {
+      "id": 3,
+      "facility_type": "tv_screen",
+      "facility_name": "TV/스크린",
+      "is_available": 1,
+      "created_at": "2025-08-15T10:00:00.000Z"
+    },
+    {
+      "id": 4,
+      "facility_type": "smoking_area",
+      "facility_name": "흡연구역",
+      "is_available": 0,
+      "created_at": "2025-08-15T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+#### 편의시설 추가
+- **URL**: `POST /api/v1/stores/me/facilities`
+- **설명**: 새로운 편의시설을 추가합니다.
+- **Headers**: `Authorization: Bearer <JWT>` ✅ 필수
+- **Request Body**:
+```json
+{
+  "facility_type": "wireless_charging",
+  "facility_name": "무선충전"
+}
+```
+- **Response**:
+```json
+{
+  "success": true,
+  "message": "편의시설이 추가되었습니다.",
+  "data": {
+    "id": 5,
+    "facility_type": "wireless_charging",
+    "facility_name": "무선충전",
+    "is_available": 1,
+    "created_at": "2025-08-15T10:00:00.000Z"
+  }
+}
+```
+
+#### 편의시설 수정
+- **URL**: `PUT /api/v1/stores/me/facilities/{facility_id}`
+- **설명**: 기존 편의시설 정보를 수정합니다.
+- **Headers**: `Authorization: Bearer <JWT>` ✅ 필수
+- **Request Body**:
+```json
+{
+  "facility_type": "tv_screen",
+  "facility_name": "대형 TV/스크린",
+  "is_available": true
+}
+```
+- **Response**:
+```json
+{
+  "success": true,
+  "message": "편의시설이 수정되었습니다.",
+  "data": {
+    "id": 3,
+    "facility_type": "tv_screen",
+    "facility_name": "대형 TV/스크린",
+    "is_available": 1,
+    "created_at": "2025-08-15T10:00:00.000Z"
+  }
+}
+```
+
+#### 편의시설 삭제
+- **URL**: `DELETE /api/v1/stores/me/facilities/{facility_id}`
+- **설명**: 특정 편의시설을 삭제합니다.
+- **Headers**: `Authorization: Bearer <JWT>` ✅ 필수
+- **Response**:
+```json
+{
+  "success": true,
+  "message": "편의시설이 삭제되었습니다."
+}
+```
+
+#### 편의시설 사용 가능 여부 토글
+- **URL**: `PUT /api/v1/stores/me/facilities/{facility_id}/toggle`
+- **설명**: 편의시설의 사용 가능 여부를 토글합니다.
+- **Headers**: `Authorization: Bearer <JWT>` ✅ 필수
+- **Response**:
+```json
+{
+  "success": true,
+  "message": "편의시설 상태가 변경되었습니다.",
+  "data": {
+    "id": 4,
+    "is_available": 1
+  }
+}
+```
+
+**사용 예시:**
+- 흡연구역 비활성화 → 활성화로 변경
+- WiFi 활성화 → 비활성화로 변경
+
+#### 편의시설 타입 가이드:
+**기본 편의시설:**
+- `wifi`: WiFi
+- `restroom`: 화장실
+- `tv_screen`: TV/스크린
+- `outlet`: 콘센트
+- `parking`: 주차장
+- `no_smoking`: 금연구역
+- `group_seating`: 단체석
+
+**추가 편의시설:**
+- `smoking_area`: 흡연구역
+- `wireless_charging`: 무선충전
+- `sound_system`: 음향시스템
+- `private_room`: 개인실
+- `booth_seating`: 부스석
+- `air_conditioning`: 에어컨
+- `heating`: 난방
+- `custom`: 사용자 정의
+
+**사용 예시:**
+```json
+{
+  "facility_type": "wifi",
+  "facility_name": "WiFi"
+}
+```
+
+#### 프론트엔드 연동 가이드:
+**편의시설 표시 방법:**
+```javascript
+// 편의시설 데이터 구조
+const facilities = {
+  wifi: { name: 'WiFi', available: true },
+  parking: { name: '주차장', available: true },
+  tv_screen: { name: 'TV/스크린', available: true },
+  outlet: { name: '콘센트', available: true },
+  no_smoking: { name: '금연구역', available: true },
+  group_seating: { name: '단체석', available: true },
+  smoking_area: { name: '흡연구역', available: false },
+  wireless_charging: { name: '무선충전', available: false }
+};
+
+// 편의시설 상태에 따른 UI 표시
+facilities.wifi.available ? '활성화 (주황색)' : '비활성화 (회색)';
+```
+
+**편의시설 관리 기능:**
+- ✅ 편의시설 추가/삭제
+- ✅ 편의시설 이름 수정
+- ✅ 편의시설 사용 가능 여부 토글
+- ✅ 실시간 상태 업데이트
+
+### 2.16 🆕 스포츠 카테고리 조회 (사장님 전용)
 - **URL**: `GET /api/v1/stores/me/sports-categories`
 - **설명**: 매장의 스포츠 카테고리 목록을 조회합니다.
 - **Headers**: `Authorization: Bearer <JWT>` ✅ 필수
@@ -595,7 +776,7 @@
 }
 ```
 
-### 2.16 🆕 스포츠 카테고리 추가 (사장님 전용)
+### 2.17 🆕 스포츠 카테고리 추가 (사장님 전용)
 - **URL**: `POST /api/v1/stores/me/sports-categories`
 - **설명**: 매장에 새로운 스포츠 카테고리를 추가합니다.
 - **Headers**: `Authorization: Bearer <JWT>` ✅ 필수
@@ -618,7 +799,7 @@
 }
 ```
 
-### 2.17 🆕 스포츠 카테고리 삭제 (사장님 전용)
+### 2.18 🆕 스포츠 카테고리 삭제 (사장님 전용)
 - **URL**: `DELETE /api/v1/stores/me/sports-categories/{category_name}`
 - **설명**: 매장의 특정 스포츠 카테고리를 삭제합니다.
 - **Headers**: `Authorization: Bearer <JWT>` ✅ 필수
@@ -626,16 +807,11 @@
 ```json
 {
   "success": true,
-  "message": "스포츠 카테고리가 삭제되었습니다.",
-  "data": {
-    "success": true,
-    "message": "스포츠 카테고리가 삭제되었습니다.",
-    "deleted_category": "격투기"
-  }
+  "message": "스포츠 카테고리가 삭제되었습니다."
 }
 ```
 
-### 2.18 은행 코드 목록 조회
+### 2.19 은행 코드 목록 조회
 - **URL**: `GET /api/v1/stores/banks`
 - **설명**: 사용 가능한 은행 코드 목록을 조회합니다.
 - **Response**:
@@ -776,7 +952,7 @@
         "reservation_start_time": "2025-07-28T10:00:00.000Z",
         "reservation_end_time": "2025-07-28T12:00:00.000Z",
         "reservation_match": "맨시티 vs 첼시",
-        "reservation_bio": "치킨에 맥주까지 마시면서 친해져요!",
+        "reservation_bio": "치킨에 맥주까지 마시며 친해져요!",
         "reservation_status": 0,
         "reservation_participant_cnt": 2,
         "reservation_max_participant_cnt": 6,

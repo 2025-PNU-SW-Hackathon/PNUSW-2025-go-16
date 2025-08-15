@@ -463,17 +463,51 @@ exports.getMyStoreInfo = async (store_id) => {
       menu = [];
     }
     
-    // 시설 정보 (기본값으로 설정)
-    const facilities = {
-      wifi: true,
-      parking: store.store_max_parking_cnt > 0,
-      restroom: true,
-      no_smoking: true,
-      sound_system: true,
-      private_room: false,
-      tv_screen: store.store_max_screen_cnt > 0,
-      booth_seating: true
-    };
+    // 시설 정보 (DB에서 가져오기)
+    let facilities = {};
+    try {
+      const [facilityRows] = await conn.query(
+        'SELECT facility_type, facility_name, is_available FROM store_facilities WHERE store_id = ?',
+        [store_id]
+      );
+      
+      if (facilityRows.length > 0) {
+        // DB에 있는 시설 정보 사용
+        facilityRows.forEach(facility => {
+          facilities[facility.facility_type] = {
+            name: facility.facility_name,
+            available: facility.is_available === 1
+          };
+        });
+      } else {
+        // 기본값으로 설정 (DB에 데이터가 없는 경우) - 이미지 기준으로 업데이트
+        facilities = {
+          wifi: { name: 'WiFi', available: true },
+          restroom: { name: '화장실', available: true },
+          tv_screen: { name: 'TV/스크린', available: store.store_max_screen_cnt > 0 },
+          outlet: { name: '콘센트', available: true },
+          parking: { name: '주차장', available: store.store_max_parking_cnt > 0 },
+          no_smoking: { name: '금연구역', available: true },
+          group_seating: { name: '단체석', available: true },
+          smoking_area: { name: '흡연구역', available: false },
+          wireless_charging: { name: '무선충전', available: false }
+        };
+      }
+    } catch (error) {
+      console.log('⚠️ [getMyStoreInfo] 시설 정보 조회 실패, 기본값 사용:', error.message);
+      // 에러 발생 시 기본값 사용 - 이미지 기준으로 업데이트
+      facilities = {
+        wifi: { name: 'WiFi', available: true },
+        restroom: { name: '화장실', available: true },
+        tv_screen: { name: 'TV/스크린', available: store.store_max_screen_cnt > 0 },
+        outlet: { name: '콘센트', available: true },
+        parking: { name: '주차장', available: store.store_max_screen_cnt > 0 },
+        no_smoking: { name: '금연구역', available: true },
+        group_seating: { name: '단체석', available: true },
+        smoking_area: { name: '흡연구역', available: false },
+        wireless_charging: { name: '무선충전', available: false }
+      };
+    }
     
     // 사진 정보 (기본값)
     const photos = store.store_thumbnail ? [store.store_thumbnail] : [];
@@ -1180,6 +1214,127 @@ exports.deleteMyStore = async (store_id) => {
     if (!error.statusCode) {
       error.statusCode = 500;
       error.message = `매장 탈퇴 중 오류가 발생했습니다: ${error.sqlMessage || error.message}`;
+    }
+    throw error;
+  }
+}; 
+
+// 🆕 편의시설 관리 API들
+// 편의시설 목록 조회
+exports.getStoreFacilities = async (store_id) => {
+  const conn = getConnection();
+  try {
+    const [rows] = await conn.query(
+      'SELECT id, facility_type, facility_name, is_available FROM store_facilities WHERE store_id = ? ORDER BY facility_type',
+      [store_id]
+    );
+    return rows;
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '편의시설 조회 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
+
+// 편의시설 추가
+exports.addStoreFacility = async (store_id, facility_type, facility_name) => {
+  const conn = getConnection();
+  try {
+    const [result] = await conn.query(
+      'INSERT INTO store_facilities (store_id, facility_type, facility_name, is_available) VALUES (?, ?, ?, 1)',
+      [store_id, facility_type, facility_name]
+    );
+    
+    return {
+      id: result.insertId,
+      facility_type,
+      facility_name,
+      is_available: 1
+    };
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '편의시설 추가 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
+
+// 편의시설 수정
+exports.updateStoreFacility = async (facility_id, facility_type, facility_name, is_available) => {
+  const conn = getConnection();
+  try {
+    await conn.query(
+      'UPDATE store_facilities SET facility_type = ?, facility_name = ?, is_available = ? WHERE id = ?',
+      [facility_type, facility_name, is_available ? 1 : 0, facility_id]
+    );
+    
+    return {
+      id: facility_id,
+      facility_type,
+      facility_name,
+      is_available: is_available ? 1 : 0
+    };
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '편의시설 수정 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
+
+// 편의시설 삭제
+exports.deleteStoreFacility = async (facility_id) => {
+  const conn = getConnection();
+  try {
+    await conn.query('DELETE FROM store_facilities WHERE id = ?', [facility_id]);
+    
+    return {
+      success: true,
+      message: '편의시설이 삭제되었습니다.'
+    };
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '편의시설 삭제 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
+
+// 편의시설 사용 가능 여부 토글
+exports.toggleFacilityAvailability = async (facility_id) => {
+  const conn = getConnection();
+  try {
+    const [current] = await conn.query(
+      'SELECT is_available FROM store_facilities WHERE id = ?',
+      [facility_id]
+    );
+    
+    if (current.length === 0) {
+      const err = new Error('편의시설을 찾을 수 없습니다.');
+      err.statusCode = 404;
+      throw err;
+    }
+    
+    const newStatus = current[0].is_available === 1 ? 0 : 1;
+    
+    await conn.query(
+      'UPDATE store_facilities SET is_available = ? WHERE id = ?',
+      [newStatus, facility_id]
+    );
+    
+    return {
+      id: facility_id,
+      is_available: newStatus
+    };
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '편의시설 상태 변경 중 오류가 발생했습니다.';
     }
     throw error;
   }
