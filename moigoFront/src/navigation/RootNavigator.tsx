@@ -7,8 +7,8 @@ import LoginScreen from '@/screens/LoginScreen';
 import SignupScreen from '@/screens/SignupScreen';
 import ChatListScreen from '@/screens/ChatListScreen';
 import ChatRoomScreen from '@/screens/ChatRoomScreen';
-import Profile from '@/screens/user/Mypage/Profile';
 import MyInfoSetting from '@/screens/user/Mypage/MyInfoSetting';
+import Profile from '@/screens/user/Mypage/Profile';
 import ParticipatedMatchesScreen from '@/screens/user/ParticipatedMatches/ParticipatedMatchesScreen';
 import ChangePasswordScreen from '@/screens/user/Password/ChangePasswordScreen';
 import CustomHeader from '@/components/common/CustomHeader';
@@ -17,6 +17,13 @@ import { useAuthStore } from '@/store';
 import CreateMeeting from '@/screens/user/CreateMeeting/CreateMeeting/index';
 import BusinessNavigator from './BusinessNavigator';
 import BusinessHomeScreen from '@/screens/business/Home/HomeScreen';
+import StoreBasicInfoScreen from '@/screens/business/Setting/StoreBasicInfoScreen';
+import StoreDetailInfoScreen from '@/screens/business/Setting/StoreDetailInfoScreen';
+import SportsRegistrationScreen from '@/screens/business/Setting/SportsRegistrationScreen';
+import BusinessHoursScreen from '@/screens/business/Setting/BusinessHoursScreen';
+import ReservationTimeScreen from '@/screens/business/Setting/ReservationTimeScreen';
+import BusinessInfoEditScreen from '@/screens/business/Setting/BusinessInfoEditScreen';
+import ChatScreen from '@/screens/ChatScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -28,24 +35,9 @@ export default function RootNavigator() {
       {isLoggedIn ? (
         <>
           {/* 사용자 타입에 따라 다른 메인 화면 표시 */}
-          {user?.userType === 'business' ? (
-            <Stack.Screen name="Main" options={{ headerShown: false }}>
-              {() => <BusinessNavigator />}
-            </Stack.Screen>
-
-          ) : (
-            <Stack.Screen name="Main" options={{ headerShown: false }}>
-              {() => <MainTabNavigator />}
-            </Stack.Screen>
-          )}
-          <Stack.Screen 
-            name="ChatList" 
-            component={ChatListScreen} 
-            options={{ 
-              headerShown: true,
-              header: () => <CustomHeader title="채팅" />,
-            }} 
-          />
+          <Stack.Screen name="Main" options={{ headerShown: false }}>
+            {() => user?.userType === 'business' ? <BusinessNavigator /> : <MainTabNavigator />}
+          </Stack.Screen>
           <Stack.Screen name="ChatRoom" component={ChatRoomScreen} options={{ headerShown: false }} />
           <Stack.Screen 
             name="MyInfoSetting" 
@@ -55,10 +47,14 @@ export default function RootNavigator() {
               header: () => <CustomHeader title="설정" />,
             }} 
           />
-          <Stack.Screen name="Profile" component={Profile} options={{ 
+          <Stack.Screen 
+            name="Profile" 
+            component={Profile} 
+            options={{ 
               headerShown: true,
-              header: () => <CustomHeader title="프로필 관리" />,
-            }}  />
+              header: () => <CustomHeader title="프로필 편집" />,
+            }} 
+          />
           <Stack.Screen name="CreateMeeting" component={CreateMeeting} options={{ headerShown: false }} />
           <Stack.Screen 
             name="ParticipatedMatches" 
@@ -69,6 +65,62 @@ export default function RootNavigator() {
             }} 
           />
           <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ headerShown: false }} />
+          <Stack.Screen 
+            name="StoreBasicInfo" 
+            component={StoreBasicInfoScreen} 
+            options={{ 
+              headerShown: true,
+              header: () => <CustomHeader title="가게 기본 정보" />,
+            }} 
+          />
+          <Stack.Screen 
+            name="StoreDetailInfo" 
+            component={StoreDetailInfoScreen} 
+            options={{ 
+              headerShown: true,
+              header: () => <CustomHeader title="가게 상세 정보" />,
+            }} 
+          />
+          <Stack.Screen 
+            name="SportsRegistration" 
+            component={SportsRegistrationScreen} 
+            options={{ 
+              headerShown: true,
+              header: () => <CustomHeader title="시청 가능 스포츠 등록" />,
+            }} 
+          />
+          <Stack.Screen 
+            name="BusinessHours" 
+            component={BusinessHoursScreen} 
+            options={{ 
+              headerShown: true,
+              header: () => <CustomHeader title="영업 시간 설정" />,
+            }} 
+          />
+          <Stack.Screen 
+            name="ReservationTime" 
+            component={ReservationTimeScreen} 
+            options={{ 
+              headerShown: true,
+              header: () => <CustomHeader title="예약 시간 설정" />,
+            }} 
+          />
+         <Stack.Screen 
+            name="BusinessInfoEdit" 
+            component={BusinessInfoEditScreen} 
+            options={{ 
+              headerShown: true,
+              header: () => <CustomHeader title="사업자 정보 등록" />,
+            }} 
+          />
+          <Stack.Screen 
+            name="Chat" 
+            component={ChatScreen} 
+            options={{ 
+              headerShown: true,
+              header: () => <CustomHeader title="채팅" />,
+            }} 
+          />
         </>
       ) : (
         <>
@@ -81,6 +133,14 @@ export default function RootNavigator() {
             {() => <LoginScreen />}
           </Stack.Screen>
           <Stack.Screen name="Signup" component={SignupScreen} options={{ headerShown: false }} />
+          <Stack.Screen 
+            name="BusinessInfoEdit" 
+            component={BusinessInfoEditScreen} 
+            options={{ 
+              headerShown: true,
+              header: () => <CustomHeader title="사업자 정보 등록" />,
+            }} 
+          />
         </>
       )}
     </Stack.Navigator>

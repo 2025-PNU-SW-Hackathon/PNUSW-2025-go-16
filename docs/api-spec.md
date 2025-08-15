@@ -767,43 +767,8 @@
 
 ---
 
-### 13.4. 사장님 예약 승인/거절 API
 
-**POST** `/api/reservations/{reservationId}/approval`
-
-> 사장님이 결제 완료된 매칭(예약)을 확인하고 최종 승인하거나 거절합니다.
-
-#### Headers
-
-* Authorization: Bearer `<JWT>` ✅ 필수 
-
-#### Request Body
-
-
-```json
-{
-    "managerId": "manager_user_id", // 승인/거절을 수행하는 사장/관리자 ID (인증 토큰에서 추출)
-    "action": "APPROVE" // 또는 "REJECT"
-    // (선택 사항) "reason": "시설 예약 불가"
-}
-```
-
-#### Response (200)
-
-```json
-{
-    "status": "success",
-    "message": "예약이 성공적으로 승인되었습니다.", 
-    "data": {
-        "reservationId": "match_001",
-        "newStatus": "RESERVATION_CONFIRMED" 
-    }
-}
-```
-
----
-
-### 13.5. 채팅방 내 결제 현황 조회 API
+### 13.4. 채팅방 내 결제 현황 조회 API
 
 **GET** `/chat/rooms/{roomId}/payments/status`
 
@@ -834,7 +799,7 @@
 
 ---
 
-### 13.6. 결제 미완료 참가자 강퇴 API
+### 13.5. 결제 미완료 참가자 강퇴 API
 
 **DELETE** `/chat/rooms/{roomId}/participants/{userId}`
 
@@ -1026,3 +991,472 @@
 }
 ```
 ---
+
+## 15. 사장님 홈 페이지 기능
+
+### 15.1. 대시보드 현황 조회 API
+
+**GET** `/stores/me/dashboard`
+
+> 사장님 홈 화면 상단에 표시되는 통계 정보를 가져옵니다.
+
+---
+
+#### Headers
+
+- `Content-Type: application/json` ✅ 필수
+
+---
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "data": {
+    "today_reservations_count": 12,
+    "this_week_reservations_count": 45,
+    "average_rating": 4.8
+  }
+}
+```
+---
+
+### 15.2. 예약목록 현황 조회 API
+
+**GET** `/stores/me/reservations`
+
+> 사장님 홈 화면 상단에 표시되는 통계 정보를 가져옵니다.
+
+---
+
+#### Headers
+
+- `Content-Type: application/json` ✅ 필수
+
+---
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "reservation_id": 101,
+      "reservation_match": "토트넘 vs 맨시티",
+      "reservation_start_time": "2025-07-28T19:30:00",
+      "reservation_participant_info": "김민준 외 4명",
+      "reservation_table_info": "테이블 3번",
+      "reservation_status": "PENDING_APPROVAL"
+    },
+    {
+      "reservation_id": 102,
+      "reservation_match": "두산 vs LG",
+      "reservation_start_time": "2025-07-28T18:00:00",
+      "reservation_participant_info": "박지현 외 3명",
+      "reservation_table_info": "테이블 5번",
+      "reservation_status": "CONFIRMED"
+    }
+  ]
+}
+```
+---
+
+### 15.3. 사장님 예약 승인/거절 API
+
+**POST** `/api/reservations/{reservationId}/approval`
+
+> 사장님이 결제 완료된 매칭(예약)을 확인하고 최종 승인하거나 거절합니다.
+
+#### Headers
+
+* Authorization: Bearer `<JWT>` ✅ 필수 
+
+#### Request Body
+
+
+```json
+{
+    "managerId": "manager_user_id", // 승인/거절을 수행하는 사장/관리자 ID (인증 토큰에서 추출)
+    "action": "APPROVE" // 또는 "REJECT"
+    // (선택 사항) "reason": "시설 예약 불가"
+}
+```
+
+#### Response (200)
+
+```json
+{
+    "status": "success",
+    "message": "예약이 성공적으로 승인되었습니다.", 
+    "data": {
+        "reservationId": "match_001",
+        "newStatus": "RESERVATION_CONFIRMED" 
+    }
+}
+```
+
+---
+
+
+## 16. 사장님 일정 페이지 기능
+
+### 16.1. 주간일정 현황 조회 API
+
+**GET** `/users/me/schedules`
+
+> 예약된 모임들을 특정 주간 날짜 범위에 맞춰 조회합니다.
+
+---
+
+#### Headers
+
+- `Content-Type: application/json` ✅ 필수
+
+---
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "reservation_id": 101,
+      "reservation_match": "두산 vs LG",
+      "match_start_time": "2024-07-08T18:00:00",
+      "match_end_time": "2024-07-08T21:00:00",
+      "current_participants": 15,
+      "max_participants": 25,
+      "status": 1
+    },
+    {
+      "reservation_id": 102,
+      "reservation_match": "KBL 결승전",
+      "match_start_time": "2024-07-08T22:00:00",
+      "match_end_time": "2024-07-08T23:00:00",
+      "current_participants": 4,
+      "max_participants": 8,
+      "status": 1
+    },
+    {
+      "reservation_id": 103,
+      "reservation_match": "토트넘 vs 맨시티",
+      "match_start_time": "2024-07-10T19:30:00",
+      "match_end_time": "2024-07-10T21:30:00",
+      "current_participants": 30,
+      "max_participants": 30,
+      "status": 1
+    }
+  ]
+}
+```
+---
+
+### 16.2. 모임 상세정보 조회 API
+
+**GET** `/reservations/{reservation_id}`
+
+> 일정표에서 특정 모임을 클릭했을 때, 해당 모임의 자세한 정보를 조회합니다.
+
+---
+
+#### Headers
+
+- `Content-Type: application/json` ✅ 필수
+
+---
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "data": {
+    "reservation_id": 101,
+    "match_info": {
+      "match_id": 1,
+      "title": "두산 vs LG",
+      "start_time": "2024-07-08T18:00:00"
+    },
+    "store_info": {
+      "store_id": "store_123",
+      "store_name": "스포츠펍 훈련",
+      "address": "서울시 강남구 역삼동"
+    },
+    "participants": [
+      { "user_id": "user_a", "nickname": "홍길동" },
+      { "user_id": "user_b", "nickname": "김철수" }
+    ],
+    "current_participants": 15,
+    "max_participants": 25,
+    "status": 1
+  }
+}
+```
+---
+
+## 17. 사장님 설정 페이지 기능
+
+### 17.1. 매장 정보 조회 API
+
+**GET** `/stores/me`
+
+> 사장님의 가게에 대한 모든 설정 정보를 한 번에 불러옵니다.
+
+---
+
+#### Headers
+
+- `Content-Type: application/json` ✅ 필수
+
+---
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "data": {
+    "store_info": {
+      "store_name": "챔피언 스포츠 펍",
+      "address_main": "강남역 2번 출구 도보 3분",
+      "address_detail": "상세 주소",
+      "phone_number": "02-1234-5678",
+      "business_reg_no": "123-45-67890",
+      "owner_name": "김철수",
+      "email": "sportsclub@example.com",
+      "bio": "강남역 근처에 위치한 스포츠 전문 바입니다.",
+      "menu": [
+        { "name": "치킨 세트", "price": 28000, "description": "바삭한 치킨..." },
+        { "name": "수제 맥주 세트", "price": 25000, "description": "프리미엄 수제 맥주..." }
+      ],
+      "facilities": {
+        "wifi": true, "parking": true, "restroom": true, "no_smoking": true,
+        "sound_system": true, "private_room": false, "tv_screen": true, "booth_seating": true
+      },
+      "photos": [
+        "https://cdn.example.com/photos/store1.jpg",
+        "https://cdn.example.com/photos/store2.jpg"
+      ],
+      "sports_categories": ["축구", "야구", "농구"]
+    },
+    "reservation_settings": {
+      "cancellation_policy": "취소/환불 규정",
+      "deposit_amount": 5000,
+      "available_times": [
+        { "day": "MON", "start": "18:00", "end": "24:00" },
+        { "day": "TUE", "start": "18:00", "end": "24:00" }
+      ]
+    },
+    "notification_settings": {
+      "reservation_alerts": true,
+      "payment_alerts": true,
+      "system_alerts": true,
+      "marketing_alerts": false
+    },
+    "payment_info": {
+      "bank_account_number": "123-456-7890",
+      "bank_name": "국민은행"
+    }
+  }
+}
+```
+---
+
+### 17.2. 매장 기본 정보 수정 API
+
+**PUT** `/stores/me/basic-info`
+
+>  매장명, 주소, 전화번호 등 기본 정보를 수정합니다.
+
+
+#### Headers
+
+* Authorization: Bearer `<JWT>` ✅ 필수 
+
+#### Request Body
+
+
+```json
+{
+  "store_name": "챔피언 스포츠 펍",
+  "address_main": "강남역 2번 출구 도보 3분",
+  "address_detail": "상세 주소",
+  "phone_number": "02-1234-5678",
+  "business_reg_no": "123-45-67890",
+  "owner_name": "김철수",
+  "email": "sportsclub@example.com",
+  "bio": "강남역 근처에 위치한 스포츠 전문 바입니다."
+}
+```
+
+#### Response (200)
+
+```json
+{ "success": true, "message": "매장 기본 정보가 수정되었습니다." }
+```
+
+---
+
+### 17.3. 매장 상세 정보 수정 API
+
+**PUT** `/stores/me/details`
+
+>  메뉴, 편의시설, 사진 목록 등을 수정합니다.
+
+
+#### Headers
+
+* Authorization: Bearer `<JWT>` ✅ 필수 
+
+#### Request Body
+
+
+```json
+{
+  "menu": [
+    { "name": "치킨 세트", "price": 28000, "description": "바삭한 치킨..." }
+  ],
+  "facilities": {
+    "wifi": true, "parking": true, "restroom": true, "no_smoking": true
+  },
+  "photos": [
+    "https://cdn.example.com/photos/store1.jpg",
+    "https://cdn.example.com/photos/store2.jpg"
+  ],
+  "sports_categories": ["축구", "농구"]
+}
+```
+
+#### Response (200)
+
+```json
+{ "success": true, "message": "매장 상세 정보가 수정되었습니다." }
+```
+
+---
+
+### 17.4. 예약 설정 수정 API
+
+**PUT** `/stores/me/settings/reservation`
+
+>  메뉴, 편의시설, 사진 목록 등을 수정합니다.
+
+
+#### Headers
+
+* Authorization: Bearer `<JWT>` ✅ 필수 
+
+#### Request Body
+
+
+```json
+{
+  "cancellation_policy": "새로운 취소/환불 규정",
+  "deposit_amount": 10000,
+  "available_times": [
+    { "day": "MON", "start": "17:00", "end": "23:00" }
+  ]
+}
+```
+
+#### Response (200)
+
+```json
+{ "success": true, "message": "예약 설정이 수정되었습니다." }
+```
+
+---
+
+17.5 사장님 로그인 API
+
+**POST** `users/store/login`
+
+>  매장 로그인을 수행합니다
+
+
+#### Headers
+
+* Authorization: Bearer `<JWT>` ✅ 필수 
+
+#### Request Body
+
+
+```json
+{
+  "store_id": "champion_sports_pub",
+  "store_pwd": "storepass123"
+}
+```
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "message": "사장님 로그인 성공",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "store": {
+      "store_id": "champion_sports_pub",
+      "store_name": "챔피언 스포츠 펍",
+      "business_number": "123-45-67890",
+      "store_address": "서울시 강남구 역삼동 123-45"
+    }
+  }
+}
+```
+
+---
+
+17.6 사장님 회원가입 API
+
+**POST** `users/store/register`
+
+>  새로운 매장을 등록합니다
+
+
+#### Headers
+
+* Authorization: Bearer `<JWT>` ✅ 필수 
+
+#### Request Body
+
+
+```json
+{
+  "store_id": "champion_sports_pub",
+  "store_pwd": "storepass123",
+  "store_name": "챔피언 스포츠 펍",
+  "business_number": "123-45-67890",
+  "store_address": "서울시 강남구 역삼동 123-45",
+  "store_phonenumber": "02-1234-5678",
+  "store_bio": "강남역 근처에 위치한 스포츠 전문 바입니다.",
+  "store_open_hour": 18,
+  "store_close_hour": 24,
+  "store_max_people_cnt": 50,
+  "store_max_table_cnt": 10,
+  "store_max_parking_cnt": 20,
+  "store_max_screen_cnt": 5,
+  "store_holiday": 0
+}
+```
+
+#### Response (200)
+
+```json
+{
+  "success": true,
+  "message": "사장님 회원가입이 완료되었습니다.",
+  "data": {
+    "store_id": "champion_sports_pub",
+    "store_name": "챔피언 스포츠 펍",
+    "business_number": "123-45-67890"
+  }
+}
+```
+
+---
+

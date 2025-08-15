@@ -24,10 +24,10 @@ export default function OnboardingScreen() {
 
       {/* 메인 텍스트 */}
       <View className="mb-5 items-center">
-        <Text className="text-2xl font-bold text-mainDark text-center mb-5">
+        <Text className="text-2xl font-bold text-center text-gray-800 mb-5">
           같이 보는 스포츠, Spotple에서
         </Text>
-        <Text className="text-base text-mainGrayText text-center leading-6">
+        <Text className="text-base text-center text-gray-600 leading-6">
           스포츠를 좋아하는 사람들과 함께{'\n'}경기를 즐기고 최고의 장소를 찾아보세요
         </Text>
       </View>
