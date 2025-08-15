@@ -26,26 +26,20 @@ exports.markAllMessagesAsRead = async (user_id, room_id) => {
     const [rows] = await conn.query(
         'SELECT MAX(message_id) AS maxId FROM chat_messages WHERE chat_room_id = ?',
         [room_id]
+    )
+    const new_message_id = ((last_message_id[0]?.maxId) ?? 0);
+    console.log(last_message_id);
+    console.log(new_message_id);
+    
+    // UPSERT 방식으로 읽음 상태 업데이트
+    await conn.query(
+        `INSERT INTO chat_read_status (chat_room_id, user_id, last_read_message_id, updated_at) 
+         VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+         ON DUPLICATE KEY UPDATE 
+         last_read_message_id = VALUES(last_read_message_id),
+         updated_at = CURRENT_TIMESTAMP`,
+        [room_id, user_id, new_message_id > 0 ? new_message_id : -1]
     );
-    const lastId = rows?.[0]?.maxId ?? -1;
-
-    // 먼저 업데이트 시도
-    const [updateRes] = await conn.query(
-        `UPDATE chat_read_status
-   SET last_read_message_id = GREATEST(?, last_read_message_id),
-       updated_at = CURRENT_TIMESTAMP
-   WHERE chat_room_id = ? AND user_id = ?`,
-        [lastId, room_id, user_id]
-    );
-
-    // 없으면 insert
-    if (updateRes.affectedRows === 0) {
-        await conn.query(
-            `INSERT INTO chat_read_status (chat_room_id, user_id, last_read_message_id, updated_at)
-     VALUES (?, ?, ?, CURRENT_TIMESTAMP)`,
-            [room_id, user_id, lastId]
-        );
-    }
 
     return true;
 }
