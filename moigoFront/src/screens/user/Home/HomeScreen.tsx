@@ -12,7 +12,7 @@ import EnterModal from '@/screens/user/Home/EnterModal';
 import FilterBtn from '@/screens/user/Home/FilterBtn';
 import PlusMeetingBtn from '@/screens/user/Home/PlusMeetingBtn';
 
-import { useHomeScreen } from '@/hooks/useHomeScreen';
+import { useUserHomeScreen } from '@/hooks/useHomeScreen';
 
 export default function HomeScreen() {
   const {
@@ -40,7 +40,7 @@ export default function HomeScreen() {
     hideToast,
     showSuccessToast,
     showErrorToast,
-  } = useHomeScreen();
+  } = useUserHomeScreen();
 
   return (
     <View className="flex-1 bg-white">

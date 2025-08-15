@@ -195,3 +195,168 @@ export interface MatchesResponseDTO {
     filters?: Record<string, any>;
   };
 }
+
+// 가게 정보 관련 DTO
+export interface StoreInfoDTO {
+  store_name: string;
+  address_main: string;
+  address_detail?: string;
+  phone_number: string;
+  business_reg_no: string;
+  owner_name: string;
+  email: string;
+  bio?: string;
+  postal_code?: string; // 🆕 우편번호 필드 추가
+  menu?: MenuItemDTO[]; // 🆕 메뉴 정보 추가
+  facilities?: FacilitiesDTO; // 🆕 편의시설 정보 추가
+  photos?: string[]; // 🆕 사진 정보 추가
+  sports_categories?: string[]; // 🆕 스포츠 카테고리 추가
+}
+
+export interface StoreBasicInfoRequestDTO {
+  store_name: string;           // 상호명 (필수)
+  owner_name: string;           // 대표자명 (필수)
+  business_number: string;      // 사업자 등록번호 (필수)
+  store_phonenumber: string;    // 연락처 (필수)
+  store_address: string;        // 사업장 주소 (필수)
+  postal_code: string;          // 우편번호 (필수)
+  address_detail?: string;      // 상세주소 (선택)
+  email?: string;               // 이메일 (선택)
+  bio?: string;                 // 매장소개 (선택)
+}
+
+export interface StoreBasicInfoResponseDTO {
+  success: boolean;
+  message: string;
+  data: {
+    store_id: string;
+    store_name: string;
+    address_main: string;
+    phone_number: string;
+  };
+}
+
+export interface StoreInfoResponseDTO {
+  success: boolean;
+  data: {
+    store_info: StoreInfoDTO;
+    reservation_settings?: any;
+    notification_settings?: any;
+    payment_info?: any;
+  };
+}
+
+// 가게 상세 정보 관련 DTO
+export interface StoreDetailInfoDTO {
+  menu: MenuItemDTO[];
+  facilities: FacilitiesDTO;
+  photos: string[];
+  sports_categories: string[];
+}
+
+export interface MenuItemDTO {
+  name: string;
+  price: number;
+  description: string;
+}
+
+export interface FacilitiesDTO {
+  wifi: boolean;
+  parking: boolean;
+  restroom: boolean;
+  no_smoking: boolean;
+  sound_system: boolean;
+  private_room: boolean;
+  tv_screen: boolean;
+  booth_seating: boolean;
+}
+
+export interface StoreDetailInfoRequestDTO {
+  menu: MenuItemDTO[];
+  facilities?: FacilitiesDTO; // 편의시설은 선택적으로 변경
+  photos: string[];
+  sports_categories: string[];
+  bio: string; // 🆕 매장 소개 필드 추가!
+}
+
+export interface StoreDetailInfoResponseDTO {
+  success: boolean;
+  message: string;
+  data: {
+    store_id: string;
+    menu: MenuItemDTO[];
+    facilities: FacilitiesDTO;
+    photos: string[];
+    sports_categories: string[];
+  };
+}
+
+// 영업 시간 설정 DTO
+export interface BusinessHoursDTO {
+  day: string;
+  start: string;
+  end: string;
+}
+
+export interface ReservationSettingsDTO {
+  cancellation_policy?: string;
+  deposit_amount?: number;
+  min_participants: number;
+  max_participants?: number;
+  available_times: BusinessHoursDTO[];
+}
+
+export interface ReservationSettingsRequestDTO {
+  cancellation_policy?: string;
+  deposit_amount?: number;
+  min_participants: number;
+  max_participants?: number;
+  available_times: BusinessHoursDTO[];
+}
+
+export interface ReservationSettingsResponseDTO {
+  success: boolean;
+  message: string;
+  data: {
+    cancellation_policy: string;
+    deposit_amount: number;
+    min_participants: number;
+    max_participants: number;
+    available_times: BusinessHoursDTO[];
+  };
+}
+
+// 스포츠 카테고리 DTO
+export interface SportsCategoryDTO {
+  name: string;
+  created_at: string;
+}
+
+export interface SportsCategoriesResponseDTO {
+  success: boolean;
+  data: SportsCategoryDTO[];
+}
+
+export interface AddSportsCategoryRequestDTO {
+  category_name: string;
+}
+
+export interface AddSportsCategoryResponseDTO {
+  success: boolean;
+  message: string;
+  data: {
+    store_id: string;
+    category_name: string;
+    message: string;
+  };
+}
+
+export interface DeleteSportsCategoryResponseDTO {
+  success: boolean;
+  message: string;
+  data: {
+    success: boolean;
+    message: string;
+    deleted_category: string;
+  };
+}

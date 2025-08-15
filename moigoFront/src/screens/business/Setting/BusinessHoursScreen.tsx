@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -7,6 +7,8 @@ import { Feather } from '@expo/vector-icons';
 import { COLORS } from '@/constants/colors';
 import ToggleSwitch from '@/components/common/ToggleSwitch';
 import Toast from '@/components/common/Toast';
+import { useStoreInfo, useUpdateReservationSettings } from '@/hooks/queries/useUserQueries';
+import type { BusinessHoursDTO } from '@/types/DTO/users';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'BusinessHours'>;
 
@@ -27,7 +29,14 @@ interface BreakTime {
 
 export default function BusinessHoursScreen() {
   const navigation = useNavigation<NavigationProp>();
+  
+  // API 훅 사용
+  const { data: storeInfoData, isLoading: isStoreInfoLoading } = useStoreInfo();
+  const { mutate: updateReservationSettings, isSuccess: isUpdateSuccess, isError: isUpdateError, isPending: isUpdating } = useUpdateReservationSettings();
+  
   const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
   
   const [schedule, setSchedule] = useState<DaySchedule[]>([
     {
@@ -88,6 +97,102 @@ export default function BusinessHoursScreen() {
     },
   ]);
 
+  // API 데이터로 초기화
+  useEffect(() => {
+    if (storeInfoData?.data?.reservation_settings?.available_times) {
+      const apiBusinessHours = storeInfoData.data.reservation_settings.available_times;
+      
+      // API에서 받은 영업 시간을 기존 UI 형식에 맞게 변환
+      const updatedSchedule = schedule.map(day => {
+        const dayCode = getDayCode(day.name);
+        const apiDay = apiBusinessHours.find((hour: BusinessHoursDTO) => hour.day === dayCode);
+        
+        if (apiDay) {
+          return {
+            ...day,
+            isOpen: true,
+            startTime: apiDay.start,
+            endTime: apiDay.end,
+          };
+        } else {
+          return {
+            ...day,
+            isOpen: false,
+          };
+        }
+      });
+      
+      setSchedule(updatedSchedule);
+    }
+  }, [storeInfoData]);
+
+  // 요일명을 API 요일 코드로 변환
+  const getDayCode = (dayName: string): string => {
+    switch (dayName) {
+      case '월요일':
+        return 'MON';
+      case '화요일':
+        return 'TUE';
+      case '수요일':
+        return 'WED';
+      case '목요일':
+        return 'THU';
+      case '금요일':
+        return 'FRI';
+      case '토요일':
+        return 'SAT';
+      case '일요일':
+        return 'SUN';
+      default:
+        return 'MON';
+    }
+  };
+
+  // API 요일 코드를 요일명으로 변환
+  const getDayName = (dayCode: string): string => {
+    switch (dayCode) {
+      case 'MON':
+        return '월요일';
+      case 'TUE':
+        return '화요일';
+      case 'WED':
+        return '수요일';
+      case 'THU':
+        return '목요일';
+      case 'FRI':
+        return '금요일';
+      case 'SAT':
+        return '토요일';
+      case 'SUN':
+        return '일요일';
+      default:
+        return '월요일';
+    }
+  };
+
+
+
+  // 업데이트 성공 시 처리
+  useEffect(() => {
+    if (isUpdateSuccess) {
+      console.log('✅ [화면] 영업 시간 설정 수정 성공!');
+      showSuccessMessage('영업 시간이 성공적으로 저장되었습니다!');
+      
+      // 2초 후 이전 화면으로 이동
+      setTimeout(() => {
+        navigation.goBack();
+      }, 2000);
+    }
+  }, [isUpdateSuccess, navigation]);
+
+  // 업데이트 실패 시 처리
+  useEffect(() => {
+    if (isUpdateError) {
+      console.log('❌ [화면] 영업 시간 설정 수정 실패!');
+      showErrorMessage('영업 시간 저장에 실패했습니다.');
+    }
+  }, [isUpdateError]);
+
   const handleToggleDay = (dayId: string) => {
     setSchedule(prev => prev.map(day => 
       day.id === dayId ? { ...day, isOpen: !day.isOpen } : day
@@ -136,21 +241,52 @@ export default function BusinessHoursScreen() {
   };
 
   const handleSave = () => {
-    // 저장 로직
-    console.log('저장된 영업 시간:', schedule);
+    console.log('🔍 [화면] handleSave 함수 시작');
+    console.log('🔍 [화면] 현재 schedule 상태:', schedule);
     
-    // 토스트 표시
-    setShowToast(true);
+    // API 데이터 형식으로 변환
+    const businessHours: BusinessHoursDTO[] = schedule
+      .filter(day => day.isOpen)
+      .map(day => ({
+        day: getDayCode(day.name),
+        start: day.startTime,
+        end: day.endTime,
+      }));
+
+    console.log('🏪 [화면] 저장할 영업 시간:', businessHours);
+    console.log('🏪 [화면] API 호출 시작...');
     
-    // 2초 후 이전 화면으로 이동
-    setTimeout(() => {
-      setShowToast(false);
-      navigation.goBack();
-    }, 2000);
+    // API 호출 - updateReservationSettings 사용
+    const apiData = {
+      available_times: businessHours,
+      // 기존 설정 유지
+      min_participants: 2, // 기본값
+      deposit_amount: 0, // 기본값
+    };
+    
+    console.log('🏪 [화면] API 호출 데이터:', apiData);
+    console.log('🏪 [화면] updateReservationSettings 함수 호출...');
+    
+    updateReservationSettings(apiData);
+    
+    console.log('🏪 [화면] updateReservationSettings 함수 호출 완료');
   };
 
-  const handleCancel = () => {
-    navigation.goBack();
+  // 토스트 표시 함수들
+  const showSuccessMessage = (message: string) => {
+    setToastMessage(message);
+    setToastType('success');
+    setShowToast(true);
+  };
+
+  const showErrorMessage = (message: string) => {
+    setToastMessage(message);
+    setToastType('error');
+    setShowToast(true);
+  };
+
+  const hideToast = () => {
+    setShowToast(false);
   };
 
   return (
@@ -249,20 +385,22 @@ export default function BusinessHoursScreen() {
           className="py-4 w-full bg-orange-500 rounded-xl"
           onPress={handleSave}
           activeOpacity={0.7}
+          disabled={isUpdating}
         >
-          <Text className="text-lg font-semibold text-center text-white">저장</Text>
+          <Text className="text-lg font-semibold text-center text-white">
+            {isUpdating ? '저장 중...' : '저장'}
+          </Text>
         </TouchableOpacity>
       </View>
 
       {/* 토스트 */}
-      {showToast && (
-        <Toast 
-          visible={showToast}
-          message="저장되었습니다" 
-          type="success"
-          onHide={() => setShowToast(false)}
-        />
-      )}
+      <Toast 
+        visible={showToast}
+        message={toastMessage} 
+        type={toastType}
+        onHide={hideToast}
+        duration={2000}
+      />
     </View>
   );
 }

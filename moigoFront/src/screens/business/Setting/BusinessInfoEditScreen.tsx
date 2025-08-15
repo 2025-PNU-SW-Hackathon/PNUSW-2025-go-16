@@ -8,6 +8,7 @@ import { Feather } from '@expo/vector-icons';
 import { COLORS } from '@/constants/colors';
 import Toast from '@/components/common/Toast';
 import { useBusinessRegistration } from '@/hooks/queries/useAuthQueries';
+import { useStoreInfo, useUpdateStoreBasicInfo } from '@/hooks/queries/useUserQueries';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'BusinessInfoEdit'>;
 type RoutePropType = RouteProp<RootStackParamList, 'BusinessInfoEdit'>;
@@ -18,6 +19,8 @@ export default function BusinessInfoEditScreen() {
   const { storeId, isSignup = false } = route.params || {};
   
   const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const [isLoading, setIsLoading] = useState(false);
   
   const [businessInfo, setBusinessInfo] = useState({
@@ -28,25 +31,82 @@ export default function BusinessInfoEditScreen() {
     store_address: '',
     address_detail: '',
     business_certificate_url: '',
+    phone_number: '',
+    email: '',
   });
 
   const businessRegistrationMutation = useBusinessRegistration();
+  
+  // API 훅 사용
+  const { data: storeInfoData, isLoading: isStoreInfoLoading } = useStoreInfo();
+  const { mutate: updateStoreBasicInfo, isPending: isUpdating, isSuccess: isUpdateSuccess, isError: isUpdateError } = useUpdateStoreBasicInfo();
 
   useEffect(() => {
     // 회원가입이 아닌 경우 기존 정보를 불러옴
-    if (!isSignup) {
-      // TODO: 기존 사업자 정보를 불러오는 로직
+    if (!isSignup && storeInfoData?.data?.store_info) {
+      // API에서 가져온 storeInfo를 사용하여 폼 초기화
+      const storeInfo = storeInfoData.data.store_info;
+      console.log('🔍 [BusinessInfoEdit] API에서 가져온 storeInfo:', storeInfo);
+      
       setBusinessInfo({
-        store_name: '챔피언 스포츠 펍',
-        owner_name: '김성훈',
-        business_number: '123-45-67890',
-        postal_code: '06123',
-        store_address: '서울특별시 강남구 강남대로 123길 45',
-        address_detail: '2층 201호',
+        store_name: storeInfo.store_name || '',
+        owner_name: storeInfo.owner_name || '',
+        business_number: storeInfo.business_reg_no || '',
+        postal_code: storeInfo.postal_code || '',
+        store_address: storeInfo.address_main || '',
+        address_detail: storeInfo.address_detail || '',
+        business_certificate_url: '', // StoreInfoDTO에 business_certificate_url이 없으므로 빈 값으로 설정
+        phone_number: storeInfo.phone_number || '',
+        email: storeInfo.email || '',
+      });
+      
+      console.log('🔍 [BusinessInfoEdit] 폼에 설정된 businessInfo:', {
+        store_name: storeInfo.store_name || '',
+        owner_name: storeInfo.owner_name || '',
+        business_number: storeInfo.business_reg_no || '',
+        store_address: storeInfo.address_main || '',
+        address_detail: storeInfo.address_detail || '',
+      });
+    } else if (!isSignup) {
+      // storeInfo가 없는 경우 기본값 설정
+      setBusinessInfo({
+        store_name: '',
+        owner_name: '',
+        business_number: '',
+        postal_code: '',
+        store_address: '',
+        address_detail: '',
         business_certificate_url: '',
+        phone_number: '',
+        email: '',
       });
     }
-  }, [isSignup]);
+  }, [isSignup, storeInfoData]);
+
+  // 사업자 정보 수정 성공/실패 처리
+  useEffect(() => {
+    if (isUpdateSuccess) {
+      console.log('✅ [BusinessInfoEdit] 사업자 정보 수정 성공!');
+      setToastMessage('사업자 정보가 성공적으로 수정되었습니다!');
+      setToastType('success');
+      setShowToast(true);
+      
+      // 2초 후 이전 화면으로 이동
+      setTimeout(() => {
+        setShowToast(false);
+        navigation.goBack();
+      }, 2000);
+    }
+  }, [isUpdateSuccess, navigation]);
+
+  useEffect(() => {
+    if (isUpdateError) {
+      console.log('❌ [BusinessInfoEdit] 사업자 정보 수정 실패!');
+      setToastMessage('사업자 정보 수정에 실패했습니다.');
+      setToastType('error');
+      setShowToast(true);
+    }
+  }, [isUpdateError]);
 
   const handleInputChange = (field: keyof typeof businessInfo, value: string) => {
     setBusinessInfo(prev => ({ ...prev, [field]: value }));
@@ -109,16 +169,30 @@ export default function BusinessInfoEditScreen() {
           }, 2000);
         }
       } else {
-        // 일반 수정 시: 기존 로직
-        console.log('저장된 사업자 정보:', businessInfo);
+        // 일반 수정 시: 사업자 정보 수정 API 호출
+        console.log('🚀 [BusinessInfoEdit] 사업자 정보 수정 시작:', businessInfo);
         
-        setShowToast(true);
+        const updateData = {
+          // 새로운 요구사항: 모든 필수 필드 포함
+          store_name: businessInfo.store_name,        // 상호명 (필수)
+          owner_name: businessInfo.owner_name,        // 대표자명 (필수)
+          business_number: businessInfo.business_number, // 사업자 등록번호 (필수)
+          store_phonenumber: businessInfo.phone_number, // 연락처 (필수)
+          store_address: businessInfo.store_address,   // 사업장 주소 (필수)
+          postal_code: businessInfo.postal_code,       // 우편번호 (필수)
+        };
         
-        // 2초 후 이전 화면으로 이동
-        setTimeout(() => {
-          setShowToast(false);
-          navigation.goBack();
-        }, 2000);
+        console.log('🚀 [BusinessInfoEdit] 서버로 전송할 데이터:', updateData);
+        console.log('🔍 [BusinessInfoEdit] 필드별 값 확인:');
+        console.log('- store_name:', businessInfo.store_name);
+        console.log('- owner_name:', businessInfo.owner_name);
+        console.log('- business_number:', businessInfo.business_number);
+        console.log('- store_phonenumber:', businessInfo.phone_number);
+        console.log('- store_address:', businessInfo.store_address);
+        console.log('- postal_code:', businessInfo.postal_code);
+        
+        console.log('🚀 [BusinessInfoEdit] 서버로 전송할 데이터:', updateData);
+        updateStoreBasicInfo(updateData);
       }
     } catch (error) {
       console.error('저장 실패:', error);
@@ -143,7 +217,7 @@ export default function BusinessInfoEditScreen() {
       <ScrollView className="flex-1 px-4 pt-4" showsVerticalScrollIndicator={false}>
         {/* 헤더 */}
         <View className="mb-6">
-          <Text className="text-2xl font-bold text-center text-gray-800 mb-2">
+          <Text className="mb-2 text-2xl font-bold text-center text-gray-800">
             {isSignup ? '사업자 정보 등록' : '사업자 정보 수정'}
           </Text>
           <Text className="text-sm text-center text-gray-600">
@@ -193,6 +267,34 @@ export default function BusinessInfoEditScreen() {
             keyboardType="numeric"
           />
         </View>
+
+        {/* 연락처 정보 */}
+        <View className="mb-6">
+          <Text className="mb-2 text-sm font-medium text-gray-800">
+            연락처 <Text className="text-red-500">*</Text>
+          </Text>
+          
+          {/* 전화번호 */}
+          <TextInput
+            className="p-4 mb-3 bg-gray-50 rounded-xl border border-gray-200"
+            value={businessInfo.phone_number || ''}
+            onChangeText={(text) => handleInputChange('phone_number', text)}
+            placeholder="전화번호"
+            keyboardType="phone-pad"
+          />
+          
+          {/* 이메일 */}
+          <TextInput
+            className="p-4 bg-gray-50 rounded-xl border border-gray-200"
+            value={businessInfo.email || ''}
+            onChangeText={(text) => handleInputChange('email', text)}
+            placeholder="이메일"
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+        </View>
+
+
 
         {/* 사업장 주소 */}
         <View className="mb-6">
@@ -263,10 +365,10 @@ export default function BusinessInfoEditScreen() {
           className="py-4 w-full bg-orange-500 rounded-xl"
           onPress={handleSave}
           activeOpacity={0.7}
-          disabled={isLoading || businessRegistrationMutation.isPending}
+          disabled={isLoading || businessRegistrationMutation.isPending || isUpdating}
         >
           <Text className="text-lg font-semibold text-center text-white">
-            {isLoading || businessRegistrationMutation.isPending 
+            {isLoading || businessRegistrationMutation.isPending || isUpdating
               ? '처리중...' 
               : (isSignup ? '회원가입 완료' : '저장')
             }
@@ -278,8 +380,8 @@ export default function BusinessInfoEditScreen() {
       {showToast && (
         <Toast 
           visible={showToast}
-          message={isSignup ? "회원가입이 완료되었습니다. 로그인해주세요." : "저장되었습니다"} 
-          type="success"
+          message={toastMessage} 
+          type={toastType}
           onHide={() => setShowToast(false)}
         />
       )}

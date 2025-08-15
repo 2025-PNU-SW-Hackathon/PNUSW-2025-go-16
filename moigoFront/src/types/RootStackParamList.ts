@@ -17,6 +17,7 @@ export type RootStackParamList = {
   Meeting: { eventId: string };
   ParticipatedMatches: undefined;
   MyInfoSetting: undefined;
+  Profile: undefined;
   ChangePassword: undefined;
   Favorite: undefined;
 };

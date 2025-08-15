@@ -7,7 +7,7 @@ import PromotionCard from "@/components/business/PromotionCard";
 import AcceptModal from "./AcceptModal";
 import RejectModal from "./RejectModal";
 import { COLORS } from "@/constants/colors";
-import { useHomeScreen } from "@/hooks/useHomeScreen";
+import { useBusinessHomeScreen } from "@/hooks/useHomeScreen";
 import Toast from "@/components/common/Toast";
 
 export default function BusinessHomeScreen() {
@@ -38,7 +38,7 @@ export default function BusinessHomeScreen() {
     // 뮤테이션 상태
     isAccepting,
     isRejecting,
-  } = useHomeScreen();
+  } = useBusinessHomeScreen();
 
   const [refreshing, setRefreshing] = useState(false);
 

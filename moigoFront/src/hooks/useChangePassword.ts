@@ -31,9 +31,10 @@ export const useChangePassword = () => {
 
   // 사용자 타입에 따른 API 엔드포인트 결정
   const getApiEndpoint = () => {
+    // 사용자 타입에 따라 다른 API 엔드포인트 사용
     return user?.userType === 'business' 
-      ? '/business/change-password' 
-      : '/user/change-password';
+      ? '/stores/me/password'  // 사장님: PUT /api/v1/stores/me/password
+      : '/users/me/password';  // 일반 사용자: PUT /api/v1/users/me/password
   };
 
   // 폼 유효성 검사
@@ -102,9 +103,9 @@ export const useChangePassword = () => {
     if (!validateForm()) return;
     
     try {
-      // 사용자 타입에 따른 API 엔드포인트 사용
+      const userType = user?.userType || 'user';
       const endpoint = getApiEndpoint();
-      console.log(`비밀번호 변경 API 호출: ${endpoint} (사용자 타입: ${user?.userType})`);
+      console.log(`비밀번호 변경 API 호출: ${endpoint} (사용자 타입: ${userType})`);
       
       const result = await changePasswordMutation.mutateAsync({
         old_password: form.currentPassword,
@@ -146,9 +147,23 @@ export const useChangePassword = () => {
       
       let errorMessage = '비밀번호 변경에 실패했습니다';
       
-      if (error?.response?.data?.errorCode === 'WRONG_PASSWORD') {
-        errorMessage = '현재 비밀번호가 올바르지 않습니다';
-        setErrors(prev => ({ ...prev, currentPassword: errorMessage }));
+      // 백엔드 에러 응답 확인
+      if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      // HTTP 상태 코드별 에러 처리
+      if (error?.response?.status === 500) {
+        errorMessage = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+      } else if (error?.response?.status === 400) {
+        if (error?.response?.data?.errorCode === 'WRONG_PASSWORD') {
+          errorMessage = '현재 비밀번호가 올바르지 않습니다';
+          setErrors(prev => ({ ...prev, currentPassword: errorMessage }));
+        } else {
+          errorMessage = error?.response?.data?.message || '잘못된 요청입니다';
+        }
+      } else if (error?.response?.status === 401) {
+        errorMessage = '인증이 만료되었습니다. 다시 로그인해주세요.';
       }
       
       setToastMessage(errorMessage);

@@ -19,6 +19,12 @@ export default function MinReservationModal({
 }: MinReservationModalProps) {
   const [minCapacity, setMinCapacity] = useState(currentMinCapacity);
 
+  // currentMinCapacity가 변경될 때마다 상태 업데이트
+  React.useEffect(() => {
+    console.log('🔍 [모달] 최소 인원수 변경됨:', currentMinCapacity);
+    setMinCapacity(currentMinCapacity);
+  }, [currentMinCapacity]);
+
   const increaseCapacity = () => {
     if (minCapacity < 10) {
       setMinCapacity(prev => prev + 1);
@@ -32,6 +38,7 @@ export default function MinReservationModal({
   };
 
   const handleSave = () => {
+    console.log('💾 [모달] 최소 인원수 저장:', minCapacity);
     onSave(minCapacity);
     onClose();
   };
@@ -61,7 +68,7 @@ export default function MinReservationModal({
           onPress={increaseCapacity}
           activeOpacity={0.7}
         >
-          <Feather name="plus" size={24} color={COLORS.mainDarkGray} />1
+          <Feather name="plus" size={24} color={COLORS.mainDarkGray} />
         </TouchableOpacity>
       </View>
 

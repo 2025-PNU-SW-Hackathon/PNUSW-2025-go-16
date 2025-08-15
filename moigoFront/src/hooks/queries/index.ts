@@ -33,10 +33,23 @@ export { useStoreDashboard } from '../useHomeScreen';
 export { useStoreReservations } from '../useHomeScreen';
 export { useAcceptReservation } from '../useHomeScreen';
 export { useRejectReservation } from '../useHomeScreen';
+export { useBusinessHomeScreen } from '../useHomeScreen';
 export { useHomeScreen } from '../useHomeScreen';
+
+// 회원 탈퇴
+export { useDeleteAccount } from './useUserQueries';
 
 // 일정 관련 훅
 export {
   useMatches,
   useStoreSchedule,
+} from './useUserQueries';
+
+// 가게 정보 관련 훅
+export {
+  useStoreInfo,
+  useUpdateStoreBasicInfo,
+  useUpdateNotificationSettings,
+  useUpdateReservationSettings,
+  useUpdateStoreDetailInfo,
 } from './useUserQueries'; 

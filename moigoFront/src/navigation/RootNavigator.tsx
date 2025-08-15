@@ -7,6 +7,7 @@ import LoginScreen from '@/screens/LoginScreen';
 import SignupScreen from '@/screens/SignupScreen';
 import ChatRoomScreen from '@/screens/ChatRoomScreen';
 import MyInfoSetting from '@/screens/user/Mypage/MyInfoSetting';
+import Profile from '@/screens/user/Mypage/Profile';
 import ParticipatedMatchesScreen from '@/screens/user/ParticipatedMatches/ParticipatedMatchesScreen';
 import ChangePasswordScreen from '@/screens/user/Password/ChangePasswordScreen';
 import CustomHeader from '@/components/common/CustomHeader';
@@ -33,16 +34,9 @@ export default function RootNavigator() {
       {isLoggedIn ? (
         <>
           {/* 사용자 타입에 따라 다른 메인 화면 표시 */}
-          {user?.userType === 'business' ? (
-            <Stack.Screen name="Main" options={{ headerShown: false }}>
-              {() => <BusinessNavigator />}
-            </Stack.Screen>
-
-          ) : (
-            <Stack.Screen name="Main" options={{ headerShown: false }}>
-              {() => <MainTabNavigator />}
-            </Stack.Screen>
-          )}
+          <Stack.Screen name="Main" options={{ headerShown: false }}>
+            {() => user?.userType === 'business' ? <BusinessNavigator /> : <MainTabNavigator />}
+          </Stack.Screen>
           <Stack.Screen name="ChatRoom" component={ChatRoomScreen} options={{ headerShown: false }} />
           <Stack.Screen 
             name="MyInfoSetting" 
@@ -50,6 +44,14 @@ export default function RootNavigator() {
             options={{ 
               headerShown: true,
               header: () => <CustomHeader title="설정" />,
+            }} 
+          />
+          <Stack.Screen 
+            name="Profile" 
+            component={Profile} 
+            options={{ 
+              headerShown: true,
+              header: () => <CustomHeader title="프로필 편집" />,
             }} 
           />
           <Stack.Screen name="CreateMeeting" component={CreateMeeting} options={{ headerShown: false }} />

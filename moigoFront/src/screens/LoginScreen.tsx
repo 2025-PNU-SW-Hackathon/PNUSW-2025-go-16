@@ -55,7 +55,16 @@ export default function LoginScreen() {
             userType: 'business',
           }, response.data.token);
           
-          Alert.alert('성공', '사장님 로그인되었습니다.');
+          // 사장님 로그인 성공 후 BusinessHome으로 네비게이션
+          Alert.alert('성공', '사장님 로그인되었습니다.', [
+            {
+              text: '확인',
+              onPress: () => {
+                // RootNavigator에서 자동으로 BusinessHome으로 전환됨
+                // 추가 네비게이션 로직이 필요하다면 여기에 추가
+              }
+            }
+          ]);
         }
       } else {
         // 일반 사용자 로그인
@@ -113,8 +122,16 @@ export default function LoginScreen() {
           userType: selectedUserType || 'sports_fan',
         }, token);
 
-        // 로그인 성공 알림 (네비게이션은 RootNavigator에서 자동 처리)
-        Alert.alert('성공', '로그인되었습니다.');
+        // 일반 사용자 로그인 성공 후 MainNavigator의 Home으로 이동
+        Alert.alert('성공', '로그인되었습니다.', [
+          {
+            text: '확인',
+            onPress: () => {
+              // RootNavigator에서 자동으로 MainNavigator의 Home으로 전환됨
+              // 추가 네비게이션 로직이 필요하다면 여기에 추가
+            }
+          }
+        ]);
       }
     } catch (error: any) {
       console.error('로그인 에러:', error);
