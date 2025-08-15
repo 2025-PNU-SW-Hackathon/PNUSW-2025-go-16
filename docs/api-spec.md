@@ -230,12 +230,13 @@
   "data": {
     "store_info": {
       "store_name": "챔피언 스포츠 펍",
-      "address_main": "강남역 2번 출구 도보 3분",
+      "store_address": "강남역 2번 출구 도보 3분",
       "address_detail": "상세 주소",
-      "phone_number": "02-1234-5678",
-      "business_reg_no": "123-45-67890",
+      "store_phonenumber": "02-1234-5678",
+      "business_number": "123-45-67890",
       "owner_name": "김철수",
       "email": "sportsclub@example.com",
+      "postal_code": "06123",
       "bio": "강남역 근처에 위치한 스포츠 전문 바입니다.",
       "menu": [
         { "name": "치킨 세트", "price": 28000, "description": "바삭한 치킨..." },
@@ -288,15 +289,26 @@
 ```json
 {
   "store_name": "챔피언 스포츠 펍",
-  "address_main": "강남역 2번 출구 도보 3분",
-  "address_detail": "상세 주소",
-  "phone_number": "02-1234-5678",
-  "business_reg_no": "123-45-67890",
+  "store_address": "강남역 2번 출구 도보 3분",
+  "store_phonenumber": "02-1234-5678",
+  "business_number": "123-45-67890",
   "owner_name": "김철수",
-  "email": "sportsclub@example.com",
+  "postal_code": "06123",
   "bio": "강남역 근처에 위치한 스포츠 전문 바입니다."
 }
 ```
+
+#### 필수 필드:
+- `store_name`: 상호명
+- `store_address`: 사업자 주소
+- `store_phonenumber`: 연락처
+- `business_number`: 사업자 등록번호
+- `owner_name`: 대표자명
+- `postal_code`: 우편번호
+
+#### 선택 필드:
+- `bio`: 매장 소개
+
 - **Response**:
 ```json
 {
@@ -305,8 +317,12 @@
   "data": {
     "store_id": "store_123",
     "store_name": "챔피언 스포츠 펍",
-    "address_main": "강남역 2번 출구 도보 3분",
-    "phone_number": "02-1234-5678"
+    "store_address": "강남역 2번 출구 도보 3분",
+    "store_phonenumber": "02-1234-5678",
+    "business_number": "123-45-67890",
+    "owner_name": "김철수",
+    "postal_code": "06123",
+    "bio": "강남역 근처에 위치한 스포츠 전문 바입니다."
   }
 }
 ```
@@ -545,16 +561,42 @@
 - **Request Body**:
 ```json
 {
-  "business_number": "123-45-67890",
+  "store_name": "챔피언 스포츠 펍",
   "owner_name": "김철수",
+  "business_number": "123-45-67890",
+  "postal_code": "06123",
+  "store_address": "강남역 2번 출구 도보 3분",
+  "address_detail": "상세 주소",
   "business_certificate_url": "https://example.com/cert.pdf"
 }
 ```
+
+#### 필수 필드:
+- `store_name`: 상호명
+- `owner_name`: 대표자명
+- `business_number`: 사업자 등록번호
+- `postal_code`: 우편번호
+- `store_address`: 사업자 주소
+
+#### 선택 필드:
+- `address_detail`: 상세주소
+- `business_certificate_url`: 사업자등록증 URL
+
 - **Response**:
 ```json
 {
   "success": true,
-  "message": "사업자 정보가 수정되었습니다."
+  "message": "사업자 정보가 수정되었습니다.",
+  "data": {
+    "store_id": "store_123",
+    "store_name": "챔피언 스포츠 펍",
+    "owner_name": "김철수",
+    "business_number": "123-45-67890",
+    "postal_code": "06123",
+    "store_address": "강남역 2번 출구 도보 3분",
+    "address_detail": "상세 주소",
+    "business_certificate_url": "https://example.com/cert.pdf"
+  }
 }
 ```
 

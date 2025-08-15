@@ -569,6 +569,7 @@ exports.getMyStoreInfo = async (store_id) => {
         business_reg_no: store.business_number,
         owner_name: store.owner_name,
         email: store.email,
+        postal_code: store.postal_code,  // 🆕 우편번호 추가
         bio: store.store_bio,
         menu: menu,
         facilities: facilities,
@@ -603,17 +604,32 @@ exports.updateMyStoreBasicInfo = async (store_id, basicInfo) => {
     store_phonenumber,
     business_number,
     owner_name,
-    email,
+    postal_code,  // 🆕 postal_code 추가
     bio
   } = basicInfo;
   
   try {
+    console.log('🔍 [updateMyStoreBasicInfo] 업데이트 시작:', {
+      store_id,
+      store_name,
+      store_address,
+      store_phonenumber,
+      business_number,
+      owner_name,
+      postal_code,
+      bio
+    });
+    
+    // bio가 undefined일 때 기본값 설정
+    const bioValue = bio || '매장 소개를 입력해주세요';
+    
     const [result] = await conn.query(
       `UPDATE store_table 
        SET store_name = ?, store_address = ?, store_phonenumber = ?, 
-           business_number = ?, store_bio = ?
+           business_number = ?, owner_name = ?, postal_code = ?, store_bio = ?
        WHERE store_id = ?`,
-      [store_name, store_address, store_phonenumber, business_number, bio, store_id]
+      [store_name, store_address, store_phonenumber, business_number, 
+       owner_name, postal_code, bioValue, store_id]
     );
     
     if (result.affectedRows === 0) {
@@ -628,12 +644,17 @@ exports.updateMyStoreBasicInfo = async (store_id, basicInfo) => {
       store_address,
       store_phonenumber,
       business_number,
-      bio
+      owner_name,
+      postal_code,
+      bio: bioValue
     };
   } catch (error) {
+    console.error('❌ [updateMyStoreBasicInfo] SQL 에러:', error);
+    console.error('❌ [updateMyStoreBasicInfo] SQL 메시지:', error.sqlMessage);
+    
     if (!error.statusCode) {
       error.statusCode = 500;
-      error.message = '매장 기본 정보 수정 중 오류가 발생했습니다.';
+      error.message = `매장 기본 정보 수정 중 오류가 발생했습니다: ${error.sqlMessage || error.message}`;
     }
     throw error;
   }

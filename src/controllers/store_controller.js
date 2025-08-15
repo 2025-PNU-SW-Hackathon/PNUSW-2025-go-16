@@ -125,17 +125,17 @@ exports.updateMyStoreBasicInfo = async (req, res, next) => {
 
     const {
       store_name,
-      address_main,        // ✅ API 명세서와 일치
+      store_address,        // 🆕 API 명세서와 일치하도록 수정
       address_detail,
-      phone_number,        // ✅ API 명세서와 일치
-      business_reg_no,     // ✅ API 명세서와 일치
+      store_phonenumber,    // 🆕 API 명세서와 일치하도록 수정
+      business_number,      // 🆕 API 명세서와 일치하도록 수정
       owner_name,
-      email,
+      postal_code,          // 🆕 우편번호 추가
       bio
     } = req.body;
 
     // 필수 필드 검증
-    if (!store_name || !address_main || !phone_number) {
+    if (!store_name || !store_address || !store_phonenumber) {
       return res.status(400).json({
         success: false,
         message: '가게명, 주소, 전화번호는 필수입니다.'
@@ -144,12 +144,12 @@ exports.updateMyStoreBasicInfo = async (req, res, next) => {
 
     const result = await storeService.updateMyStoreBasicInfo(store_id, {
       store_name,
-      store_address: address_main,        // ✅ 매핑
+      store_address,        // 🆕 직접 전달
       address_detail,
-      store_phonenumber: phone_number,    // ✅ 매핑
-      business_number: business_reg_no,   // ✅ 매핑
+      store_phonenumber,    // 🆕 직접 전달
+      business_number,      // 🆕 직접 전달
       owner_name,
-      email,
+      postal_code,          // 🆕 우편번호 추가
       bio
     });
 
