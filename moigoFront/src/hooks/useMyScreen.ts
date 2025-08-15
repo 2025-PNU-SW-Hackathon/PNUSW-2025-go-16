@@ -76,6 +76,7 @@ export function useMyScreen() {
   const handleEditProfile = () => {
     // 프로필 편집 페이지로 이동
     console.log('프로필 편집');
+    navigation.navigate('Profile');
   };
 
   // 비밀번호 편집

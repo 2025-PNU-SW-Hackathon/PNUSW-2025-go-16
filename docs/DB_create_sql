@@ -199,3 +199,32 @@ INSERT INTO bank_codes (bank_code, bank_name) VALUES
 ('009', '수협은행'),
 ('010', '케이뱅크'),
 ('011', '카카오뱅크');
+
+CREATE TABLE `matches` (
+  `id` int NOT NULL,
+  `competition_code` varchar(10) DEFAULT NULL,
+  `match_date` datetime DEFAULT NULL,
+  `status` varchar(20) DEFAULT NULL,
+  `home_team` varchar(100) DEFAULT NULL,
+  `away_team` varchar(100) DEFAULT NULL,
+  `venue` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `id` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+
+CREATE TABLE `store_menu` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `store_id` varchar(64) NOT NULL,
+  `name` varchar(100) NOT NULL COMMENT '메뉴명',
+  `price` int NOT NULL COMMENT '가격',
+  `description` text COMMENT '메뉴 설명',
+  `category` varchar(50) DEFAULT NULL COMMENT '메뉴 카테고리',
+  `is_available` tinyint(1) DEFAULT 1 COMMENT '판매 가능 여부',
+  `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_store_id` (`store_id`),
+  CONSTRAINT `fk_store_menu_store` FOREIGN KEY (`store_id`) REFERENCES `store_table` (`store_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
