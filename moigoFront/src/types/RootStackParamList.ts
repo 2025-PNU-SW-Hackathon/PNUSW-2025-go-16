@@ -1,4 +1,4 @@
-import { ChatRoom } from './ChatTypes';
+import type { ChatRoom } from './ChatTypes';
 
 export type RootStackParamList = {
   Onboarding: undefined;

@@ -56,9 +56,7 @@ export default function MainTabNavigator() {
         component={ChatScreen}
         options={{
           tabBarLabel: '채팅',
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="message-circle" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Feather name="message-circle" size={size} color={color} />,
         }}
       />
       <Tab.Screen

@@ -5,6 +5,7 @@ import MainTabNavigator from './MainTabNavigator';
 import OnboardingScreen from '@/screens/OnboardingScreen';
 import LoginScreen from '@/screens/LoginScreen';
 import SignupScreen from '@/screens/SignupScreen';
+import ChatListScreen from '@/screens/ChatListScreen';
 import ChatRoomScreen from '@/screens/ChatRoomScreen';
 import MyInfoSetting from '@/screens/user/Mypage/MyInfoSetting';
 import Profile from '@/screens/user/Mypage/Profile';

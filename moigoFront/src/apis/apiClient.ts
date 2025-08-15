@@ -4,9 +4,9 @@ import { useAuthStore } from '@/store/authStore';
 
 // React Native에서는 localhost 대신 실제 IP 주소 사용
 // 개발자 도구에서 확인한 IP 주소로 변경하세요
-// const BASE_URL = 'http://10.0.2.2:3001/'; // Android 에뮬레이터용
-const BASE_URL = 'http://localhost:3001/api/v1'; // iOS 시뮬레이터용
-// const BASE_URL = 'http://192.168.1.xxx:5000/'; // 실제 디바이스용 (실제 IP 주소)
+const BASE_URL = 'http://10.0.2.2:5000/api/v1'; // Android 에뮬레이터용
+// const BASE_URL = 'http://localhost:3001/api/v1'; // iOS 시뮬레이터용
+// const BASE_URL = 'http://192.168.1.xxx:5000/api/v1'; // 실제 디바이스용 (실제 IP 주소)
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
