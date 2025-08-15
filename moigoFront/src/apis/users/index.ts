@@ -57,7 +57,7 @@ export const updateProfile = async (
   return response.data;
 };
 
-// PUT /users/me/password - 비밀번호 변경
+// PUT /users/me/password 또는 PUT /stores/me/password - 비밀번호 변경
 export const changePassword = async (
   data: ChangePasswordRequestDTO,
   endpoint?: string
@@ -282,6 +282,24 @@ export const updateStoreDetailInfo = async (
 // 예약 설정 조회
 export const getReservationSettings = async () => {
   const response = await apiClient.get('/stores/me/settings/reservation');
+  return response.data;
+};
+
+// 회원 탈퇴 관련 API
+
+// 일반 사용자 회원 탈퇴 - DELETE /api/v1/users/me
+export const deleteUser = async (): Promise<{ success: boolean; message: string }> => {
+  console.log('🌐 [API] deleteUser 호출: DELETE /users/me');
+  const response = await apiClient.delete('/users/me');
+  console.log('✅ [API] deleteUser 성공:', response.data);
+  return response.data;
+};
+
+// 사장님 회원 탈퇴 - DELETE /api/v1/stores/me
+export const deleteStore = async (): Promise<{ success: boolean; message: string }> => {
+  console.log('🌐 [API] deleteStore 호출: DELETE /stores/me');
+  const response = await apiClient.delete('/stores/me');
+  console.log('✅ [API] deleteStore 성공:', response.data);
   return response.data;
 };
 

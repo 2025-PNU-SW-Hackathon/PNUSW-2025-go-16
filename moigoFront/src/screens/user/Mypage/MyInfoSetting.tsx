@@ -36,6 +36,7 @@ export default function MyInfoSetting() {
     handleSendFeedback,
     handleLogout,
     handleWithdraw,
+    isDeletingAccount,
   } = useMyInfoSetting();
 
   const handleLogoutPress = () => {
@@ -247,8 +248,14 @@ export default function MyInfoSetting() {
             <Text className="font-medium text-red-500">로그아웃</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity className="items-center mx-4" onPress={handleWithdrawPress}>
-            <Text className="font-medium text-gray-500">회원탈퇴</Text>
+          <TouchableOpacity 
+            className="items-center mx-4" 
+            onPress={handleWithdrawPress}
+            disabled={isDeletingAccount}
+          >
+            <Text className={`font-medium ${isDeletingAccount ? 'text-gray-300' : 'text-gray-500'}`}>
+              {isDeletingAccount ? '탈퇴 중...' : '회원탈퇴'}
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

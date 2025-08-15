@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuthStore } from '../../store/authStore';
 import {
   getMyInfo,
   updateProfile,
@@ -19,6 +20,7 @@ import {
   getSportsCategories,
   getReservationSettings,
 } from '../../apis/users';
+import { deleteUser, deleteStore } from '../../apis/users';
 import type {
   UpdateProfileRequestDTO,
   ChangePasswordRequestDTO,
@@ -99,6 +101,14 @@ export const useStoreSchedule = (params?: {
   page?: number;
   page_size?: number;
 }) => {
+  const { user } = useAuthStore();
+  
+  // 일반 사용자가 호출하려고 하면 에러 발생
+  if (user?.userType !== 'business') {
+    console.error('사장님 계정으로만 접근 가능한 API입니다.');
+    throw new Error('사장님 계정으로만 접근 가능합니다.');
+  }
+  
   return useQuery({
     queryKey: ['storeSchedule', params],
     queryFn: () => getStoreSchedule(params),
@@ -128,11 +138,19 @@ export const useUpdateProfile = () => {
   });
 };
 
-// PUT /users/me/password - 비밀번호 변경 훅
+// PUT /users/me/password 또는 PUT /stores/me/password - 비밀번호 변경 훅
 export const useChangePassword = () => {
+  const { user } = useAuthStore();
+  
   return useMutation({
     mutationFn: (data: ChangePasswordRequestDTO & { endpoint?: string }) => {
       const { endpoint, ...passwordData } = data;
+      
+      // 사장님 전용 API 호출 시 역할 검증
+      if (endpoint === '/stores/me/password' && user?.userType !== 'business') {
+        throw new Error('사장님 계정으로만 접근 가능합니다.');
+      }
+      
       return changePassword(passwordData, endpoint);
     },
     onError: (error) => {
@@ -159,6 +177,14 @@ export const useUpdateUserSettings = () => {
 
 // 가게 정보 관련 훅
 export const useStoreInfo = () => {
+  const { user } = useAuthStore();
+  
+  // 일반 사용자가 호출하려고 하면 에러 발생
+  if (user?.userType !== 'business') {
+    console.error('사장님 계정으로만 접근 가능한 API입니다.');
+    throw new Error('사장님 계정으로만 접근 가능합니다.');
+  }
+  
   return useQuery({
     queryKey: ['storeInfo'],
     queryFn: () => getStoreInfo(),
@@ -169,9 +195,15 @@ export const useStoreInfo = () => {
 
 export const useUpdateStoreBasicInfo = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
   
   return useMutation({
-    mutationFn: (data: StoreBasicInfoRequestDTO) => updateStoreBasicInfo(data),
+    mutationFn: (data: StoreBasicInfoRequestDTO) => {
+      if (user?.userType !== 'business') {
+        throw new Error('사장님 계정으로만 접근 가능합니다.');
+      }
+      return updateStoreBasicInfo(data);
+    },
     onSuccess: () => {
       // 매장 정보 캐시 무효화
       queryClient.invalidateQueries({ queryKey: ['storeInfo'] });
@@ -186,6 +218,7 @@ export const useUpdateStoreBasicInfo = () => {
 // 알림 설정 업데이트 훅
 export const useUpdateNotificationSettings = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
 
   return useMutation({
     mutationFn: (data: {
@@ -193,7 +226,12 @@ export const useUpdateNotificationSettings = () => {
       payment_alerts: boolean;
       system_alerts: boolean;
       marketing_alerts: boolean;
-    }) => updateNotificationSettings(data),
+    }) => {
+      if (user?.userType !== 'business') {
+        throw new Error('사장님 계정으로만 접근 가능합니다.');
+      }
+      return updateNotificationSettings(data);
+    },
     onSuccess: () => {
       // 매장 정보 캐시 무효화
       queryClient.invalidateQueries({ queryKey: ['storeInfo'] });
@@ -207,6 +245,14 @@ export const useUpdateNotificationSettings = () => {
 
 // 예약 설정 조회
 export const useReservationSettings = () => {
+  const { user } = useAuthStore();
+  
+  // 일반 사용자가 호출하려고 하면 에러 발생
+  if (user?.userType !== 'business') {
+    console.error('사장님 계정으로만 접근 가능한 API입니다.');
+    throw new Error('사장님 계정으로만 접근 가능합니다.');
+  }
+  
   return useQuery({
     queryKey: ['reservationSettings'],
     queryFn: getReservationSettings,
@@ -217,8 +263,15 @@ export const useReservationSettings = () => {
 // 예약 설정 수정
 export const useUpdateReservationSettings = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  
   return useMutation({
-    mutationFn: updateReservationSettings,
+    mutationFn: (data: any) => {
+      if (user?.userType !== 'business') {
+        throw new Error('사장님 계정으로만 접근 가능합니다.');
+      }
+      return updateReservationSettings(data);
+    },
     onMutate: (data) => {
       console.log('🚀 [훅] 예약 설정 수정 시작:', data);
     },
@@ -238,9 +291,15 @@ export const useUpdateReservationSettings = () => {
 // 가게 상세 정보 수정 훅
 export const useUpdateStoreDetailInfo = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
 
   return useMutation({
-    mutationFn: (data: StoreDetailInfoRequestDTO) => updateStoreDetailInfo(data),
+    mutationFn: (data: StoreDetailInfoRequestDTO) => {
+      if (user?.userType !== 'business') {
+        throw new Error('사장님 계정으로만 접근 가능합니다.');
+      }
+      return updateStoreDetailInfo(data);
+    },
     onSuccess: () => {
       // 매장 정보 캐시 무효화
       queryClient.invalidateQueries({ queryKey: ['storeInfo'] });
@@ -256,6 +315,14 @@ export const useUpdateStoreDetailInfo = () => {
 
 // 스포츠 카테고리 조회
 export const useSportsCategories = () => {
+  const { user } = useAuthStore();
+  
+  // 일반 사용자가 호출하려고 하면 에러 발생
+  if (user?.userType !== 'business') {
+    console.error('사장님 계정으로만 접근 가능한 API입니다.');
+    throw new Error('사장님 계정으로만 접근 가능합니다.');
+  }
+  
   return useQuery({
     queryKey: ['sportsCategories'],
     queryFn: getSportsCategories,
@@ -266,8 +333,15 @@ export const useSportsCategories = () => {
 // 스포츠 카테고리 추가
 export const useAddSportsCategory = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  
   return useMutation({
-    mutationFn: addSportsCategory,
+    mutationFn: (data: any) => {
+      if (user?.userType !== 'business') {
+        throw new Error('사장님 계정으로만 접근 가능합니다.');
+      }
+      return addSportsCategory(data);
+    },
     onSuccess: (data) => {
       console.log('✅ 스포츠 카테고리 추가 성공:', data);
       // 스포츠 카테고리 쿼리 무효화
@@ -282,8 +356,15 @@ export const useAddSportsCategory = () => {
 // 스포츠 카테고리 삭제
 export const useDeleteSportsCategory = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  
   return useMutation({
-    mutationFn: deleteSportsCategory,
+    mutationFn: (data: any) => {
+      if (user?.userType !== 'business') {
+        throw new Error('사장님 계정으로만 접근 가능합니다.');
+      }
+      return deleteSportsCategory(data);
+    },
     onSuccess: (data) => {
       console.log('✅ 스포츠 카테고리 삭제 성공:', data);
       // 스포츠 카테고리 쿼리 무효화
@@ -291,6 +372,35 @@ export const useDeleteSportsCategory = () => {
     },
     onError: (error) => {
       console.error('❌ 스포츠 카테고리 삭제 실패:', error);
+    },
+  });
+};
+
+// 회원 탈퇴 훅
+export const useDeleteAccount = () => {
+  const queryClient = useQueryClient();
+  const { user, logout } = useAuthStore();
+  
+  return useMutation({
+    mutationFn: async () => {
+      console.log('🚀 [useDeleteAccount] mutationFn 시작, 사용자 타입:', user?.userType);
+      if (user?.userType === 'business') {
+        console.log('🏢 [useDeleteAccount] 사장님 회원 탈퇴 API 호출');
+        return deleteStore();
+      } else {
+        console.log('👤 [useDeleteAccount] 일반 사용자 회원 탈퇴 API 호출');
+        return deleteUser();
+      }
+    },
+    onSuccess: (data) => {
+      console.log('✅ [useDeleteAccount] 회원 탈퇴 성공:', data);
+      // 모든 쿼리 캐시 무효화
+      queryClient.clear();
+      // 로그아웃 처리
+      logout();
+    },
+    onError: (error) => {
+      console.error('❌ [useDeleteAccount] 회원 탈퇴 실패:', error);
     },
   });
 }; 

@@ -23,7 +23,7 @@ import WithdrawConfirmModal from '@/components/business/WithdrawConfirmModal';
 import { useAuthStore } from '@/store/authStore';
 import { useMyStore } from '@/store/myStore';
 import { useStoreInfo } from '@/hooks/queries/useUserQueries';
-import { useUpdateStoreBasicInfo, useUpdateNotificationSettings, useUpdateReservationSettings, useReservationSettings } from '@/hooks/queries/useUserQueries';
+import { useUpdateStoreBasicInfo, useUpdateNotificationSettings, useUpdateReservationSettings, useReservationSettings, useDeleteAccount } from '@/hooks/queries/useUserQueries';
 import Toast from '@/components/common/Toast';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'StoreBasicInfo'>;
@@ -39,6 +39,7 @@ export default function SettingScreen() {
   const { mutate: updateStoreBasicInfo, isPending: isUpdating } = useUpdateStoreBasicInfo();
   const { mutate: updateNotificationSettings, isSuccess: isNotificationSettingsUpdated, isError: isNotificationSettingsError } = useUpdateNotificationSettings();
   const { mutate: updateReservationSettings, isSuccess: isReservationSettingsUpdated, isError: isReservationSettingsError } = useUpdateReservationSettings();
+  const { mutate: deleteAccount, isPending: isDeletingAccount } = useDeleteAccount();
 
   // 새로고침 함수
   const handleRefresh = async () => {
@@ -246,11 +247,22 @@ export default function SettingScreen() {
     setShowWithdrawModal(true);
   };
 
-  const handleConfirmWithdraw = () => {
-    // 실제 회원 탈퇴 로직
-    console.log('회원 탈퇴 실행');
-    setShowWithdrawModal(false);
-    // TODO: 회원 탈퇴 API 호출 및 상태 정리
+  const handleConfirmWithdraw = async () => {
+    try {
+      console.log('🚀 [사장님 회원탈퇴] handleConfirmWithdraw 시작');
+      setShowWithdrawModal(false);
+      
+      // 회원 탈퇴 API 호출
+      await deleteAccount();
+      
+      console.log('✅ [사장님 회원탈퇴] API 호출 성공');
+      // useDeleteAccount에서 자동으로 로그아웃되고 로그인 전 화면으로 이동됨
+      
+    } catch (error) {
+      console.error('❌ [사장님 회원탈퇴] API 호출 실패:', error);
+      // 에러 발생 시 모달 다시 표시
+      setShowWithdrawModal(true);
+    }
   };
 
   return (
@@ -435,13 +447,15 @@ export default function SettingScreen() {
           />
           
           <MenuItem
-            title="회원 탈퇴"
+            title={isDeletingAccount ? "탈퇴 중..." : "회원 탈퇴"}
             icon="user-x"
             iconColor="#EF4444"
-            onPress={handleWithdraw}
+            onPress={isDeletingAccount ? () => {} : handleWithdraw}
             className="mb-4 rounded-b-2xl border-2 border-t-0 border-mainGray"
             rightComponent={
-              <Text className="font-medium text-red-500">회원 탈퇴</Text>
+              <Text className={`font-medium ${isDeletingAccount ? 'text-gray-300' : 'text-red-500'}`}>
+                {isDeletingAccount ? '탈퇴 중...' : '회원 탈퇴'}
+              </Text>
             }
           />
         </SettingSection>
