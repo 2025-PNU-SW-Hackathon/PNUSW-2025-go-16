@@ -46,8 +46,16 @@ module.exports = async function handleSocket(io) {
         // 클라이언트가 메시지 전송 시
         socket.on('sendMessage', async ({ room, message }) => {
             try {
+                console.log('📨 메시지 전송 요청:', {
+                    user_id: socket.user.user_id,
+                    room: room,
+                    message: message
+                });
+                
                 // 메시지를 db에 저장
                 const new_message_result = await messageService.saveNewMessage(socket.user.user_id, room, message);
+
+                console.log('💾 저장된 메시지:', new_message_result);
 
                 // 메시지를 해당 방에 브로드캐스트
                 // 전송자 포함하지 않음.

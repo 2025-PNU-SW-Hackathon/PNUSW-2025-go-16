@@ -59,7 +59,7 @@ exports.createPaymentRequest = async ({ chat_room_id, requester_id, amount, mess
 
   try {
     // 메시지를 db에 저장
-    const new_message_result = await messageService.saveNewMessage('admin', chat_room_id, '결제를 요청하였습니다.');
+    const new_message_result = await messageService.saveNewMessage(requester_id, chat_room_id, '결제를 요청하였습니다.');
 
     // 메시지를 해당 방에 브로드캐스트
     io.to(chat_room_id).emit('newMessage', new_message_result);
