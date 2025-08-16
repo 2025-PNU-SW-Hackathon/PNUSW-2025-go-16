@@ -17,6 +17,19 @@ exports.registerUser = async (userData) => {
       user_gender
     } = userData;
 
+    // 아이디 중복 확인
+    const [existingUserIds] = await conn.query(
+      'SELECT user_id FROM user_table WHERE user_id = ?',
+      [user_id]
+    );
+
+    if (existingUserIds.length > 0) {
+      const err = new Error('이미 사용 중인 아이디입니다.');
+      err.statusCode = 400;
+      err.errorCode = 'USER_ID_ALREADY_EXISTS';
+      throw err;
+    }
+
     // 이메일 중복 확인
     const [existingUsers] = await conn.query(
       'SELECT user_id FROM user_table WHERE user_email = ?',

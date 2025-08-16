@@ -1,5 +1,25 @@
 const authService = require('../services/auth_service');
 
+// 아이디 중복 검사
+exports.checkUserIdDuplicate = async (req, res, next) => {
+  try {
+    const { user_id } = req.body;
+
+    // 기본 검증
+    if (!user_id) {
+      return res.status(400).json({
+        success: false,
+        message: '사용자 ID를 입력해주세요.'
+      });
+    }
+
+    const result = await authService.checkUserIdDuplicate(user_id);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
 // 일반 사용자 로그인
 exports.login = async (req, res, next) => {
   try {

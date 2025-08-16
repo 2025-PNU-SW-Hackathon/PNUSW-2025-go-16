@@ -2,6 +2,37 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { getConnection } = require('../config/db_config');
 
+// 아이디 중복 검사
+exports.checkUserIdDuplicate = async (user_id) => {
+  const conn = getConnection();
+  
+  try {
+    // 사용자 ID 조회
+    const [users] = await conn.query(
+      'SELECT user_id FROM user_table WHERE user_id = ?',
+      [user_id]
+    );
+
+    if (users.length > 0) {
+      return {
+        success: false,
+        message: '이미 사용 중인 아이디입니다.',
+        isDuplicate: true
+      };
+    }
+
+    return {
+      success: true,
+      message: '사용 가능한 아이디입니다.',
+      isDuplicate: false
+    };
+
+  } catch (error) {
+    console.error('아이디 중복 검사 중 오류:', error);
+    throw new Error('아이디 중복 검사 중 오류가 발생했습니다.');
+  }
+};
+
 // 일반 사용자 로그인
 exports.login = async (user_id, user_pwd) => {
   const conn = getConnection();
