@@ -1,5 +1,6 @@
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useCallback, useState } from 'react';
 
 import TagChip from '@/components/common/TagChip';
 
@@ -45,6 +46,8 @@ const getStatusText = (status: number): string => {
 };
 
 export default function MeetingScreen() {
+  const [refreshing, setRefreshing] = useState(false);
+  
   const { 
     visible, 
     selectedReservation, 
@@ -55,6 +58,16 @@ export default function MeetingScreen() {
     closeModal,
     refreshMatchingHistory
   } = useMeeting();
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      // 참여중인 모임 목록 새로고침
+      await refreshMatchingHistory();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshMatchingHistory]);
 
   if (loading) {
     return (
@@ -102,6 +115,15 @@ export default function MeetingScreen() {
           paddingBottom: 24,
         }}
         className="bg-white"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#FF6B35']} // iOS - 메인 오렌지 색상
+            tintColor="#FF6B35"  // iOS
+            progressBackgroundColor="#ffffff"
+          />
+        }
       >
         {matchingHistory.length === 0 ? (
           <View className="flex-1 justify-center items-center py-20">

@@ -1,6 +1,7 @@
 // src/screens/HomeScreen.tsx
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { COLORS } from '@/constants/colors';
+import { useCallback, useState } from 'react';
 
 import TagChip from '@/components/common/TagChip';
 import SearchBar from '@/components/common/SearchBar';
@@ -15,6 +16,8 @@ import PlusMeetingBtn from '@/screens/user/Home/PlusMeetingBtn';
 import { useUserHomeScreen } from '@/hooks/useHomeScreen';
 
 export default function HomeScreen() {
+  const [refreshing, setRefreshing] = useState(false);
+  
   const {
     filterOptions,
     filterLocations,
@@ -40,7 +43,18 @@ export default function HomeScreen() {
     hideToast,
     showSuccessToast,
     showErrorToast,
+    handleRefresh,
   } = useUserHomeScreen();
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      // 모임 목록 새로고침
+      await handleRefresh();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [handleRefresh]);
 
   return (
     <View className="flex-1 bg-white">
@@ -72,7 +86,18 @@ export default function HomeScreen() {
         onHide={hideToast}
       />
 
-      <ScrollView className="flex-3">
+      <ScrollView 
+        className="flex-3"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#FF6B35']} // iOS - 메인 오렌지 색상
+            tintColor="#FF6B35"  // iOS
+            progressBackgroundColor="#ffffff"
+          />
+        }
+      >
         {/* 검색바 */}
         <SearchBar
           searchText={searchText}
@@ -123,11 +148,11 @@ export default function HomeScreen() {
               />
             ))
           ) : (
-            <View className="flex-1 items-center justify-center py-20">
-              <Text className="text-lg text-gray-500 mb-2">
+            <View className="flex-1 justify-center items-center py-20">
+              <Text className="mb-2 text-lg text-gray-500">
                 {isLoading ? '데이터를 불러오는 중...' : '매칭이 없습니다'}
               </Text>
-              <Text className="text-sm text-gray-400 text-center">
+              <Text className="text-sm text-center text-gray-400">
                 {isLoading 
                   ? '잠시만 기다려주세요' 
                   : '다른 조건으로 검색해보세요'

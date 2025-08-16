@@ -38,7 +38,7 @@ export function useParticipatedMatches() {
           }),
           location: item.store_name,
           status: item.status,
-          category: '축구', // API에서 카테고리 정보가 없으므로 기본값 사용
+          category: '축구' as const, // 타입을 union 타입으로 고정
           participants: 0, // API에서 참가자 수 정보가 없으므로 기본값 사용
           maxParticipants: 0, // API에서 최대 참가자 수 정보가 없으므로 기본값 사용
           hasReview: false, // 기본값

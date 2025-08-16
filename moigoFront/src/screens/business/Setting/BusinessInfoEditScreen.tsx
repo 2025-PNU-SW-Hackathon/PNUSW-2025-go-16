@@ -103,15 +103,12 @@ export default function BusinessInfoEditScreen() {
 
   // 로그인 상태에 따른 네비게이션 처리
   useEffect(() => {
-    if (isLoggedIn && !isSignup) {
-      // 로그인된 상태에서 회원가입이 아닌 경우 (정보 수정 모드)
-      console.log('🔍 [BusinessInfoEdit] 로그인된 상태에서 정보 수정 모드 - 이전 화면으로 이동');
-      navigation.goBack();
-    } else if (isLoggedIn && isSignup) {
+    if (isLoggedIn && isSignup) {
       // 로그인된 상태에서 회원가입인 경우 (회원가입 완료)
       console.log('🔍 [BusinessInfoEdit] 회원가입 완료 - Main으로 이동');
       navigation.navigate('Main');
     }
+    // 로그인된 상태에서 정보 수정 모드일 때는 화면을 유지 (navigation.goBack() 제거)
   }, [isLoggedIn, isSignup, navigation]);
 
   useEffect(() => {
