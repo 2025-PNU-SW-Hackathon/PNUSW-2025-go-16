@@ -20,4 +20,6 @@ export type RootStackParamList = {
   Profile: undefined;
   ChangePassword: undefined;
   Favorite: undefined;
+  StoreList: { chatRoom?: ChatRoom; isHost?: boolean };
+  StoreDetail: { storeId: number; chatRoom?: ChatRoom; isHost?: boolean };
 };

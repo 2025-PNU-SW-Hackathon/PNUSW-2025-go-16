@@ -9,6 +9,7 @@ export interface ChatRoom {
   timestamp: string;
   unreadCount: number;
   isHost: boolean; // 방장 여부
+  host_id?: string; // 방장 ID
   icon: {
     text: string;
     backgroundColor: string;

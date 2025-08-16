@@ -24,6 +24,8 @@ import BusinessHoursScreen from '@/screens/business/Setting/BusinessHoursScreen'
 import ReservationTimeScreen from '@/screens/business/Setting/ReservationTimeScreen';
 import BusinessInfoEditScreen from '@/screens/business/Setting/BusinessInfoEditScreen';
 import ChatScreen from '@/screens/ChatScreen';
+import StoreListScreen from '@/screens/stores/StoreListScreen';
+import StoreDetailScreen from '@/screens/stores/StoreDetailScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -65,6 +67,8 @@ export default function RootNavigator() {
             }} 
           />
           <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="StoreList" component={StoreListScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="StoreDetail" component={StoreDetailScreen} options={{ headerShown: false }} />
           <Stack.Screen 
             name="StoreBasicInfo" 
             component={StoreBasicInfoScreen} 
