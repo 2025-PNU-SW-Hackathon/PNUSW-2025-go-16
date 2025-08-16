@@ -22,10 +22,15 @@ class SocketManager {
 
   // Socket 연결
   connect() {
-    const token = useAuthStore.getState().token;
+    const { token, user } = useAuthStore.getState();
     
     if (!token) {
       console.error('토큰이 없어서 소켓 연결을 할 수 없습니다.');
+      return;
+    }
+
+    if (!user?.id) {
+      console.error('사용자 ID가 없어서 소켓 연결을 할 수 없습니다.');
       return;
     }
 
@@ -34,9 +39,12 @@ class SocketManager {
       return;
     }
 
+    console.log('소켓 연결 시도 - 사용자 ID:', user.id);
+
     this.socket = io(SOCKET_URL, {
       auth: {
-        token: `Bearer ${token}`
+        token: `Bearer ${token}`,
+        userId: user.id // 사용자 ID 추가
       },
       transports: ['websocket', 'polling']
     });
@@ -96,8 +104,21 @@ class SocketManager {
       return;
     }
 
+    const { user } = useAuthStore.getState();
+    console.log('메시지 전송 시도:', {
+      data,
+      currentUserId: user?.id,
+      socketId: this.socket?.id
+    });
+
+    // 사용자 ID가 없으면 추가
+    if (!data.sender_id && user?.id) {
+      data.sender_id = user.id;
+      console.log('sender_id 추가됨:', data.sender_id);
+    }
+
     this.socket.emit('sendMessage', data);
-    console.log('메시지 전송:', data);
+    console.log('메시지 전송 완료:', data);
   }
 
   // 새 메시지 콜백 등록

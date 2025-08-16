@@ -44,7 +44,10 @@ export default function ChatRoomScreen() {
   });
 
   // 현재 사용자 ID (실제로는 세션에서 가져와야 함)
-  const currentUserId = user?.id || 'test'; // user?.id가 있으면 사용, 없으면 'test' 사용
+  const currentUserId = user?.id || ''; // user?.id가 있으면 사용, 없으면 빈 문자열 사용
+  
+  // 사용자 ID가 제대로 로드되었는지 확인
+  const isUserLoaded = !!user?.id;
   
   console.log('=== ChatRoomScreen 디버깅 ===');
   console.log('user 객체:', user);
@@ -52,9 +55,20 @@ export default function ChatRoomScreen() {
   console.log('user?.id 타입:', typeof user?.id);
   console.log('currentUserId (최종):', currentUserId);
   console.log('currentUserId 타입:', typeof currentUserId);
+  console.log('isUserLoaded:', isUserLoaded);
   console.log('user?.id가 undefined인가?', user?.id === undefined);
   console.log('user?.id가 null인가?', user?.id === null);
   console.log('user?.id가 빈 문자열인가?', user?.id === '');
+  console.log('isLoggedIn 상태:', useAuthStore.getState().isLoggedIn);
+  console.log('token 존재 여부:', !!useAuthStore.getState().token);
+
+  // 사용자 로그아웃 시 메시지 초기화
+  useEffect(() => {
+    if (!user) {
+      console.log('사용자가 로그아웃됨 - 메시지 상태 초기화');
+      setMessages([]);
+    }
+  }, [user]);
 
   // API 데이터를 ChatMessage 형식으로 변환
   useEffect(() => {
@@ -77,6 +91,23 @@ export default function ChatRoomScreen() {
           isEqualTrim: msg.sender_id?.trim() === currentUserId?.trim()
         });
         
+        // 시스템 메시지인지 확인
+        if (msg.sender_id === 'system') {
+          return {
+            id: msg.id.toString(),
+            senderId: 'system',
+            senderName: '시스템',
+            senderAvatar: '⚙️',
+            message: msg.message,
+            timestamp: new Date(msg.created_at),
+            type: 'system' as const,
+            message_type: msg.message_type,
+            user_name: msg.user_name,
+            user_id: msg.user_id,
+            kicked_by: msg.kicked_by
+          };
+        }
+        
         const isMyMessage = msg.sender_id === currentUserId;
         
         return {
@@ -91,26 +122,55 @@ export default function ChatRoomScreen() {
       });
       setMessages(convertedMessages);
     }
-  }, [apiData, currentUserId]);
+  }, [apiData, currentUserId, user]); // user 의존성 추가
 
   // 소켓 연결 및 실시간 메시지 처리
   useEffect(() => {
+    // 사용자가 로그인한 경우에만 소켓 연결
+    if (!user) {
+      console.log('사용자가 로그인하지 않음 - 소켓 연결하지 않음');
+      return;
+    }
+
     // 소켓 연결
     socketManager.connect();
     
     // 새 메시지 수신 콜백 등록
     const handleNewMessage = (newMessage: NewMessageDTO) => {
-      console.log('새 메시지 원본:', {
-        sender_id: newMessage.sender_id,
-        sender_idType: typeof newMessage.sender_id,
-        currentUserId,
-        currentUserIdType: typeof currentUserId,
+      console.log('=== 새 메시지 수신 ===');
+      console.log('받은 메시지 원본:', newMessage);
+      console.log('현재 사용자 ID:', currentUserId);
+      console.log('메시지 sender_id:', newMessage.sender_id);
+      console.log('sender_id 타입:', typeof newMessage.sender_id);
+      console.log('currentUserId 타입:', typeof currentUserId);
+      console.log('ID 비교 결과:', {
         isEqual: newMessage.sender_id === currentUserId,
         isEqualStrict: newMessage.sender_id === currentUserId,
         isEqualTrim: newMessage.sender_id?.trim() === currentUserId?.trim()
       });
       
+      // 시스템 메시지인지 확인
+      if (newMessage.sender_id === 'system') {
+        console.log('시스템 메시지 처리');
+        const convertedMessage: ChatMessage = {
+          id: newMessage.id.toString(),
+          senderId: 'system',
+          senderName: '시스템',
+          senderAvatar: '⚙️',
+          message: newMessage.message,
+          timestamp: new Date(newMessage.created_at),
+          type: 'system',
+          message_type: newMessage.message_type,
+          user_name: newMessage.user_name,
+          user_id: newMessage.user_id,
+          kicked_by: newMessage.kicked_by
+        };
+        setMessages(prev => [...prev, convertedMessage]);
+        return;
+      }
+      
       const isMyMessage = newMessage.sender_id === currentUserId;
+      console.log('내 메시지 여부:', isMyMessage);
       
       const convertedMessage: ChatMessage = {
         id: newMessage.id.toString(),
@@ -121,6 +181,8 @@ export default function ChatRoomScreen() {
         timestamp: new Date(newMessage.created_at),
         type: 'text'
       };
+      
+      console.log('변환된 메시지:', convertedMessage);
       setMessages(prev => [...prev, convertedMessage]);
     };
 
@@ -131,7 +193,7 @@ export default function ChatRoomScreen() {
       socketManager.removeCallback(handleNewMessage);
       socketManager.leaveRoom(chatRoom.chat_room_id || 1);
     };
-  }, [chatRoom.chat_room_id, currentUserId]);
+  }, [chatRoom.chat_room_id, currentUserId, user]); // user 의존성 추가
 
   // 방장용 메뉴 옵션
   const hostMenuOptions: DropdownOption[] = [
@@ -157,16 +219,41 @@ export default function ChatRoomScreen() {
   // 메시지 그룹화 로직
   const groupedMessages = useMemo(() => {
     return groupMessages(messages, currentUserId);
-  }, [messages, currentUserId]);
+  }, [messages, currentUserId, user]); // user 의존성 추가
 
   const handleSendMessage = () => {
-    if (message.trim()) {
-      // 소켓을 통해 메시지 전송
-      socketManager.sendMessage({
+    console.log('=== 메시지 전송 시도 ===');
+    console.log('현재 사용자 ID:', currentUserId);
+    console.log('사용자 로드 상태:', isUserLoaded);
+    console.log('메시지 내용:', message.trim());
+    console.log('사용자 객체:', user);
+    console.log('로그인 상태:', useAuthStore.getState().isLoggedIn);
+    
+    if (!isUserLoaded) {
+      console.error('사용자 정보가 제대로 로드되지 않았습니다.');
+      console.error('user 객체:', user);
+      console.error('isLoggedIn:', useAuthStore.getState().isLoggedIn);
+      return;
+    }
+    
+    if (message.trim() && currentUserId) {
+      const messageData = {
         room: chatRoom.chat_room_id || 1,
-        message: message.trim()
-      });
+        message: message.trim(),
+        sender_id: currentUserId
+      };
+      
+      console.log('전송할 메시지 데이터:', messageData);
+      
+      // 소켓을 통해 메시지 전송
+      socketManager.sendMessage(messageData);
       setMessage('');
+    } else if (!currentUserId) {
+      console.error('사용자 ID가 없어서 메시지를 보낼 수 없습니다.');
+      console.error('user?.id:', user?.id);
+      console.error('currentUserId:', currentUserId);
+    } else if (!message.trim()) {
+      console.error('메시지가 비어있습니다.');
     }
   };
 
@@ -336,18 +423,19 @@ export default function ChatRoomScreen() {
           <TextInput
             value={message}
             onChangeText={setMessage}
-            placeholder="메시지를 입력하세요"
+            placeholder={isUserLoaded ? "메시지를 입력하세요" : "사용자 정보 로딩 중..."}
             className="flex-1 px-2"
             multiline
             placeholderTextColor="#9CA3AF"
+            editable={isUserLoaded}
           />
           
           {/* 전송 버튼 (입력 필드 안에) */}
           <TouchableOpacity
             onPress={handleSendMessage}
-            disabled={!message.trim()}
+            disabled={!message.trim() || !isUserLoaded}
             className={`w-8 h-8 rounded-full items-center justify-center ${
-              message.trim() ? 'bg-mainOrange' : 'bg-gray-300'
+              message.trim() && isUserLoaded ? 'bg-mainOrange' : 'bg-gray-300'
             }`}
             activeOpacity={0.8}
           >

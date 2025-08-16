@@ -25,6 +25,86 @@ export const signup = async (
   return response.data;
 };
 
+// POST /users/check-duplicate - 사용자 아이디 중복검사
+export const checkUserIdDuplicate = async (userId: string): Promise<{ success: boolean; message: string; isDuplicate: boolean }> => {
+  try {
+    console.log('중복검사 API 호출:', `/users/check-duplicate`, { user_id: userId });
+    const response = await apiClient.post('/users/check-duplicate', { user_id: userId });
+    console.log('중복검사 API 응답:', response.data);
+    return {
+      success: true,
+      message: response.data.message || '중복검사 완료',
+      isDuplicate: response.data.isDuplicate || false
+    };
+  } catch (error: any) {
+    console.error('중복검사 API 에러:', error.response?.status, error.response?.data);
+    if (error.response?.status === 409) {
+      // 중복된 아이디
+      return {
+        success: true,
+        message: '이미 사용 중인 아이디입니다.',
+        isDuplicate: true
+      };
+    }
+    // 서버 에러나 네트워크 에러
+    throw error;
+  }
+};
+
+// POST /users/store/check-duplicate - 사장님 아이디 중복검사
+export const checkStoreIdDuplicate = async (storeId: string): Promise<{ success: boolean; message: string; isDuplicate: boolean }> => {
+  try {
+    console.log('사장님 중복검사 API 호출:', `/users/store/check-duplicate`, { store_id: storeId });
+    const response = await apiClient.post('/users/store/check-duplicate', { store_id: storeId });
+    console.log('사장님 중복검사 API 응답:', response.data);
+    return {
+      success: true,
+      message: response.data.message || '중복검사 완료',
+      isDuplicate: response.data.isDuplicate || false
+    };
+  } catch (error: any) {
+    console.error('사장님 중복검사 API 에러:', error.response?.status, error.response?.data);
+    if (error.response?.status === 409) {
+      // 중복된 아이디
+      return {
+        success: true,
+        message: '이미 사용 중인 아이디입니다.',
+        isDuplicate: true
+      };
+    }
+    // 서버 에러나 네트워크 에러
+    throw error;
+  }
+};
+
+// 회원가입 시 중복검사 후 가입 (일반 사용자)
+export const signupWithDuplicateCheck = async (userData: SignupRequestDTO): Promise<SignupResponseDTO> => {
+  // 1단계: 아이디 중복 검사
+  const duplicateCheck = await checkUserIdDuplicate(userData.user_id);
+  
+  if (duplicateCheck.isDuplicate) {
+    throw new Error('이미 사용 중인 아이디입니다.');
+  }
+  
+  // 2단계: 회원가입 (중복이 아닌 경우에만)
+  const response = await apiClient.post<SignupResponseDTO>('/users/register', userData);
+  return response.data;
+};
+
+// 사장님 회원가입 시 중복검사 후 가입
+export const storeSignupWithDuplicateCheck = async (storeData: StoreBasicSignupRequestDTO): Promise<StoreBasicSignupResponseDTO> => {
+  // 1단계: 아이디 중복 검사
+  const duplicateCheck = await checkStoreIdDuplicate(storeData.store_id);
+  
+  if (duplicateCheck.isDuplicate) {
+    throw new Error('이미 사용 중인 아이디입니다.');
+  }
+  
+  // 2단계: 회원가입 (중복이 아닌 경우에만)
+  const response = await apiClient.post<StoreBasicSignupResponseDTO>('/users/store/register/basic', storeData);
+  return response.data;
+};
+
 // POST /users/store/register/basic - 사장님 기본 회원가입
 export const storeBasicSignup = async (
   data: StoreBasicSignupRequestDTO

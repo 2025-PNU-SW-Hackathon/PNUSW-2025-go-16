@@ -1,4 +1,4 @@
-import { ChatMessage, MessageGroup } from '@/types/ChatTypes';
+import { ChatMessage, MessageGroup, SystemMessageType } from '@/types/ChatTypes';
 
 /**
  * 메시지 배열을 그룹화하여 렌더링에 최적화된 형태로 변환
@@ -97,4 +97,44 @@ export function groupMessages(messages: ChatMessage[], currentUserId: string): M
  */
 export function getMessageComponentType(message: ChatMessage): 'text' | 'store' | 'system' {
   return message.type;
+}
+
+/**
+ * 시스템 메시지 생성 유틸리티 함수
+ */
+export function createSystemMessage(
+  messageType: SystemMessageType,
+  userName: string,
+  userId: string,
+  kickedBy?: string
+): ChatMessage {
+  const now = new Date();
+  const messageId = `system-${now.getTime()}`;
+  
+  let message = '';
+  switch (messageType) {
+    case 'system_join':
+      message = `${userName}님이 모임에 참여하셨습니다.`;
+      break;
+    case 'system_leave':
+      message = `${userName}님이 모임을 나가셨습니다.`;
+      break;
+    case 'system_kick':
+      message = `${userName}님이 강퇴되었습니다.`;
+      break;
+  }
+
+  return {
+    id: messageId,
+    senderId: 'system',
+    senderName: '시스템',
+    senderAvatar: '⚙️',
+    message,
+    timestamp: now,
+    type: 'system',
+    message_type: messageType,
+    user_name: userName,
+    user_id: userId,
+    kicked_by: kickedBy
+  };
 } 

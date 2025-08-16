@@ -1,12 +1,12 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Alert } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Alert, SafeAreaView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/types/RootStackParamList';
 import { COLORS } from '@/constants/colors';
 import PrimaryButton from '@/components/common/PrimaryButton';
 import { Ionicons } from '@expo/vector-icons';
-import { signup } from '@/apis/auth';
+import { signup, checkUserIdDuplicate, checkStoreIdDuplicate, signupWithDuplicateCheck, storeSignupWithDuplicateCheck } from '@/apis/auth';
 import { useStoreBasicSignup } from '@/hooks/queries/useAuthQueries';
 import { useAuthStore } from '@/store';
 import Toast from '@/components/common/Toast';
@@ -30,6 +30,8 @@ export default function SignupScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [showDomainDropdown, setShowDomainDropdown] = useState(false);
   const [isIdAvailable, setIsIdAvailable] = useState(false);
+  const [isCheckingId, setIsCheckingId] = useState(false);
+  const [idCheckMessage, setIdCheckMessage] = useState('');
   
   // 사장님 회원가입 상태
   const [storeBasicInfo, setStoreBasicInfo] = useState({
@@ -39,6 +41,9 @@ export default function SignupScreen() {
     email: '',
     store_phonenumber: '',
   });
+  const [isStoreIdAvailable, setIsStoreIdAvailable] = useState(false);
+  const [isCheckingStoreId, setIsCheckingStoreId] = useState(false);
+  const [storeIdCheckMessage, setStoreIdCheckMessage] = useState('');
 
   const storeBasicSignupMutation = useStoreBasicSignup();
 
@@ -53,8 +58,56 @@ export default function SignupScreen() {
     'icloud.com'
   ];
 
-  // 아이디 중복확인 (항상 성공)
-  const handleIdCheck = () => {
+  // 일반 사용자 아이디 중복검사 (수동)
+  const checkUserIdAvailability = async (id: string) => {
+    if (!id.trim() || id.length < 4) {
+      setIsIdAvailable(false);
+      setIdCheckMessage('');
+      return;
+    }
+
+    setIsCheckingId(true);
+    try {
+      const result = await checkUserIdDuplicate(id);
+      console.log('중복검사 결과:', result);
+      // 서버에서 isDuplicate 필드로 응답하므로 이를 반대로 처리
+      setIsIdAvailable(!result.isDuplicate);
+      setIdCheckMessage(result.isDuplicate ? '이미 사용 중인 아이디입니다.' : '사용 가능한 아이디입니다.');
+    } catch (error: any) {
+      console.error('아이디 중복검사 실패:', error);
+      setIsIdAvailable(false);
+      setIdCheckMessage('중복검사 중 오류가 발생했습니다.');
+    } finally {
+      setIsCheckingId(false);
+    }
+  };
+
+  // 사장님 아이디 중복검사 (수동)
+  const checkStoreIdAvailability = async (id: string) => {
+    if (!id.trim() || id.length < 4) {
+      setIsStoreIdAvailable(false);
+      setStoreIdCheckMessage('');
+      return;
+    }
+
+    setIsCheckingStoreId(true);
+    try {
+      const result = await checkStoreIdDuplicate(id);
+      console.log('사장님 중복검사 결과:', result);
+      // 서버에서 isDuplicate 필드로 응답하므로 이를 반대로 처리
+      setIsStoreIdAvailable(!result.isDuplicate);
+      setStoreIdCheckMessage(result.isDuplicate ? '이미 사용 중인 아이디입니다.' : '사용 가능한 아이디입니다.');
+    } catch (error: any) {
+      console.error('사장님 아이디 중복검사 실패:', error);
+      setIsStoreIdAvailable(false);
+      setStoreIdCheckMessage('중복검사 중 오류가 발생했습니다.');
+    } finally {
+      setIsCheckingStoreId(false);
+    }
+  };
+
+  // 수동 아이디 중복확인
+  const handleIdCheck = async () => {
     if (!userId.trim()) {
       Alert.alert('알림', '아이디를 입력해주세요.');
       return;
@@ -64,9 +117,21 @@ export default function SignupScreen() {
       return;
     }
     
-    // 항상 사용 가능하다고 처리
-    setIsIdAvailable(true);
-    Alert.alert('알림', '사용 가능한 아이디입니다.');
+    await checkUserIdAvailability(userId);
+  };
+
+  // 수동 사장님 아이디 중복확인
+  const handleStoreIdCheck = async () => {
+    if (!storeBasicInfo.store_id.trim()) {
+      Alert.alert('알림', '아이디를 입력해주세요.');
+      return;
+    }
+    if (storeBasicInfo.store_id.length < 4 || storeBasicInfo.store_id.length > 12) {
+      Alert.alert('알림', '아이디는 4~12자로 입력해주세요.');
+      return;
+    }
+    
+    await checkStoreIdAvailability(storeBasicInfo.store_id);
   };
 
   // 사장님 회원가입 입력 처리
@@ -88,6 +153,12 @@ export default function SignupScreen() {
 
     if (storeBasicInfo.store_pwd.length < 6) {
       Alert.alert('입력 오류', '비밀번호는 6자 이상이어야 합니다.');
+      return false;
+    }
+
+    // 비밀번호에 최소 1개의 문자가 포함되어야 함
+    if (!/[a-zA-Z]/.test(storeBasicInfo.store_pwd)) {
+      Alert.alert('입력 오류', '비밀번호에 최소 1개의 문자가 포함되어야 합니다.');
       return false;
     }
 
@@ -130,21 +201,9 @@ export default function SignupScreen() {
         return;
       }
       
-      // 실제 API 호출
-      const response = await storeBasicSignupMutation.mutateAsync(signupData);
+      // 중복검사 후 회원가입 API 호출
+      const response = await storeSignupWithDuplicateCheck(signupData);
       console.log('사장님 회원가입 API 응답:', response);
-      
-      // 테스트용 모의 응답 (주석 처리)
-      // const mockResponse: StoreBasicSignupResponseDTO = {
-      //   success: true,
-      //   message: '기본 회원가입이 완료되었습니다. 사업자 정보를 입력해주세요.',
-      //   data: {
-      //     store_id: signupData.store_id,
-      //     business_registration_status: 'pending'
-      //   }
-      // };
-      // console.log('모의 응답 사용:', mockResponse);
-      // const response = mockResponse;
       
       if (response && response.success) {
         console.log('사장님 회원가입 성공, 토스트 표시');
@@ -215,16 +274,17 @@ export default function SignupScreen() {
       Alert.alert('알림', '아이디를 입력해주세요.');
       return;
     }
-    if (!isIdAvailable) {
-      Alert.alert('알림', '아이디 중복확인을 해주세요.');
-      return;
-    }
     if (!password.trim()) {
       Alert.alert('알림', '비밀번호를 입력해주세요.');
       return;
     }
     if (password.length < 6) {
       Alert.alert('알림', '비밀번호는 6자 이상 입력해주세요.');
+      return;
+    }
+    // 비밀번호에 최소 1개의 문자가 포함되어야 함
+    if (!/[a-zA-Z]/.test(password)) {
+      Alert.alert('알림', '비밀번호에 최소 1개의 문자가 포함되어야 합니다.');
       return;
     }
     if (password !== confirmPassword) {
@@ -245,8 +305,8 @@ export default function SignupScreen() {
       
       const fullEmail = `${email}@${emailDomain}`;
       
-      // 서버에 회원가입 요청
-      const response = await signup({
+      // 중복검사 후 회원가입 요청
+      const response = await signupWithDuplicateCheck({
         user_id: userId.trim(),
         user_pwd: password.trim(),
         user_email: fullEmail,
@@ -334,10 +394,31 @@ export default function SignupScreen() {
         <TextInput
           className="p-4 bg-gray-50 rounded-xl border border-gray-200"
           value={storeBasicInfo.store_id}
-          onChangeText={(text) => handleStoreInputChange('store_id', text)}
+          onChangeText={(text) => {
+            setStoreBasicInfo(prev => ({ ...prev, store_id: text }));
+            setIsStoreIdAvailable(false); // 아이디 변경 시 중복확인 초기화
+            setStoreIdCheckMessage('');
+          }}
           placeholder="매장 ID를 입력하세요"
           autoCapitalize="none"
+          editable={!isLoading}
         />
+        {isCheckingStoreId ? (
+          <Text className="mt-2 text-sm text-mainGrayText">중복 확인 중...</Text>
+        ) : (
+          <Text className="mt-2 text-sm text-mainGrayText">
+            {storeIdCheckMessage || '4~12자 영문 소문자(숫자 조합 가능)'}
+          </Text>
+        )}
+        <TouchableOpacity 
+          className={`mt-2 rounded-lg px-4 py-4 ${isStoreIdAvailable ? 'bg-green-500' : 'bg-mainOrange'}`}
+          onPress={handleStoreIdCheck}
+          disabled={isLoading || isCheckingStoreId}
+        >
+          <Text className="text-sm font-semibold text-white">
+            {isStoreIdAvailable ? '확인완료' : '중복확인'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* 비밀번호 */}
@@ -413,6 +494,7 @@ export default function SignupScreen() {
               onChangeText={(text) => {
                 setUserId(text);
                 setIsIdAvailable(false); // 아이디 변경 시 중복확인 초기화
+                setIdCheckMessage('');
               }}
               className="text-base"
               autoCapitalize="none"
@@ -422,16 +504,20 @@ export default function SignupScreen() {
           <TouchableOpacity 
             className={`rounded-lg px-4 py-4 ${isIdAvailable ? 'bg-green-500' : 'bg-mainOrange'}`}
             onPress={handleIdCheck}
-            disabled={isLoading}
+            disabled={isLoading || isCheckingId}
           >
             <Text className="text-sm font-semibold text-white">
               {isIdAvailable ? '확인완료' : '중복확인'}
             </Text>
           </TouchableOpacity>
         </View>
-        <Text className="mt-2 text-sm text-mainGrayText">
-          4~12자 / 영문 소문자(숫자 조합 가능)
-        </Text>
+        {isCheckingId ? (
+          <Text className="mt-2 text-sm text-mainGrayText">중복 확인 중...</Text>
+        ) : (
+          <Text className="mt-2 text-sm text-mainGrayText">
+            {idCheckMessage || '4~12자 / 영문 소문자(숫자 조합 가능)'}
+          </Text>
+        )}
       </View>
 
       {/* 비밀번호 섹션 */}
@@ -551,50 +637,58 @@ export default function SignupScreen() {
   );
 
   return (
-    <TouchableWithoutFeedback onPress={() => setShowDomainDropdown(false)}>
-      <KeyboardAvoidingView 
-        className="flex-1 bg-white" 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        {/* CustomHeader 사용 */}
-        <CustomHeader 
-          title={selectedUserType === 'business' ? '사장님 회원가입' : '회원가입'}
-          showBackButton
-          onBackPress={() => navigation.goBack()}
-        />
+    <SafeAreaView className="flex-1 bg-white">
+      <TouchableWithoutFeedback onPress={() => setShowDomainDropdown(false)}>
+        <KeyboardAvoidingView 
+          className="flex-1" 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
+          {/* CustomHeader 사용 */}
+          <CustomHeader 
+            title={selectedUserType === 'business' ? '사장님 회원가입' : '회원가입'}
+            showBackButton
+            onBackPress={() => navigation.goBack()}
+          />
 
-        <ScrollView className="flex-1 px-4 py-6" keyboardShouldPersistTaps="handled">
-          {/* 사용자 타입 표시 */}
-          <View className="px-4 py-3 mb-6 bg-gray-100 rounded-lg">
-            <Text className="text-sm text-center text-gray-600">
-              {selectedUserType === 'business' ? '사업자' : '스포츠 팬'} 모드로 회원가입
-            </Text>
+          <ScrollView 
+            className="flex-1 px-4 py-6" 
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 100 }}
+          >
+            {/* 사용자 타입 표시 */}
+            <View className="px-4 py-3 mb-6 bg-gray-100 rounded-lg">
+              <Text className="text-sm text-center text-gray-600">
+                {selectedUserType === 'business' ? '사업자' : '스포츠 팬'} 모드로 회원가입
+              </Text>
+            </View>
+
+            {/* 사용자 타입에 따른 폼 렌더링 */}
+            {selectedUserType === 'business' ? renderStoreSignupForm() : renderUserSignupForm()}
+          </ScrollView>
+
+          {/* 가입하기 버튼 */}
+          <View className="absolute bottom-0 px-4 py-7 w-full bg-white border-t border-gray-100">
+            <PrimaryButton 
+              title={isLoading || storeBasicSignupMutation.isPending ? "가입 중..." : "가입하기"} 
+              color={COLORS.mainOrange}
+              onPress={handleSignup}
+              disabled={isLoading || storeBasicSignupMutation.isPending}
+            />
           </View>
 
-          {/* 사용자 타입에 따른 폼 렌더링 */}
-          {selectedUserType === 'business' ? renderStoreSignupForm() : renderUserSignupForm()}
-        </ScrollView>
-
-        {/* 가입하기 버튼 */}
-        <View className="absolute bottom-0 px-4 py-7 w-full">
-          <PrimaryButton 
-            title={isLoading || storeBasicSignupMutation.isPending ? "가입 중..." : "가입하기"} 
-            color={COLORS.mainOrange}
-            onPress={handleSignup}
-            disabled={isLoading || storeBasicSignupMutation.isPending}
-          />
-        </View>
-
-        {/* 토스트 */}
-        {showToast && (
-          <Toast 
-            visible={showToast}
-            message={toastMessage} 
-            type={toastType}
-            onHide={() => setShowToast(false)}
-          />
-        )}
-      </KeyboardAvoidingView>
-    </TouchableWithoutFeedback>
+          {/* 토스트 */}
+          {showToast && (
+            <Toast 
+              visible={showToast}
+              message={toastMessage} 
+              type={toastType}
+              onHide={() => setShowToast(false)}
+            />
+          )}
+        </KeyboardAvoidingView>
+      </TouchableWithoutFeedback>
+    </SafeAreaView>
   );
 }

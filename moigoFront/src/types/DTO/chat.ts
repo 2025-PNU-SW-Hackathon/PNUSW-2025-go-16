@@ -38,6 +38,11 @@ export interface ChatMessageDTO {
   message: string;
   created_at: string;
   read_count: number;
+  // 시스템 메시지 관련 필드
+  message_type?: 'system_join' | 'system_leave' | 'system_kick';
+  user_name?: string;
+  user_id?: string;
+  kicked_by?: string;
 }
 
 // 채팅방 상태 변경 요청
@@ -61,6 +66,7 @@ export interface ChatResponseDTO {
 export interface SocketMessageDTO {
   room: number;
   message: string;
+  sender_id?: string; // 사용자 ID 추가
 }
 
 export interface NewMessageDTO {
@@ -70,6 +76,11 @@ export interface NewMessageDTO {
   created_at: string;
   room_id: number;
   read_count?: number; // 선택적 필드로 추가
+  // 시스템 메시지 관련 필드
+  message_type?: 'system_join' | 'system_leave' | 'system_kick';
+  user_name?: string;
+  user_id?: string;
+  kicked_by?: string;
 }
 
 // 에러 응답

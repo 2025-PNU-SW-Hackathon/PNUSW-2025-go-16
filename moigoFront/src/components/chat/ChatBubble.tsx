@@ -1,13 +1,20 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import StoreShareMessage from './StoreShareMessage';
+import SystemMessage from './SystemMessage';
+import type { SystemMessageType } from '@/types/ChatTypes';
 
 interface ChatBubbleProps {
   messages: Array<{
     id: string;
-    type: 'text' | 'store';
+    type: 'text' | 'store' | 'system';
     content: string;
     storeInfo?: any;
+    // 시스템 메시지 관련 필드
+    message_type?: SystemMessageType;
+    user_name?: string;
+    user_id?: string;
+    kicked_by?: string;
   }>; // 메시지 배열 (타입과 내용 포함)
   isMyMessage: boolean;
   senderName?: string;
@@ -20,7 +27,24 @@ export default function ChatBubble({
   senderName, 
   senderAvatar
 }: ChatBubbleProps) {
+  // 시스템 메시지인지 확인
+  const isSystemMessage = messages.length > 0 && messages[0].type === 'system';
+  
+  // 시스템 메시지인 경우 SystemMessage 컴포넌트로 렌더링
+  if (isSystemMessage) {
+    const systemMessage = messages[0];
     return (
+      <SystemMessage
+        message={systemMessage.content}
+        messageType={systemMessage.message_type || 'system_join'}
+        userName={systemMessage.user_name}
+        userId={systemMessage.user_id}
+        kickedBy={systemMessage.kicked_by}
+      />
+    );
+  }
+
+  return (
     <View className={`mb-4 ${isMyMessage ? 'self-end' : 'self-start'}`}>
       {!isMyMessage ? (
         <View className="flex-row items-start">
