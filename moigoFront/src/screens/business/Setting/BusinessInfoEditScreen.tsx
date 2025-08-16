@@ -9,6 +9,7 @@ import { COLORS } from '@/constants/colors';
 import Toast from '@/components/common/Toast';
 import { useBusinessRegistration } from '@/hooks/queries/useAuthQueries';
 import { useStoreInfo, useUpdateStoreBasicInfo } from '@/hooks/queries/useUserQueries';
+import { useAuthStore } from '@/store';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'BusinessInfoEdit'>;
 type RoutePropType = RouteProp<RootStackParamList, 'BusinessInfoEdit'>;
@@ -17,6 +18,7 @@ export default function BusinessInfoEditScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RoutePropType>();
   const { storeId, isSignup = false } = route.params || {};
+  const { isLoggedIn } = useAuthStore();
   
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -37,9 +39,9 @@ export default function BusinessInfoEditScreen() {
 
   const businessRegistrationMutation = useBusinessRegistration();
   
-  // API 훅 사용
-  const { data: storeInfoData, isLoading: isStoreInfoLoading } = useStoreInfo();
-  const { mutate: updateStoreBasicInfo, isPending: isUpdating, isSuccess: isUpdateSuccess, isError: isUpdateError } = useUpdateStoreBasicInfo();
+  // API 훅 사용 - 회원가입 시에는 사용하지 않음
+  const { data: storeInfoData, isLoading: isStoreInfoLoading } = isSignup ? { data: null, isLoading: false } : useStoreInfo();
+  const { mutate: updateStoreBasicInfo, isPending: isUpdating, isSuccess: isUpdateSuccess, isError: isUpdateError } = isSignup ? { mutate: () => {}, isPending: false, isSuccess: false, isError: false } : useUpdateStoreBasicInfo();
 
   useEffect(() => {
     // 회원가입이 아닌 경우 기존 정보를 불러옴
@@ -98,6 +100,19 @@ export default function BusinessInfoEditScreen() {
       }, 2000);
     }
   }, [isUpdateSuccess, navigation]);
+
+  // 로그인 상태에 따른 네비게이션 처리
+  useEffect(() => {
+    if (isLoggedIn && !isSignup) {
+      // 로그인된 상태에서 회원가입이 아닌 경우 (정보 수정 모드)
+      console.log('🔍 [BusinessInfoEdit] 로그인된 상태에서 정보 수정 모드 - 이전 화면으로 이동');
+      navigation.goBack();
+    } else if (isLoggedIn && isSignup) {
+      // 로그인된 상태에서 회원가입인 경우 (회원가입 완료)
+      console.log('🔍 [BusinessInfoEdit] 회원가입 완료 - Main으로 이동');
+      navigation.navigate('Main');
+    }
+  }, [isLoggedIn, isSignup, navigation]);
 
   useEffect(() => {
     if (isUpdateError) {

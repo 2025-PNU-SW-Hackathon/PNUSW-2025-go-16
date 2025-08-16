@@ -55,13 +55,12 @@ export default function LoginScreen() {
             userType: 'business',
           }, response.data.token);
           
-          // 사장님 로그인 성공 후 BusinessHome으로 네비게이션
+          // 사장님 로그인 성공 후 RootNavigator가 자동으로 처리
           Alert.alert('성공', '사장님 로그인되었습니다.', [
             {
               text: '확인',
               onPress: () => {
-                // RootNavigator에서 자동으로 BusinessHome으로 전환됨
-                // 추가 네비게이션 로직이 필요하다면 여기에 추가
+                // RootNavigator에서 isLoggedIn 상태 변화를 감지하여 자동으로 Main 화면 표시
               }
             }
           ]);
@@ -101,7 +100,7 @@ export default function LoginScreen() {
           console.log('서버에서 토큰을 제공하지 않음. 임시 토큰 생성');
           const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
           const payload = btoa(JSON.stringify({ 
-            user_id: response.data.user_id,
+            user_id: response.data.user.user_id,
             exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24시간 후 만료
             iat: Math.floor(Date.now() / 1000)
           }));
@@ -114,21 +113,20 @@ export default function LoginScreen() {
 
         // 스토어에 사용자 정보 저장
         login({
-          id: response.data.user_id,
-          email: response.data.user_email,
-          name: response.data.user_name,
-          phoneNumber: response.data.user_phone_number,
-          gender: response.data.user_gender,
+          id: response.data.user.user_id,
+          email: response.data.user.user_email,
+          name: response.data.user.user_name,
+          phoneNumber: response.data.user.user_phone_number,
+          gender: response.data.user.user_gender,
           userType: selectedUserType || 'sports_fan',
         }, token);
 
-        // 일반 사용자 로그인 성공 후 MainNavigator의 Home으로 이동
+        // 일반 사용자 로그인 성공 후 RootNavigator가 자동으로 처리
         Alert.alert('성공', '로그인되었습니다.', [
           {
             text: '확인',
             onPress: () => {
-              // RootNavigator에서 자동으로 MainNavigator의 Home으로 전환됨
-              // 추가 네비게이션 로직이 필요하다면 여기에 추가
+              // RootNavigator에서 isLoggedIn 상태 변화를 감지하여 자동으로 Main 화면 표시
             }
           }
         ]);
