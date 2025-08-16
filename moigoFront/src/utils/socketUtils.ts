@@ -24,6 +24,12 @@ class SocketManager {
   connect() {
     const { token, user } = useAuthStore.getState();
     
+    console.log('=== 소켓 연결 시도 ===');
+    console.log('토큰 존재 여부:', !!token);
+    console.log('사용자 정보:', user);
+    console.log('사용자 ID:', user?.id);
+    console.log('로그인 상태:', useAuthStore.getState().isLoggedIn);
+    
     if (!token) {
       console.error('토큰이 없어서 소켓 연결을 할 수 없습니다.');
       return;
@@ -34,9 +40,14 @@ class SocketManager {
       return;
     }
 
-    if (this.socket?.connected) {
-      console.log('이미 소켓이 연결되어 있습니다.');
+    if (!useAuthStore.getState().isLoggedIn) {
+      console.error('로그인 상태가 아니어서 소켓 연결을 할 수 없습니다.');
       return;
+    }
+
+    if (this.socket?.connected) {
+      console.log('이미 소켓이 연결되어 있습니다. 기존 연결 해제 후 재연결');
+      this.disconnect();
     }
 
     console.log('소켓 연결 시도 - 사용자 ID:', user.id);
@@ -141,12 +152,16 @@ class SocketManager {
 
   // 소켓 연결 해제
   disconnect() {
+    console.log('=== 소켓 연결 해제 ===');
     if (this.socket) {
+      console.log('기존 소켓 연결 해제 중...');
       this.socket.disconnect();
       this.socket = null;
       this.messageCallbacks = [];
       this.errorCallbacks = [];
-      console.log('소켓 연결 해제됨');
+      console.log('소켓 연결 해제 완료');
+    } else {
+      console.log('연결된 소켓이 없습니다.');
     }
   }
 

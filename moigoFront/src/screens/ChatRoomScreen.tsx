@@ -64,15 +64,32 @@ export default function ChatRoomScreen() {
 
   // 사용자 로그아웃 시 메시지 초기화
   useEffect(() => {
-    if (!user) {
+    console.log('=== 사용자 정보 변경 감지 ===');
+    console.log('현재 user 객체:', user);
+    console.log('현재 isLoggedIn 상태:', useAuthStore.getState().isLoggedIn);
+    
+    if (!user || !useAuthStore.getState().isLoggedIn) {
       console.log('사용자가 로그아웃됨 - 메시지 상태 초기화');
       setMessages([]);
+      
+      // 소켓 연결도 해제
+      socketManager.disconnect();
+    } else {
+      console.log('새로운 사용자로 로그인됨:', user.id);
+      // 새로운 사용자로 로그인된 경우 소켓 재연결
+      socketManager.connect();
     }
-  }, [user]);
+  }, [user, useAuthStore.getState().isLoggedIn]);
 
   // API 데이터를 ChatMessage 형식으로 변환
   useEffect(() => {
-    if (apiData?.data) {
+    console.log('=== API 데이터 변환 처리 ===');
+    console.log('API 데이터 존재 여부:', !!apiData?.data);
+    console.log('현재 사용자 ID:', currentUserId);
+    console.log('사용자 정보:', user);
+    console.log('로그인 상태:', useAuthStore.getState().isLoggedIn);
+    
+    if (apiData?.data && currentUserId && user && useAuthStore.getState().isLoggedIn) {
       console.log('API 데이터 변환 시작:', {
         currentUserId,
         currentUserIdType: typeof currentUserId,
@@ -121,17 +138,27 @@ export default function ChatRoomScreen() {
         };
       });
       setMessages(convertedMessages);
+    } else {
+      console.log('API 데이터 변환 조건 불충족 - 메시지 초기화');
+      setMessages([]);
     }
-  }, [apiData, currentUserId, user]); // user 의존성 추가
+  }, [apiData, currentUserId, user, useAuthStore.getState().isLoggedIn]); // 의존성 추가
 
   // 소켓 연결 및 실시간 메시지 처리
   useEffect(() => {
-    // 사용자가 로그인한 경우에만 소켓 연결
-    if (!user) {
+    console.log('=== 소켓 연결 처리 ===');
+    console.log('사용자 정보:', user);
+    console.log('로그인 상태:', useAuthStore.getState().isLoggedIn);
+    console.log('현재 사용자 ID:', currentUserId);
+    
+    // 사용자가 로그인하지 않은 경우 소켓 연결하지 않음
+    if (!user || !useAuthStore.getState().isLoggedIn || !currentUserId) {
       console.log('사용자가 로그인하지 않음 - 소켓 연결하지 않음');
       return;
     }
 
+    console.log('소켓 연결 시작 - 사용자 ID:', currentUserId);
+    
     // 소켓 연결
     socketManager.connect();
     
@@ -190,10 +217,11 @@ export default function ChatRoomScreen() {
     socketManager.joinRoom(chatRoom.chat_room_id || 1);
 
     return () => {
+      console.log('소켓 정리 - 콜백 제거 및 방 나가기');
       socketManager.removeCallback(handleNewMessage);
       socketManager.leaveRoom(chatRoom.chat_room_id || 1);
     };
-  }, [chatRoom.chat_room_id, currentUserId, user]); // user 의존성 추가
+  }, [chatRoom.chat_room_id, currentUserId, user, useAuthStore.getState().isLoggedIn]); // 의존성 추가
 
   // 방장용 메뉴 옵션
   const hostMenuOptions: DropdownOption[] = [
@@ -218,8 +246,19 @@ export default function ChatRoomScreen() {
 
   // 메시지 그룹화 로직
   const groupedMessages = useMemo(() => {
+    console.log('=== 메시지 그룹화 처리 ===');
+    console.log('메시지 개수:', messages.length);
+    console.log('현재 사용자 ID:', currentUserId);
+    console.log('사용자 정보:', user);
+    console.log('로그인 상태:', useAuthStore.getState().isLoggedIn);
+    
+    if (!currentUserId || !user || !useAuthStore.getState().isLoggedIn) {
+      console.log('사용자 정보 불충족 - 빈 그룹 반환');
+      return [];
+    }
+    
     return groupMessages(messages, currentUserId);
-  }, [messages, currentUserId, user]); // user 의존성 추가
+  }, [messages, currentUserId, user, useAuthStore.getState().isLoggedIn]); // 의존성 추가
 
   const handleSendMessage = () => {
     console.log('=== 메시지 전송 시도 ===');
