@@ -40,7 +40,7 @@ exports.login = async (user_id, user_pwd) => {
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
-      expiresIn: '24h'
+      expiresIn: '30d'
     });
 
     return {
@@ -113,7 +113,7 @@ exports.storeLogin = async (store_id, store_pwd) => {
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
-      expiresIn: '24h'
+      expiresIn: '30d'
     });
 
     return {
