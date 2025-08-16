@@ -2,8 +2,21 @@ import * as React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LogBox } from 'react-native';
+import Constants from 'expo-constants';
 import RootNavigator from '@/navigation/RootNavigator';
+import { healthCheck } from '@/apis/apiClient';
 import './global.css';
+
+// 환경변수 로깅
+const { API_URL, WS_URL } = (Constants.expoConfig?.extra ?? {}) as any;
+console.log('=== 배포 서버 설정 확인 ===');
+console.log('API_URL:', API_URL || '기본값 사용 (https://spotple.kr)');
+console.log('WS_URL:', WS_URL || '기본값 사용 (wss://spotple.kr)');
+
+// 앱 시작 시 헬스체크 실행
+healthCheck().then((isHealthy) => {
+  console.log('초기 API 연결 상태:', isHealthy ? '성공' : '실패');
+});
 
 // 특정 에러 메시지 무시 (개발 모드에서만)
 LogBox.ignoreLogs([

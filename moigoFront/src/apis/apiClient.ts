@@ -1,18 +1,24 @@
 import axios from 'axios';
 import type { AxiosResponse } from 'axios';
+import Constants from 'expo-constants';
 import { useAuthStore } from '@/store/authStore';
 
-// React Native에서는 localhost 대신 실제 IP 주소 사용
-// 개발자 도구에서 확인한 IP 주소로 변경하세요
-const BASE_URL = 'http://10.0.2.2:5000/api/v1'; // Android 에뮬레이터용
-// const BASE_URL = 'http://localhost:3001/api/v1'; // iOS 시뮬레이터용
-// const BASE_URL = 'http://192.168.1.xxx:5000/api/v1'; // 실제 디바이스용 (실제 IP 주소)
+// 환경변수에서 API URL 가져오기
+const { API_URL } = (Constants.expoConfig?.extra ?? {}) as any;
+if (!API_URL) {
+  console.warn('API_URL missing: check app.json extra.API_URL');
+}
+
+const BASE_URL = API_URL ? `${API_URL}/api/v1` : 'https://spotple.kr/api/v1';
+
+console.log('API Client 초기화 - BASE_URL:', BASE_URL);
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 10000,
 });
 
 // 토큰을 동적으로 가져오는 함수
@@ -72,6 +78,18 @@ let legacyAccessToken: string | null = null;
 export function setAccessToken(token: string | null) {
   legacyAccessToken = token;
   console.log('토큰 설정됨:', token ? '있음' : '없음');
+}
+
+// 헬스체크 함수 추가
+export async function healthCheck() {
+  try {
+    const response = await apiClient.get('/health');
+    console.log('API 헬스체크 성공:', response.status);
+    return true;
+  } catch (error) {
+    console.error('API 헬스체크 실패:', error);
+    return false;
+  }
 }
 
 export default apiClient;

@@ -34,7 +34,9 @@
     "extra": {
       "eas": {
         "projectId": "3ddd0517-7ac9-447f-85f3-60927f4aff61"
-      }
+      },
+      "API_URL": "https://spotple.kr",
+      "WS_URL": "wss://spotple.kr"
     }
   }
 }
