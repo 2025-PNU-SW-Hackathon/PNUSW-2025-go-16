@@ -42,7 +42,7 @@ exports.getChatRooms = async (user_id) => {
   return rows;
 };
 
-// 👋 2. 채팅방 나가기
+// 👋 2. 채팅방 나가기 (모임에서도 나가기)
 exports.leaveChatRoom = async (user_id, room_id) => {
   const conn = getConnection();
   
@@ -54,13 +54,25 @@ exports.leaveChatRoom = async (user_id, room_id) => {
   
   const userName = userInfo.length > 0 ? userInfo[0].user_name : '알 수 없는 사용자';
   
-  // 채팅방에서 제거
+  // 1. 채팅방에서 제거
   await conn.query(
     `DELETE FROM chat_room_users WHERE reservation_id = ? AND user_id = ?`,
     [room_id, user_id]
   );
   
-  // 시스템 메시지 생성 - 사용자 퇴장 알림
+  // 2. 모임 참여자 수 감소
+  await conn.query(
+    `UPDATE reservation_table
+    SET reservation_participant_cnt = reservation_participant_cnt - 1,
+    reservation_status = CASE 
+      WHEN reservation_participant_cnt - 1 < reservation_max_participant_cnt THEN 0 
+      ELSE reservation_status 
+    END
+    WHERE reservation_id = ?`,
+    [room_id]
+  );
+  
+  // 3. 시스템 메시지 생성 - 사용자 퇴장 알림
   const systemMessage = `👋 ${userName}님이 모임을 나가셨습니다.`;
   
   // 시스템 메시지 저장
@@ -74,7 +86,7 @@ exports.leaveChatRoom = async (user_id, room_id) => {
     [nextMessageId, room_id, 'system', systemMessage]
   );
 
-  // 실시간으로 시스템 메시지 전송
+  // 4. 실시간으로 시스템 메시지 전송
   try {
     const { getIO } = require('../config/socket_hub');
     const io = getIO();
@@ -108,7 +120,7 @@ exports.updateChatRoomStatus = async (user_id, room_id, status) => {
     SET reservation_participant_cnt = reservation_participant_cnt - 1,
     reservation_status = 0
     WHERE reservation_id = ?`,
-    [reservation_id]
+    [room_id]
   );
 };
 
@@ -134,7 +146,10 @@ exports.kickUser = async (room_id, target_user_id, requester_id) => {
       await conn.query(
         `UPDATE reservation_table
         SET reservation_participant_cnt = reservation_participant_cnt - 1,
-        reservation_status = 0
+        reservation_status = CASE 
+          WHEN reservation_participant_cnt - 1 < reservation_max_participant_cnt THEN 0 
+          ELSE reservation_status 
+        END
         WHERE reservation_id = ?`,
         [room_id]
       );
