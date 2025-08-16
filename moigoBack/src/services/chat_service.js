@@ -73,7 +73,7 @@ exports.leaveChatRoom = async (user_id, room_id) => {
   );
   
   // 3. 시스템 메시지 생성 - 사용자 퇴장 알림
-  const systemMessage = `👋 ${userName}님이 모임을 나가셨습니다.`;
+  const systemMessage = `${userName}님이 모임을 나가셨습니다.`;
   
   // 시스템 메시지 저장
   const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages');
@@ -163,7 +163,7 @@ exports.kickUser = async (room_id, target_user_id, requester_id) => {
       const userName = userInfo.length > 0 ? userInfo[0].user_name : '알 수 없는 사용자';
       
       // 시스템 메시지 생성 - 사용자 강퇴 알림
-      const systemMessage = `🚫 ${userName}님이 강퇴되었습니다.`;
+      const systemMessage = `${userName}님이 강퇴되었습니다.`;
       
       // 시스템 메시지 저장
       const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages');
@@ -292,7 +292,7 @@ exports.enterChatRoom = async (user_id, reservation_id) => {
   );
   
   const userName = userInfo.length > 0 ? userInfo[0].user_name : '알 수 없는 사용자';
-  const systemMessage = `👋 ${userName}님이 모임에 참여하셨습니다.`;
+  const systemMessage = `${userName}님이 모임에 참여하셨습니다.`;
   
   // 시스템 메시지 저장
   const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages');
