@@ -68,5 +68,11 @@ exports.saveNewMessage = async (user_id, room_id, message) => {
         [new_message_id, room_id]
     );
 
-    return rows[0];
+    // 일반 사용자 메시지인 경우 추가 정보 포함
+    const messageData = rows[0];
+    if (messageData.sender_id !== 'system') {
+        messageData.message_type = 'user_message';
+    }
+
+    return messageData;
 };

@@ -45,10 +45,54 @@ exports.getChatRooms = async (user_id) => {
 // 👋 2. 채팅방 나가기
 exports.leaveChatRoom = async (user_id, room_id) => {
   const conn = getConnection();
+  
+  // 사용자 정보 조회
+  const [userInfo] = await conn.query(
+    `SELECT user_name FROM user_table WHERE user_id = ?`,
+    [user_id]
+  );
+  
+  const userName = userInfo.length > 0 ? userInfo[0].user_name : '알 수 없는 사용자';
+  
+  // 채팅방에서 제거
   await conn.query(
     `DELETE FROM chat_room_users WHERE reservation_id = ? AND user_id = ?`,
     [room_id, user_id]
   );
+  
+  // 시스템 메시지 생성 - 사용자 퇴장 알림
+  const systemMessage = `👋 ${userName}님이 모임을 나가셨습니다.`;
+  
+  // 시스템 메시지 저장
+  const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages');
+  const nextMessageId = (maxIdResult[0]?.maxId || 0) + 1;
+  
+  await conn.query(
+    `INSERT INTO chat_messages 
+     (message_id, chat_room_id, sender_id, message, created_at)
+     VALUES (?, ?, ?, ?, NOW())`,
+    [nextMessageId, room_id, 'system', systemMessage]
+  );
+
+  // 실시간으로 시스템 메시지 전송
+  try {
+    const { getIO } = require('../config/socket_hub');
+    const io = getIO();
+    const systemMessageData = {
+      message_id: nextMessageId,
+      chat_room_id: room_id,
+      sender_id: 'system',
+      message: systemMessage,
+      created_at: new Date(),
+      message_type: 'system_leave', // 시스템 메시지 타입 추가
+      user_name: userName, // 퇴장한 사용자 이름
+      user_id: user_id // 퇴장한 사용자 ID
+    };
+    
+    io.to(room_id.toString()).emit('newMessage', systemMessageData);
+  } catch (error) {
+    console.log('소켓 전송 실패 (서버 시작 중일 수 있음):', error.message);
+  }
 };
 
 // 📌 3. 채팅방 상태 변경
@@ -94,6 +138,49 @@ exports.kickUser = async (room_id, target_user_id, requester_id) => {
         WHERE reservation_id = ?`,
         [room_id]
       );
+      
+      // 강퇴된 사용자 정보 조회
+      const [userInfo] = await conn.query(
+        `SELECT user_name FROM user_table WHERE user_id = ?`,
+        [target_user_id]
+      );
+      
+      const userName = userInfo.length > 0 ? userInfo[0].user_name : '알 수 없는 사용자';
+      
+      // 시스템 메시지 생성 - 사용자 강퇴 알림
+      const systemMessage = `🚫 ${userName}님이 강퇴되었습니다.`;
+      
+      // 시스템 메시지 저장
+      const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages');
+      const nextMessageId = (maxIdResult[0]?.maxId || 0) + 1;
+      
+      await conn.query(
+        `INSERT INTO chat_messages 
+         (message_id, chat_room_id, sender_id, message, created_at)
+         VALUES (?, ?, ?, ?, NOW())`,
+        [nextMessageId, room_id, 'system', systemMessage]
+      );
+
+      // 실시간으로 시스템 메시지 전송
+      try {
+        const { getIO } = require('../config/socket_hub');
+        const io = getIO();
+        const systemMessageData = {
+          message_id: nextMessageId,
+          chat_room_id: room_id,
+          sender_id: 'system',
+          message: systemMessage,
+          created_at: new Date(),
+          message_type: 'system_kick', // 시스템 메시지 타입 추가
+          user_name: userName, // 강퇴된 사용자 이름
+          user_id: target_user_id, // 강퇴된 사용자 ID
+          kicked_by: requester_id // 강퇴한 사용자 ID
+        };
+        
+        io.to(room_id.toString()).emit('newMessage', systemMessageData);
+      } catch (error) {
+        console.log('소켓 전송 실패 (서버 시작 중일 수 있음):', error.message);
+      }
     }
     else {
       console.log("user not found");
@@ -179,6 +266,48 @@ exports.enterChatRoom = async (user_id, reservation_id) => {
      VALUES (?, ?, false)`,
     [reservation_id, user_id]
   );
+
+  // 3. 시스템 메시지 생성 - 사용자 입장 알림
+  const messageService = require('../services/message_service');
+  const { getIO } = require('../config/socket_hub');
+  
+  const [userInfo] = await conn.query(
+    `SELECT user_name FROM user_table WHERE user_id = ?`,
+    [user_id]
+  );
+  
+  const userName = userInfo.length > 0 ? userInfo[0].user_name : '알 수 없는 사용자';
+  const systemMessage = `👋 ${userName}님이 모임에 참여하셨습니다.`;
+  
+  // 시스템 메시지 저장
+  const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages');
+  const nextMessageId = (maxIdResult[0]?.maxId || 0) + 1;
+  
+  await conn.query(
+    `INSERT INTO chat_messages 
+     (message_id, chat_room_id, sender_id, message, created_at)
+     VALUES (?, ?, ?, ?, NOW())`,
+    [nextMessageId, reservation_id, 'system', systemMessage]
+  );
+
+  // 실시간으로 시스템 메시지 전송
+  try {
+    const io = getIO();
+    const systemMessageData = {
+      message_id: nextMessageId,
+      chat_room_id: reservation_id,
+      sender_id: 'system',
+      message: systemMessage,
+      created_at: new Date(),
+      message_type: 'system_join', // 시스템 메시지 타입 추가
+      user_name: userName, // 참여한 사용자 이름
+      user_id: user_id // 참여한 사용자 ID
+    };
+    
+    io.to(reservation_id.toString()).emit('newMessage', systemMessageData);
+  } catch (error) {
+    console.log('소켓 전송 실패 (서버 시작 중일 수 있음):', error.message);
+  }
 
   return {
     reservation_id,
