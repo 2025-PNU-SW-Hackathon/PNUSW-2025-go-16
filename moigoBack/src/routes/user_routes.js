@@ -12,6 +12,9 @@ router.post('/register', userController.registerUser);
 router.post('/store/login', authController.storeLogin);
 router.post('/store/register', storeController.registerStore);
 
+// 아이디 중복 검사 (토큰 불필요)
+router.post('/check-duplicate', userController.checkUserIdDuplicate);
+
 // 사용자 관련
 router.get('/me/reviews', authMiddleware, userController.getMyReviews);
 router.get('/me', authMiddleware, userController.getMyProfile);

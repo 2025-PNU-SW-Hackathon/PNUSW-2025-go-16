@@ -2,6 +2,37 @@
 const { getConnection } = require('../config/db_config');
 const bcrypt = require('bcryptjs');
 
+// 👤 아이디 중복 검사 서비스
+exports.checkUserIdDuplicate = async (user_id) => {
+  const conn = getConnection();
+  
+  try {
+    // 사용자 ID 조회
+    const [users] = await conn.query(
+      'SELECT user_id FROM user_table WHERE user_id = ?',
+      [user_id]
+    );
+
+    if (users.length > 0) {
+      return {
+        success: false,
+        message: '이미 사용 중인 아이디입니다.',
+        isDuplicate: true
+      };
+    }
+
+    return {
+      success: true,
+      message: '사용 가능한 아이디입니다.',
+      isDuplicate: false
+    };
+
+  } catch (error) {
+    console.error('아이디 중복 검사 중 오류:', error);
+    throw new Error('아이디 중복 검사 중 오류가 발생했습니다.');
+  }
+};
+
 // 👤 회원가입 서비스
 exports.registerUser = async (userData) => {
   const conn = getConnection();
@@ -16,19 +47,6 @@ exports.registerUser = async (userData) => {
       user_region,
       user_gender
     } = userData;
-
-    // 아이디 중복 확인
-    const [existingUserIds] = await conn.query(
-      'SELECT user_id FROM user_table WHERE user_id = ?',
-      [user_id]
-    );
-
-    if (existingUserIds.length > 0) {
-      const err = new Error('이미 사용 중인 아이디입니다.');
-      err.statusCode = 400;
-      err.errorCode = 'USER_ID_ALREADY_EXISTS';
-      throw err;
-    }
 
     // 이메일 중복 확인
     const [existingUsers] = await conn.query(
