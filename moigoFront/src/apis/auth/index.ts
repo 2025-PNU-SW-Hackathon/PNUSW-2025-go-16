@@ -12,6 +12,7 @@ import type {
   BusinessRegistrationStatusResponseDTO,
   StoreLoginRequestDTO,
   StoreLoginResponseDTO,
+  LeaveChatRoomResponseDTO,
 } from '../../types/DTO/auth';
 
 // POST /users/register - 회원가입 (서버 명세서에 맞게 수정)
@@ -165,4 +166,14 @@ export const storeLogin = async (
 // POST /auth/logout - 로그아웃
 export const logout = async (): Promise<void> => {
   await apiClient.post('/auth/logout');
+};
+
+// DELETE /api/v1/chats/rooms/:roomId/leave - 채팅방 나가기
+export const leaveChatRoom = async (roomId: number): Promise<LeaveChatRoomResponseDTO> => {
+  console.log('채팅방 나가기 API 호출:', roomId);
+  const response = await apiClient.delete<LeaveChatRoomResponseDTO>(
+    `/chats/rooms/${roomId}/leave`
+  );
+  console.log('채팅방 나가기 API 응답:', response.data);
+  return response.data;
 };

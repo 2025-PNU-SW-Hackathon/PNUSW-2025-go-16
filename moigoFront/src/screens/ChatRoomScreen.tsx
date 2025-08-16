@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '@/types/RootStackParamList';
 import { ChatRoom, ChatMessage, MessageGroup } from '@/types/ChatTypes';
@@ -14,6 +14,7 @@ import { useChatMessages } from '@/hooks/queries/useChatQueries';
 import { socketManager } from '@/utils/socketUtils';
 import { useAuthStore } from '@/store/authStore';
 import type { ChatMessageDTO, NewMessageDTO } from '@/types/DTO/chat';
+import { signup, checkUserIdDuplicate, checkStoreIdDuplicate, signupWithDuplicateCheck, storeSignupWithDuplicateCheck, leaveChatRoom } from '@/apis/auth';
 
 type ChatRoomScreenRouteProp = RouteProp<RootStackParamList, 'ChatRoom'>;
 
@@ -229,7 +230,16 @@ export default function ChatRoomScreen() {
     { id: '2', label: '매칭 정보 수정하기', onPress: () => console.log('매칭 정보 수정하기') },
     { id: '3', label: '매칭 모집 마감하기', onPress: () => console.log('매칭 모집 마감하기') },
     { id: '4', label: '참여자 목록', onPress: () => console.log('참여자 목록') },
-    { id: '5', label: '채팅방 나가기', onPress: () => navigation.goBack() },
+    { id: '5', label: '채팅방 나가기', onPress: () => {
+      Alert.alert(
+        '채팅방 나가기',
+        '채팅방을 나가면 모임에서도 제외됩니다.\n그래도 하시겠습니까?',
+        [
+          { text: '취소', style: 'cancel' },
+          { text: '나가기', style: 'destructive', onPress: handleLeaveChatRoom }
+        ]
+      );
+    }},
     { id: '6', label: '신고하기', isDanger: true, onPress: () => console.log('신고하기') },
   ];
 
@@ -238,7 +248,16 @@ export default function ChatRoomScreen() {
     { id: '1', label: '채팅방 정보', onPress: () => console.log('채팅방 정보') },
     { id: '2', label: '멤버 관리', onPress: () => console.log('멤버 관리') },
     { id: '3', label: '알림 설정', onPress: () => console.log('알림 설정') },
-    { id: '4', label: '채팅방 나가기', onPress: () => navigation.goBack() },
+    { id: '4', label: '채팅방 나가기', onPress: () => {
+      Alert.alert(
+        '채팅방 나가기',
+        '채팅방을 나가면 모임에서도 제외됩니다.\n그래도 하시겠습니까?',
+        [
+          { text: '취소', style: 'cancel' },
+          { text: '나가기', style: 'destructive', onPress: handleLeaveChatRoom }
+        ]
+      );
+    }},
   ];
 
   // 현재 사용자의 메뉴 옵션 결정 (임시로 랜덤)
@@ -321,6 +340,39 @@ export default function ChatRoomScreen() {
     
     setShowPaymentModal(false);
     setSelectedParticipantId(null);
+  };
+
+  // 채팅방 나가기 처리
+  const handleLeaveChatRoom = async () => {
+    try {
+      console.log('채팅방 나가기 시도 - 채팅방 ID:', chatRoom.chat_room_id);
+      
+      // 채팅방 ID가 없으면 에러 처리
+      if (!chatRoom.chat_room_id) {
+        console.error('채팅방 ID가 없어서 채팅방 나가기를 할 수 없습니다.');
+        Alert.alert('오류', '채팅방 정보를 찾을 수 없습니다.');
+        return;
+      }
+
+      // 서버에 채팅방 나가기 요청
+      const response = await leaveChatRoom(chatRoom.chat_room_id);
+      
+      if (response.success) {
+        console.log('채팅방 나가기 성공:', response);
+        
+        // 소켓 연결 해제
+        socketManager.disconnect();
+        
+        // 채팅방 목록으로 이동
+        navigation.goBack();
+      } else {
+        console.error('채팅방 나가기 실패:', response.message);
+        Alert.alert('오류', response.message || '채팅방 나가기에 실패했습니다.');
+      }
+    } catch (error: any) {
+      console.error('채팅방 나가기 에러:', error);
+      Alert.alert('오류', '채팅방 나가기 중 오류가 발생했습니다.');
+    }
   };
 
   const renderMessageGroup = (group: MessageGroup, index: number) => {
