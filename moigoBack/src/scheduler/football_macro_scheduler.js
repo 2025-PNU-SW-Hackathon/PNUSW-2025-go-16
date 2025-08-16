@@ -7,10 +7,11 @@ const COMPETITIONS = ["PL", "PD", "BL1", "SA", "FL1", "CL", "EL", "EC", "WC", "C
 
 const API_KEY = process.env.FOOTBALL_DATA_API_KEY;
 const DB_CONFIG = {
-  host: 'localhost',
-  user: 'your_user',
-  password: 'your_password',
-  database: 'your_database',
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      port: process.env.DB_PORT,
 };
 
 const fetchMatches = async (competition, dateFrom, dateTo) => {
