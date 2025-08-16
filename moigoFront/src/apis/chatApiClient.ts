@@ -1,14 +1,24 @@
 import axios from 'axios';
 import type { AxiosResponse } from 'axios';
+import Constants from 'expo-constants';
 import { useAuthStore } from '@/store/authStore';
 
-const CHAT_BASE_URL = 'http://10.0.2.2:5000/api/v1'; // Android 에뮬레이터용
+// 환경변수에서 API URL 가져오기
+const { API_URL } = (Constants.expoConfig?.extra ?? {}) as any;
+if (!API_URL) {
+  console.warn('API_URL missing: check app.json extra.API_URL');
+}
+
+const CHAT_BASE_URL = API_URL ? `${API_URL}/api/v1` : 'https://spotple.kr/api/v1';
+
+console.log('Chat API Client 초기화 - CHAT_BASE_URL:', CHAT_BASE_URL);
 
 const chatApiClient = axios.create({
   baseURL: CHAT_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 10000,
 });
 
 function getAccessToken(): string | null {

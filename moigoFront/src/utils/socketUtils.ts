@@ -1,8 +1,19 @@
 import { useAuthStore } from '@/store/authStore';
+import Constants from 'expo-constants';
 import type { NewMessageDTO, SocketMessageDTO } from '@/types/DTO/chat';
 
 // Socket.IO 클라이언트를 any로 import
 const io = require('socket.io-client');
+
+// 환경변수에서 WebSocket URL 가져오기
+const { WS_URL } = (Constants.expoConfig?.extra ?? {}) as any;
+if (!WS_URL) {
+  console.warn('WS_URL missing: check app.json extra.WS_URL');
+}
+
+const SOCKET_URL = WS_URL || 'wss://spotple.kr';
+
+console.log('Socket Manager 초기화 - SOCKET_URL:', SOCKET_URL);
 
 class SocketManager {
   private socket: any = null;
@@ -23,7 +34,7 @@ class SocketManager {
       return;
     }
 
-    this.socket = io('http://10.0.2.2:5000', {
+    this.socket = io(SOCKET_URL, {
       auth: {
         token: `Bearer ${token}`
       },
