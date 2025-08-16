@@ -16,6 +16,9 @@ console.log('WS_URL:', WS_URL || '기본값 사용 (wss://spotple.kr)');
 // 앱 시작 시 헬스체크 실행
 healthCheck().then((isHealthy) => {
   console.log('초기 API 연결 상태:', isHealthy ? '성공' : '실패');
+}).catch((error) => {
+  console.log('헬스체크 중 오류 발생 (앱 시작에는 영향 없음):', error.message);
+  console.log('실제 API 연결은 로그인 후 확인됩니다.');
 });
 
 // 특정 에러 메시지 무시 (개발 모드에서만)
