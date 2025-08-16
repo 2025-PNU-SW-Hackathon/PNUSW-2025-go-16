@@ -1,31 +1,31 @@
 {
   "expo": {
-    "name": "moigoFront",
-    "slug": "moigoFront",
+    "name": "spotple",
+    "slug": "spotple",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/spotple.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/spotple.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.sehankim.moigoFront",
+      "bundleIdentifier": "com.sehankim.spotple",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/spotple.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.sehankim.moigoFront"
+      "package": "com.sehankim.spotple"
     },
     "web": {
       "bundler": "metro",
