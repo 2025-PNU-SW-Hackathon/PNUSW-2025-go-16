@@ -106,14 +106,6 @@ export default function RootNavigator() {
             }} 
           />
          <Stack.Screen 
-            name="BusinessInfoEdit" 
-            component={BusinessInfoEditScreen} 
-            options={{ 
-              headerShown: true,
-              header: () => <CustomHeader title="사업자 정보 등록" />,
-            }} 
-          />
-          <Stack.Screen 
             name="Chat" 
             component={ChatScreen} 
             options={{ 
@@ -133,16 +125,18 @@ export default function RootNavigator() {
             {() => <LoginScreen />}
           </Stack.Screen>
           <Stack.Screen name="Signup" component={SignupScreen} options={{ headerShown: false }} />
-          <Stack.Screen 
-            name="BusinessInfoEdit" 
-            component={BusinessInfoEditScreen} 
-            options={{ 
-              headerShown: true,
-              header: () => <CustomHeader title="사업자 정보 등록" />,
-            }} 
-          />
         </>
       )}
+      
+      {/* 로그인 상태와 관계없이 접근 가능한 화면들 */}
+      <Stack.Screen 
+        name="BusinessInfoEdit" 
+        component={BusinessInfoEditScreen} 
+        options={{ 
+          headerShown: true,
+          header: () => <CustomHeader title="사업자 정보 등록" />,
+        }} 
+      />
     </Stack.Navigator>
   );
 }
