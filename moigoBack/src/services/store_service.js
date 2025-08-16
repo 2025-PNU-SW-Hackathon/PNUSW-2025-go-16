@@ -67,6 +67,8 @@ exports.getStoreList = async (filters) => {
 exports.getStoreDetail = async (storeId) => {
   const conn = getConnection();
   try {
+    console.log('🔍 [DEBUG] 가게 상세 정보 조회 시작 - storeId:', storeId);
+    
     const [rows] = await conn.query(
       `SELECT 
         store_id, store_name, store_address, store_bio,
@@ -79,6 +81,8 @@ exports.getStoreDetail = async (storeId) => {
       [storeId]
     );
     
+    console.log('🔍 [DEBUG] 쿼리 결과:', rows);
+    
     if (rows.length === 0) {
       const err = new Error('가게를 찾을 수 없습니다.');
       err.statusCode = 404;
@@ -87,6 +91,9 @@ exports.getStoreDetail = async (storeId) => {
     
     return rows[0];
   } catch (error) {
+    console.error('❌ [ERROR] 가게 상세 정보 조회 오류:', error);
+    console.error('❌ [ERROR] 오류 스택:', error.stack);
+    
     if (!error.statusCode) {
       error.statusCode = 500;
       error.message = '가게 상세 정보 조회 중 오류가 발생했습니다.';
