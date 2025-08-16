@@ -4,15 +4,16 @@
     "slug": "spotple",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/spotple.png",
+    "icon": "./assets/spotple-icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/spotple.png",
+      "image": "./assets/spotple-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
+      "icon": "./assets/spotple-icon.png",
       "supportsTablet": true,
       "bundleIdentifier": "com.sehankim.spotple",
       "infoPlist": {
@@ -21,11 +22,11 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/spotple.png",
+        "foregroundImage": "./assets/spotple-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.sehankim.spotple"
+        "package": "com.sehankim.moigoFront"
     },
     "web": {
       "bundler": "metro",
