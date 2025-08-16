@@ -1,0 +1,33 @@
+명령어 : node scheduler/kbo_macro_scheduler.js                                      INT 46s node system 07:01:01 AM
+result
+[dotenv@17.2.1] injecting env (13) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+✅ MySQL DB connected!
+[eventsseason] 2025 kbo total=15
+[eventsday:l=Korean KBO League] 2025-08-13 total=5 kbo=5
+✅ KBO 2025-08-13: 5 matches saved
+[eventsday:l=Korean KBO League] 2025-08-14 total=5 kbo=5
+✅ KBO 2025-08-14: 5 matches saved
+[eventsday:l=Korean KBO League] 2025-08-15 total=5 kbo=5
+✅ KBO 2025-08-15: 5 matches saved
+[eventsday:l=Korean KBO League] 2025-08-16 total=5 kbo=5
+✅ KBO 2025-08-16: 5 matches saved
+[eventsday:l=Korean KBO League] 2025-08-17 total=5 kbo=5
+✅ KBO 2025-08-17: 5 matches saved
+
+
+명령어 : node scheduler/football_macro_scheduler.js                                    INT 12s node system 06:55:13 AM
+result
+[dotenv@17.2.1] injecting env (13) from .env -- tip: 📡 observe env with Radar: https://dotenvx.com/radar
+✅ MySQL DB connected!
+2025-08-13 => 2025-08-23
+✅ PL: 11 matches saved
+✅ PD: 11 matches saved
+✅ BL1: 1 matches saved
+✅ SA: 0 matches saved
+✅ FL1: 10 matches saved
+✅ CL: 0 matches saved
+✅ EL: 0 matches saved
+✅ EC: 0 matches saved
+✅ WC: 0 matches saved
+✅ CLI: 15 matches saved
+✅ ACL: 0 matches saved

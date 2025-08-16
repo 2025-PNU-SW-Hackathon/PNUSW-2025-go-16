@@ -1,0 +1,287 @@
+CREATE DATABASE `spotple` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+
+CREATE TABLE `gathering_table` (
+  `gathering_id` int NOT NULL,
+  `store_id` varchar(45) DEFAULT NULL,
+  `reservation_id` int DEFAULT NULL,
+  `gathering_match` varchar(45) DEFAULT NULL,
+  `gathering_bio` varchar(300) NOT NULL,
+  `gathering_start_time` datetime NOT NULL,
+  `gathering_end_time` datetime NOT NULL,
+  `gathering_min_participant_cnt` int DEFAULT NULL,
+  `gathering_max_participant_cnt` int DEFAULT NULL,
+  `gathering_money` int NOT NULL,
+  `gathering_participant_cnt` int DEFAULT NULL,
+  `gathering_participant` varchar(550) DEFAULT NULL,
+  `gathering_status` int NOT NULL,
+  `gathering_created_time` datetime NOT NULL,
+  `gathering_ex1` varchar(45) DEFAULT NULL,
+  `gathering_ex2` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`gathering_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `reservation_participant_table` (
+  `user_id` varchar(45) NOT NULL,
+  `reservation_id` int NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `reservation_table` (
+  `reservation_id` int NOT NULL,
+  `user_id` varchar(45) NOT NULL,
+  `store_id` varchar(45) DEFAULT NULL,
+  `reservation_start_time` datetime NOT NULL,
+  `reservation_participant_cnt` int NOT NULL,
+  `reservation_participant_id` varchar(450) NOT NULL,
+  `reservation_match` varchar(45) NOT NULL,
+  `reservation_status` int NOT NULL,
+  `reservation_bio` varchar(300) NOT NULL,
+  `reservation_max_participant_cnt` int NOT NULL,
+  `reservation_ex1` varchar(45) DEFAULT NULL,
+  `reservation_ex2` varchar(45) DEFAULT NULL,
+  `reservation_ex3` varchar(45) DEFAULT NULL,
+  `reservation_ex4` varchar(45) DEFAULT NULL,
+  `reservation_created_time` datetime DEFAULT NULL,
+  `reservation_end_time` datetime DEFAULT NULL,
+  `reservation_match_category` int NOT NULL,
+  `reservation_user_name` varchar(45) NOT NULL,
+  `reservation_store_name` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`reservation_id`),
+  UNIQUE KEY `reservation_id_UNIQUE` (`reservation_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `review_table` (
+  `review_id` int NOT NULL,
+  `review_text` varchar(300) NOT NULL,
+  `store_id` varchar(45) NOT NULL,
+  `user_id` varchar(45) NOT NULL,
+  `review_rating` int NOT NULL,
+  `review_visited_time` datetime NOT NULL,
+  `review_created_time` datetime NOT NULL,
+  `review_img1` varchar(255) DEFAULT NULL,
+  `review_img2` varchar(255) DEFAULT NULL,
+  `review_img3` varchar(255) DEFAULT NULL,
+  `review_img4` varchar(255) DEFAULT NULL,
+  `review_img5` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`review_id`),
+  UNIQUE KEY `review_id_UNIQUE` (`review_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 🏪 매장 정보 테이블 (최신 구조)
+CREATE TABLE `store_table` (
+  `store_id` varchar(64) NOT NULL,
+  `store_pwd` varchar(64) NOT NULL,
+  `store_address` varchar(64) NOT NULL,
+  `store_bio` varchar(45) NOT NULL,
+  `store_open_hour` int NOT NULL,
+  `store_close_hour` int NOT NULL,
+  `store_max_people_cnt` int NOT NULL,
+  `store_min_people_cnt` int NOT NULL DEFAULT '2' COMMENT '최소 참여자 수',
+  `store_max_table_cnt` int NOT NULL,
+  `store_max_parking_cnt` int NOT NULL,
+  `store_max_screen_cnt` int NOT NULL,
+  `store_phonenumber` varchar(45) NOT NULL,
+  `store_holiday` varchar(45) NOT NULL,
+  `store_thumbnail` varchar(256) DEFAULT NULL,
+  `store_review_cnt` int NOT NULL,
+  `store_rating` int NOT NULL,
+  `store_name` varchar(45) NOT NULL,
+  `business_number` varchar(64) NOT NULL COMMENT '사업자등록번호',
+  `owner_name` varchar(45) NOT NULL COMMENT '사장님 이름',
+  `email` varchar(100) NOT NULL COMMENT '이메일',
+  `address_detail` varchar(100) DEFAULT NULL COMMENT '상세 주소',
+  `cancellation_policy` text COMMENT '취소/환불 규정',
+  `deposit_amount` int DEFAULT '0' COMMENT '예약금 금액',
+  `available_times` json DEFAULT NULL COMMENT '예약 가능 시간대',
+  `business_registration_status` enum('pending','completed') DEFAULT 'pending' COMMENT '사업자 등록 상태',
+  `postal_code` varchar(10) DEFAULT NULL COMMENT '우편번호',
+  `business_certificate_url` varchar(256) DEFAULT NULL COMMENT '사업자등록증 URL',
+  `registration_completed_at` timestamp NULL DEFAULT NULL COMMENT '사업자 등록 완료 시간',
+  PRIMARY KEY (`store_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `user_table` (
+  `user_id` varchar(64) NOT NULL,
+  `user_pwd` varchar(64) NOT NULL,
+  `user_email` varchar(64) NOT NULL,
+  `user_name` varchar(64) NOT NULL,
+  `user_region` varchar(256) NOT NULL,
+  `user_phone_number` varchar(45) NOT NULL,
+  `user_updated_time` varchar(45) NOT NULL,
+  `user_gender` int NOT NULL,
+  `ex1` varchar(45) DEFAULT NULL,
+  `ex2` varchar(45) DEFAULT NULL,
+  `ex3` varchar(45) DEFAULT NULL,
+  `ex4` varchar(45) DEFAULT NULL,
+  `user_thumbnail` varchar(256) DEFAULT NULL,
+  PRIMARY KEY (`user_id`),
+  UNIQUE KEY `iduser_table_UNIQUE` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `chat_messages` (
+  `message_id` int NOT NULL,
+  `chat_room_id` int NOT NULL,
+  `sender_id` varchar(45) NOT NULL,
+  `message` text NOT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `chat_read_status` (
+  `id` int NOT NULL DEFAULT '0',
+  `chat_room_id` int NOT NULL,
+  `user_id` varchar(45) NOT NULL,
+  `last_read_message_id` int NOT NULL,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `unique_read` (`chat_room_id`,`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `chat_rooms` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `reservation_id` int NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `status` tinyint NOT NULL DEFAULT '0',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `chat_room_users` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `reservation_id` int NOT NULL,
+  `user_id` varchar(45) NOT NULL,
+  `is_kicked` tinyint(1) DEFAULT '0',
+  `joined_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=45 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `payment_request_table` (
+  `payment_request_id` int NOT NULL AUTO_INCREMENT,
+  `chat_room_id` int NOT NULL,
+  `requester_id` varchar(45) NOT NULL,
+  `amount` int NOT NULL,
+  `message` text,
+  `request_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `status` enum('pending','completed','cancelled') DEFAULT 'pending',
+  PRIMARY KEY (`payment_request_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `payment_table` (
+  `payment_id` int NOT NULL AUTO_INCREMENT,
+  `chat_room_id` int NOT NULL,
+  `payer_id` varchar(45) NOT NULL,
+  `payment_amount` int NOT NULL,
+  `payment_method` enum('card','bank_transfer','cash','mobile_payment') NOT NULL,
+  `payment_status` enum('pending','completed','failed','refunded') DEFAULT 'pending',
+  `payment_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`payment_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+
+--------chat_room_users table update -------------
+ALTER TABLE chat_room_users
+ADD COLUMN payment_status ENUM('pending', 'completed', 'refunded') DEFAULT 'pending',
+ADD COLUMN payment_method ENUM('card','bank_transfer','cash','mobile_payment'),
+ADD COLUMN payment_key VARCHAR(100),
+ADD COLUMN payment_amount INT;
+
+
+CREATE TABLE `bank_codes` (
+  `bank_code` varchar(10) NOT NULL,
+  `bank_name` varchar(50) NOT NULL,
+  PRIMARY KEY (`bank_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 주요 은행 코드 데이터
+INSERT INTO bank_codes (bank_code, bank_name) VALUES
+('001', '한국은행'),
+('002', '산업은행'),
+('003', '기업은행'),
+('004', '국민은행'),
+('005', '하나은행'),
+('006', '신한은행'),
+('007', '우리은행'),
+('008', '농협은행'),
+('009', '수협은행'),
+('010', '케이뱅크'),
+('011', '카카오뱅크');
+
+-- 🏪 매장 시설 정보 테이블
+CREATE TABLE `store_facilities` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `store_id` varchar(64) NOT NULL,
+  `facility_type` varchar(50) NOT NULL COMMENT '시설 유형 (parking, wifi, etc)',
+  `facility_name` varchar(100) NOT NULL COMMENT '시설명',
+  `is_available` tinyint(1) DEFAULT '1' COMMENT '사용 가능 여부',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_store_id` (`store_id`),
+  CONSTRAINT `fk_store_facilities_store` FOREIGN KEY (`store_id`) REFERENCES `store_table` (`store_id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=30 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 📸 매장 사진 정보 테이블
+CREATE TABLE `store_photos` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `store_id` varchar(64) NOT NULL,
+  `photo_url` varchar(256) NOT NULL COMMENT '사진 URL',
+  `photo_type` varchar(50) DEFAULT 'general' COMMENT '사진 유형 (thumbnail, interior, etc)',
+  `display_order` int DEFAULT '0' COMMENT '표시 순서',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_store_id` (`store_id`),
+  CONSTRAINT `fk_store_photos_store` FOREIGN KEY (`store_id`) REFERENCES `store_table` (`store_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- ⚽ 매장 스포츠 카테고리 테이블
+CREATE TABLE `store_sports_categories` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `store_id` varchar(64) NOT NULL,
+  `category_name` varchar(50) NOT NULL COMMENT '스포츠 카테고리명',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_store_id` (`store_id`),
+  CONSTRAINT `fk_store_sports_categories_store` FOREIGN KEY (`store_id`) REFERENCES `store_table` (`store_id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 💳 매장 결제 정보 테이블
+CREATE TABLE `store_payment_info` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `store_id` varchar(64) NOT NULL,
+  `bank_code` varchar(10) NOT NULL COMMENT '은행 코드',
+  `account_number` varchar(50) NOT NULL COMMENT '계좌번호',
+  `account_holder_name` varchar(100) NOT NULL COMMENT '예금주명',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_store_id` (`store_id`),
+  CONSTRAINT `fk_store_payment_info_store` FOREIGN KEY (`store_id`) REFERENCES `store_table` (`store_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 🍽️ 매장 메뉴 정보 테이블
+CREATE TABLE `store_menu` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `store_id` varchar(64) NOT NULL,
+  `name` varchar(100) NOT NULL COMMENT '메뉴명',
+  `price` int NOT NULL COMMENT '가격',
+  `description` text COMMENT '메뉴 설명',
+  `category` varchar(50) DEFAULT NULL COMMENT '메뉴 카테고리',
+  `is_available` tinyint(1) DEFAULT '1' COMMENT '판매 가능 여부',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_store_id` (`store_id`),
+  CONSTRAINT `fk_store_menu_store` FOREIGN KEY (`store_id`) REFERENCES `store_table` (`store_id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=86 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- ⚽ 경기 정보 테이블
+CREATE TABLE `matches` (
+  `id` int NOT NULL,
+  `competition_code` varchar(10) DEFAULT NULL,
+  `match_date` datetime DEFAULT NULL,
+  `status` varchar(20) DEFAULT NULL,
+  `home_team` varchar(100) DEFAULT NULL,
+  `away_team` varchar(100) DEFAULT NULL,
+  `venue` varchar(255) DEFAULT NULL,
+  `category` int DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `id` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
