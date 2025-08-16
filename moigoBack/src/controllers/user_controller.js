@@ -1,6 +1,26 @@
 // src/controllers/user_controller.js
 const userService = require('../services/user_service');
 
+// 👤 아이디 중복 검사 컨트롤러
+exports.checkUserIdDuplicate = async (req, res, next) => {
+  try {
+    const { user_id } = req.body;
+
+    // 기본 검증
+    if (!user_id) {
+      return res.status(400).json({
+        success: false,
+        message: '사용자 ID를 입력해주세요.'
+      });
+    }
+
+    const result = await userService.checkUserIdDuplicate(user_id);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
 // 👤 회원가입 컨트롤러
 exports.registerUser = async (req, res, next) => {
   try {
