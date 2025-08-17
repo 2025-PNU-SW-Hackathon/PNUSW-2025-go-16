@@ -52,3 +52,4 @@ export interface StoreDetailDTO {
   account_holder_name: string;
   business_number: string;
 }
+
