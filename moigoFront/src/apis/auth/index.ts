@@ -65,7 +65,7 @@ export const login = async (
   data: LoginRequestDTO
 ): Promise<LoginResponseDTO> => {
   const response = await apiClient.post<LoginResponseDTO>(
-    '/api/v1/users/login',
+    '/users/login',
     data
   );
   return response.data;
@@ -76,7 +76,7 @@ export const storeLogin = async (
   data: StoreLoginRequestDTO
 ): Promise<StoreLoginResponseDTO> => {
   const response = await apiClient.post<StoreLoginResponseDTO>(
-    '/api/v1/users/store/login',
+    '/users/store/login',
     data
   );
   return response.data;
