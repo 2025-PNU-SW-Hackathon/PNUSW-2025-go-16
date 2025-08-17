@@ -894,6 +894,7 @@ exports.getMyStoreReservations = async (store_id) => {
         r.reservation_participant_cnt,
         r.reservation_max_participant_cnt,
         r.reservation_status,
+        r.reservation_ex2,
         GROUP_CONCAT(u.user_name SEPARATOR ', ') as participant_names
        FROM reservation_table r
        LEFT JOIN reservation_participant_table rp ON r.reservation_id = rp.reservation_id
@@ -910,6 +911,7 @@ exports.getMyStoreReservations = async (store_id) => {
       reservation_start_time: row.reservation_start_time,
       reservation_participant_info: row.participant_names || '참가자 없음',
       reservation_table_info: '테이블 정보', // 실제 테이블 정보가 있다면 추가
+      reservation_ex2: row.reservation_ex2,  // 🆕 ex2 정보 추가
       reservation_status: 
         row.reservation_status === 0 ? 'PENDING_APPROVAL' :
         row.reservation_status === 1 ? 'APPROVED' : 'REJECTED'
