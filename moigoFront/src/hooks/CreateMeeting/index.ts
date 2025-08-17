@@ -96,22 +96,25 @@ export function useCreateMeeting() {
       return date.toTimeString().slice(0, 8); // HH:MM:SS
     };
 
-    // 모임 생성 요청 데이터 구성 (서버에서 날짜를 붙이도록 수정했으므로 시간만 전송)
+    // 모임 생성 요청 데이터 구성 (match_id 포함)
     const createRequest: CreateReservationRequestDTO = {
+      match_id: selectedEvent.id, // 🎯 경기 ID 전송 (백엔드에서 competition_code 자동 설정)
       store_id: 1, // 기본 매장 ID (실제로는 사용자가 선택해야 함)
-      reservation_title: data.meetingName, // 사용자가 입력한 모임 이름
-      reservation_description: data.description, // 사용자가 입력한 모임 설명
-      reservation_date: formatDate(reservationStartTime), // YYYY-MM-DD 형식
-      reservation_start_time: formatTime(reservationStartTime), // HH:MM:SS 형식
-      reservation_end_time: formatTime(reservationEndTime), // HH:MM:SS 형식
       reservation_max_participant_cnt: data.maxPeople, // 최대 참여자 수
+      // 백엔드에서 match_id로 자동 설정되므로 아래 필드들은 제거
+      // reservation_title: data.meetingName, // 사용자가 입력한 모임 이름
+      // reservation_description: data.description, // 사용자가 입력한 모임 설명
+      // reservation_date: formatDate(reservationStartTime), // YYYY-MM-DD 형식
+      // reservation_start_time: formatTime(reservationStartTime), // HH:MM:SS 형식
+      // reservation_end_time: formatTime(reservationEndTime), // HH:MM:SS 형식
     };
 
     console.log('모임 생성 요청:', createRequest);
-    console.log('시간 형식 확인:', {
-      date: formatDate(reservationStartTime),
-      startTime: formatTime(reservationStartTime),
-      endTime: formatTime(reservationEndTime),
+    console.log('경기 ID 확인:', {
+      selectedEventId: eventSelection.selectedEventId,
+      matchId: selectedEvent.id,
+      matchIdType: typeof selectedEvent.id,
+      competitionCode: selectedEvent.competition_code
     });
 
     try {
