@@ -6,10 +6,9 @@ import {
   getStoreReservations,
   acceptReservation,
   rejectReservation,
-  getReservationHistory,
-  getMatches
+  getReservationHistory
 } from '@/apis/users';
-import { getReservations } from '@/apis/reservations';
+import { getReservations, getMatches } from '@/apis/reservations';
 import type { 
   StoreDashboardDTO, 
   StoreReservationDTO,
@@ -128,20 +127,9 @@ export const useUserHomeScreen = () => {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
-  // 필터 옵션
-  const filterOptions = ['all', '축구', '야구', '농구', '기타'];
-  const filterLocations = ['서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종'];
 
-  // 필터에 따른 카테고리 매핑
-  const getCategoryFromFilter = (filter: string): number | undefined => {
-    switch (filter) {
-      case '축구': return 1;
-      case '야구': return 2;
-      case '농구': return 3;
-      case '기타': return 4;
-      default: return undefined; // 'all'인 경우
-    }
-  };
+
+
 
   // 일반 사용자 모임 조회 API (GET /api/v1/reservations)
   const { 
@@ -150,17 +138,74 @@ export const useUserHomeScreen = () => {
     error: reservationsError,
     refetch: refetchReservations
   } = useQuery({
-    queryKey: ['reservations', selectedFilter, selectedLocations],
-    queryFn: () => getReservations({
-      category: getCategoryFromFilter(selectedFilter)?.toString(),
-      // 지역 필터는 백엔드에서 지원하는 경우 추가
-    }),
+    queryKey: ['reservations'],
+    queryFn: () => getReservations(),
     staleTime: 5 * 60 * 1000, // 5분
     gcTime: 10 * 60 * 1000, // 10분
   });
 
-  // 필터링된 모임 목록
-  const filteredEvents = reservationsData?.data || [];
+  // 경기 데이터 조회 API (GET /api/v1/matches) - 필터 옵션 생성을 위해
+  const { 
+    data: matchesData, 
+    isLoading: isMatchesLoading 
+  } = useQuery({
+    queryKey: ['matches'],
+    queryFn: () => getMatches(),
+    staleTime: 5 * 60 * 1000, // 5분
+    gcTime: 10 * 60 * 1000, // 10분
+  });
+
+  // 클라이언트 사이드 필터링 (reservation_ex2로 직접 필터링)
+  const filteredEvents = (reservationsData?.data || []).filter((event: any) => {
+    // 'all' 선택 시 모든 이벤트 표시
+    if (selectedFilter === 'all') {
+      return true;
+    }
+    
+    // reservation_ex2 (competition_code)로 직접 필터링
+    const eventCompetitionCode = event.reservation_ex2;
+    
+    // 디버깅: 필터링 과정 확인
+    if (selectedFilter !== 'all') {
+      console.log('필터링 디버깅:', {
+        selectedFilter,
+        eventId: event.reservation_id,
+        eventTitle: event.reservation_match,
+        eventCompetitionCode,
+        matches: selectedFilter === eventCompetitionCode
+      });
+    }
+    
+    return eventCompetitionCode === selectedFilter;
+  });
+
+  // 경기 데이터에서 고유한 대회 코드들을 추출하여 필터 옵션 생성 (모임 생성과 동일한 방식)
+  const uniqueCompetitions = Array.from(new Set(
+    (matchesData?.data || []).map((match: any) => match.competition_code)
+  )).filter(Boolean);
+  
+  // 필터 옵션 생성
+  const filterOptions = ['all', ...uniqueCompetitions];
+  const filterLocations = ['서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종'];
+
+  // 디버깅 로그
+  if (matchesData?.data && matchesData.data.length > 0) {
+    console.log('홈 화면 필터 옵션 생성:', {
+      uniqueCompetitions,
+      filterOptions,
+      matchesCount: matchesData.data.length,
+      sampleMatches: matchesData.data.slice(0, 3) // 처음 3개 경기 데이터 확인
+    });
+  }
+  
+  // 예약 데이터에서도 competition_code 확인
+  if (reservationsData?.data && reservationsData.data.length > 0) {
+    console.log('예약 데이터 확인:', {
+      reservationsCount: reservationsData.data.length,
+      sampleReservations: reservationsData.data.slice(0, 3), // 처음 3개 예약 데이터 확인
+      allReservationEx2: reservationsData.data.map((r: any) => r.reservation_ex2).filter(Boolean)
+    });
+  }
 
   // 새로고침 함수
   const handleRefresh = async () => {
