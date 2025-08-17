@@ -1,11 +1,13 @@
 import * as React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { LogBox } from 'react-native';
+import { LogBox, Platform } from 'react-native';
 import Constants from 'expo-constants';
 import RootNavigator from '@/navigation/RootNavigator';
 import { healthCheck } from '@/apis/apiClient';
 import './global.css';
+
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 // 환경변수 로깅
 const { API_URL, WS_URL } = (Constants.expoConfig?.extra ?? {}) as any;
@@ -44,9 +46,25 @@ const queryClient = new QueryClient({
 });
 
 export default function App() {
+  const { registerForPushNotificationsAsync } = usePushNotifications();
+  const navigationRef = React.useRef<any>(null);
+
+  // 앱 시작 시 푸시 알림 설정
+  React.useEffect(() => {
+    // 푸시 알림 등록
+    registerForPushNotificationsAsync().then(token => {
+      if (token) {
+        console.log('Push notification token:', token);
+        // 토큰은 로그인 시 서버로 전송됩니다
+      }
+    }).catch(error => {
+      console.error('Push notification registration failed:', error);
+    });
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef}>
         <RootNavigator />
       </NavigationContainer>
     </QueryClientProvider>
