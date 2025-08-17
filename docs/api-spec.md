@@ -48,7 +48,8 @@
 ```json
 {
   "user_id": "testuser123",
-  "user_pwd": "password123"
+  "user_pwd": "password123",
+  "expo token" : "sdfasdf"
 }
 ```
 - **Response**:
@@ -151,7 +152,8 @@
 ```json
 {
   "store_id": "store_123",
-  "store_pwd": "storepass123"
+  "store_pwd": "storepass123",
+  "expo token" : "asfdasdf"
 }
 ```
 - **Response**:
