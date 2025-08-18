@@ -49,7 +49,7 @@
 {
   "user_id": "testuser123",
   "user_pwd": "password123",
-  "expo token" : "sdfasdf"
+  "expo_token" : "sdfasdf"
 }
 ```
 - **Response**:
@@ -153,7 +153,7 @@
 {
   "store_id": "store_123",
   "store_pwd": "storepass123",
-  "expo token" : "asfdasdf"
+  "expo_token" : "asfdasdf"
 }
 ```
 - **Response**:
