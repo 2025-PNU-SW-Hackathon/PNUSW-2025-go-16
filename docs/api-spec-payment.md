@@ -26,6 +26,7 @@
 ```json
 {
   "chat_room_id": 123,
+  "store_id" : "store_123",
   "amount": 15000,
   "message": "예약금 요청합니다."
 }
