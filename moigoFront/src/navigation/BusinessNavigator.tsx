@@ -31,7 +31,7 @@ export default function BusinessNavigator() {
           borderTopColor: '#E5E7EB',
           paddingBottom: 5,
           paddingTop: 5,
-          height: 70,
+          height: 80,
         },
       })}
     >

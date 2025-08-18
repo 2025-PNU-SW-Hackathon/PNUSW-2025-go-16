@@ -6,14 +6,17 @@ import type { RootStackParamList } from '@/types/RootStackParamList';
 import { COLORS } from '@/constants/colors';
 import PrimaryButton from '@/components/common/PrimaryButton';
 import { useAuthStore } from '@/store';
-import { login as loginAPI, storeLogin as storeLoginAPI } from '@/apis/auth';
-import { setAccessToken } from '@/apis/apiClient';
+import { useLogin, useStoreLogin } from '@/hooks/queries/useAuthQueries';
 
 export default function LoginScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { login, selectedUserType, setLoading, isLoading } = useAuthStore();
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
+
+  // 로그인 훅들
+  const loginMutation = useLogin();
+  const storeLoginMutation = useStoreLogin();
 
   const handleLogin = async () => {
     // 간단한 유효성 검사
@@ -30,96 +33,28 @@ export default function LoginScreen() {
       setLoading(true);
       console.log('로그인 시도:', { userId: userId.trim(), password: '***', userType: selectedUserType });
       
-      let response;
-      
       if (selectedUserType === 'business') {
         // 사장님 로그인
-        response = await storeLoginAPI({
+        await storeLoginMutation.mutateAsync({
           store_id: userId.trim(),
           store_pwd: password.trim(),
         });
         
-        console.log('사장님 로그인 성공:', response);
-        
-        // 사장님 로그인 성공 시 처리
-        if (response.success && response.data.token) {
-          setAccessToken(response.data.token);
-          
-          // 스토어에 사용자 정보 저장
-          login({
-            id: response.data.store.store_id,
-            email: '', // 사장님은 이메일 정보가 없을 수 있음
-            name: response.data.store.store_name,
-            phoneNumber: '', // 사장님은 전화번호 정보가 없을 수 있음
-            gender: 0, // 사장님은 성별 정보가 없음
-            userType: 'business',
-          }, response.data.token);
-          
-          // 사장님 로그인 성공 후 RootNavigator가 자동으로 처리
-          Alert.alert('성공', '사장님 로그인되었습니다.', [
-            {
-              text: '확인',
-              onPress: () => {
-                // RootNavigator에서 isLoggedIn 상태 변화를 감지하여 자동으로 Main 화면 표시
-              }
+        // 사장님 로그인 성공 후 RootNavigator가 자동으로 처리
+        Alert.alert('성공', '사장님 로그인되었습니다.', [
+          {
+            text: '확인',
+            onPress: () => {
+              // RootNavigator에서 isLoggedIn 상태 변화를 감지하여 자동으로 Main 화면 표시
             }
-          ]);
-        }
+          }
+        ]);
       } else {
         // 일반 사용자 로그인
-        response = await loginAPI({
+        await loginMutation.mutateAsync({
           user_id: userId.trim(),
           user_pwd: password.trim(),
         });
-
-        console.log('일반 사용자 로그인 성공:', response);
-
-        // 서버 응답에서 토큰 찾기 (여러 가능한 위치 확인)
-        let token: string | null = null;
-        
-        // 1. 최상위 레벨에서 token 확인
-        if ((response.data as any).token) {
-          token = (response.data as any).token;
-          console.log('최상위 레벨에서 토큰 발견');
-        }
-        // 2. data 안에서 token 확인 (response.data가 중첩된 구조일 경우)
-        else if ((response.data as any).data && ((response.data as any).data as any).token) {
-          token = ((response.data as any).data as any).token;
-          console.log('data 안에서 토큰 발견');
-        }
-        // 3. 전체 응답에서 token 확인
-        else if ((response as any).token) {
-          token = (response as any).token;
-          console.log('전체 응답에서 토큰 발견');
-        }
-        
-        if (token) {
-          console.log('서버에서 제공된 토큰 사용:', token.substring(0, 20) + '...');
-        } else {
-          // 서버에서 토큰을 제공하지 않는 경우 (임시)
-          console.log('서버에서 토큰을 제공하지 않음. 임시 토큰 생성');
-          const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-          const payload = btoa(JSON.stringify({ 
-            user_id: response.data.user.user_id,
-            exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24시간 후 만료
-            iat: Math.floor(Date.now() / 1000)
-          }));
-          const signature = btoa('temp-signature-' + Date.now());
-          token = `${header}.${payload}.${signature}`;
-          console.log('임시 JWT 토큰 생성됨');
-        }
-        
-        setAccessToken(token);
-
-        // 스토어에 사용자 정보 저장
-        login({
-          id: response.data.user.user_id,
-          email: response.data.user.user_email,
-          name: response.data.user.user_name,
-          phoneNumber: response.data.user.user_phone_number,
-          gender: response.data.user.user_gender,
-          userType: selectedUserType || 'sports_fan',
-        }, token);
 
         // 일반 사용자 로그인 성공 후 RootNavigator가 자동으로 처리
         Alert.alert('성공', '로그인되었습니다.', [

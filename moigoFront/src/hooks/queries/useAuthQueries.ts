@@ -19,6 +19,8 @@ import type {
 } from '../../types/DTO/auth';
 import { setAccessToken } from '../../apis/apiClient';
 import { useMyStore } from '../../store/myStore';
+import { useAuthStore } from '../../store/authStore';
+import { usePushNotifications } from '../usePushNotifications';
 
 // POST /auth/signup - 회원가입 훅
 export const useSignup = () => {
@@ -64,9 +66,25 @@ export const useBusinessRegistrationStatus = () => {
 // POST /api/v1/users/store/login - 사장님 로그인 훅
 export const useStoreLogin = () => {
   const { updateUserProfile } = useMyStore();
+  const { login: authLogin } = useAuthStore();
+  const { registerForPushNotificationsAsync } = usePushNotifications();
   
   return useMutation({
-    mutationFn: (data: StoreLoginRequestDTO) => storeLogin(data),
+    mutationFn: async (data: Omit<StoreLoginRequestDTO, 'expo_token'>) => {
+      // expo token 가져오기
+      const expoToken = await registerForPushNotificationsAsync();
+      if (!expoToken) {
+        throw new Error('푸시 알림 토큰을 가져올 수 없습니다.');
+      }
+      
+      // expo token을 포함한 로그인 요청
+      const loginData: StoreLoginRequestDTO = {
+        ...data,
+        expo_token: expoToken,
+      };
+      
+      return storeLogin(loginData);
+    },
     onSuccess: (data: StoreLoginResponseDTO) => {
       // 로그인 성공 시 액세스 토큰 설정
       if (data.data.token) {
@@ -75,10 +93,22 @@ export const useStoreLogin = () => {
       
       // 사용자 정보를 store에 저장
       if (data.data.store) {
+        // authStore 업데이트
+        authLogin({
+          id: data.data.store.store_id,
+          name: data.data.store.store_name,
+          email: '', // 사장님은 이메일 정보가 없을 수 있음
+          phoneNumber: '', // 사장님은 전화번호 정보가 없을 수 있음
+          gender: 0, // 사장님은 성별 정보가 없음
+          userType: 'business',
+        }, data.data.token);
+        
+        // myStore 업데이트
         updateUserProfile({
           id: data.data.store.store_id,
           name: data.data.store.store_name,
           email: '', // 사장님은 이메일 정보가 없을 수 있음
+          gender: 'male', // 기본값
           grade: 'STORE_OWNER', // 사장님 등급
           progressToNextGrade: 0,
           coupons: 0,
@@ -97,19 +127,49 @@ export const useStoreLogin = () => {
 // POST /auth/login - 로그인 훅
 export const useLogin = () => {
   const { updateUserProfile } = useMyStore();
+  const { login: authLogin } = useAuthStore();
+  const { registerForPushNotificationsAsync } = usePushNotifications();
   
   return useMutation({
-    mutationFn: (data: LoginRequestDTO) => login(data),
+    mutationFn: async (data: Omit<LoginRequestDTO, 'expo_token'>) => {
+      // expo token 가져오기
+      const expoToken = await registerForPushNotificationsAsync();
+      if (!expoToken) {
+        throw new Error('푸시 알림 토큰을 가져올 수 없습니다.');
+      }
+      
+      // expo token을 포함한 로그인 요청
+      const loginData: LoginRequestDTO = {
+        ...data,
+        expo_token: expoToken,
+      };
+      
+      return login(loginData);
+    },
     onSuccess: (data:LoginResponseDTO) => {
       // 로그인 성공 시 액세스 토큰 설정
-      setAccessToken(`Bearer ${data.data.token}`);
+      if (data.data.token) {
+        setAccessToken(`Bearer ${data.data.token}`);
+      }
       
       // 사용자 정보를 store에 저장
-      if (data.data) {
+      if (data.data.user) {
+        // authStore 업데이트
+        authLogin({
+          id: data.data.user.user_id,
+          name: data.data.user.user_name,
+          email: '', // 서버에서 제공하지 않음
+          phoneNumber: '', // 서버에서 제공하지 않음
+          gender: 0, // 기본값
+          userType: 'sports_fan',
+        }, data.data.token);
+        
+        // myStore 업데이트
         updateUserProfile({
           id: data.data.user.user_id,
           name: data.data.user.user_name,
-          email: data.data.user.user_email,
+          email: '', // 서버에서 제공하지 않음
+          gender: 'male', // 기본값
           grade: 'BRONZE', // 기본값
           progressToNextGrade: 0,
           coupons: 0,
@@ -128,6 +188,7 @@ export const useLogin = () => {
 // POST /auth/logout - 로그아웃 훅
 export const useLogout = () => {
   const { resetUserProfile } = useMyStore();
+  const { logout: authLogout } = useAuthStore();
   
   return useMutation({
     mutationFn: logout,
@@ -136,6 +197,7 @@ export const useLogout = () => {
       setAccessToken(null);
       // 사용자 정보 초기화
       resetUserProfile();
+      authLogout();
     },
     onError: (error) => {
       console.error('로그아웃 실패:', error);

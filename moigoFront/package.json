@@ -35,7 +35,10 @@
     "socket.io-client": "^4.7.4",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^3.4.17",
-    "zustand": "^5.0.6"
+    "zustand": "^5.0.6",
+    "expo-notifications": "~0.31.4",
+    "expo-device": "~7.1.4",
+    "expo-constants": "~17.1.7"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
