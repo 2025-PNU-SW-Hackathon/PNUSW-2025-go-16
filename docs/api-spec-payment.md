@@ -183,15 +183,11 @@ Content-Type: application/json
 ### Request Body
 ```json
 {
-  "store_id": "store_001",       
-  "message": "예약을 확정했습니다.", 
-  "timeISO": "2025-08-20T12:00:00.000Z" 
+  "store_id": "store_001"
 }
 ```
 
-- `store_id`: 선택, JWT의 `store_id`와 일치해야 함 (없으면 토큰의 `store_id` 사용)
-- `message`: 선택, 채팅방에 기록될 안내 메시지
-- `timeISO`: 선택, 확정된 예약 시간을 명시적으로 지정 가능
+- `store_id`: JWT의 `store_id`와 일치해야 함 
 
 ### Response (성공)
 ```json
@@ -228,12 +224,10 @@ Content-Type: application/json
 ```json
 {
   "store_id": "store_001",              
-  "reason": "해당 시간에 좌석이 부족합니다." 
 }
 ```
 
-- `store_id`: 선택, JWT의 `store_id`와 일치해야 함 (없으면 토큰의 `store_id` 사용)
-- `reason`: **필수**, 사용자와 채팅방에 전달될 거절 사유
+- `store_id`: JWT의 `store_id`와 일치해야 함 
 
 ### Response (성공)
 ```json
