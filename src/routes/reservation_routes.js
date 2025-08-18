@@ -29,5 +29,18 @@ router.get(
   reservationController.getReservationDetail
 );
 
+// 🆕 예약 승인/거절 (POST /reservations/:reservationId/approval) - 사장님만 접근 가능
+router.post(
+  '/:reservationId/approval',
+  authMiddleware,
+  reservationController.approveReservation
+);
+
+// 🆕 사장님 주간 일정 현황 조회 (GET /users/me/schedules) - 사장님만 접근 가능
+router.get(
+  '/me/schedules',
+  authMiddleware,
+  reservationController.getMyStoreSchedules
+);
 
 module.exports = router;
