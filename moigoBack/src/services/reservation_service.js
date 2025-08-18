@@ -26,7 +26,7 @@ exports.createReservation = async (user_id, data) => {
     reservation_date,  // 🆕 추가
   } = data;
   
-  let finalStartTime, finalEndTime, finalMatch, finalCategory;
+  let finalStartTime, finalEndTime, finalMatch, finalCategory, finalEx2;
   
   // 경기 ID가 있으면 경기 정보에서 가져오기
   if (match_id) {
@@ -47,6 +47,7 @@ exports.createReservation = async (user_id, data) => {
     finalStartTime = match.match_date;  // 경기 시작 시간
     finalEndTime = new Date(new Date(match.match_date).getTime() + 2 * 60 * 60 * 1000); // 2시간 후
     finalMatch = `${match.home_team} vs ${match.away_team}`;
+    finalEx2 = match.competition_code; // 🆕 competition_code를 ex2에 저장
     // competition_code를 정수로 매핑
     const categoryMap = {
       'PD': 1,     // 프리미어리그
@@ -56,10 +57,13 @@ exports.createReservation = async (user_id, data) => {
     };
     finalCategory = categoryMap[match.competition_code] || 0;  // 정수값으로 변환
     
-    console.log(`🔍 [DEBUG] 경기 정보로 설정 - 시작: ${finalStartTime}, 종료: ${finalEndTime}`);
+    console.log(`🔍 [DEBUG] 경기 정보로 설정 - 시작: ${finalStartTime}, 종료: ${finalEndTime}, ex2: ${finalEx2}`);
   } else {
     // 기존 수동 입력 방식
     console.log(`🔍 [DEBUG] 수동 입력 방식`);
+    
+    // 수동 입력 시에는 ex2를 null로 설정
+    finalEx2 = null;
     
     // 새로운 프론트엔드 필드들 처리
     if (reservation_title && reservation_date) {
@@ -96,8 +100,9 @@ exports.createReservation = async (user_id, data) => {
      (reservation_id, user_id, store_id, reservation_start_time, reservation_end_time,
       reservation_match, reservation_bio, reservation_max_participant_cnt,
       reservation_match_category, reservation_status, reservation_created_time,
-      reservation_participant_cnt, reservation_participant_id, reservation_user_name)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 1, ?, ?)`,
+      reservation_participant_cnt, reservation_participant_id, reservation_user_name,
+      reservation_ex2)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 1, ?, ?, ?)`,
     [
       reservation_current_id,
       user_id,
@@ -111,6 +116,7 @@ exports.createReservation = async (user_id, data) => {
       createdAt,
       user_id,         // participant_id 초기값 = user_id
       '알수없음',
+      finalEx2,  // 🆕 competition_code를 reservation_ex2에 저장
     ]
   );
 
@@ -195,7 +201,8 @@ exports.getReservationList = async (filters) => {
            r.reservation_start_time, r.reservation_end_time,
            r.reservation_bio, r.reservation_match, r.reservation_status,
            r.reservation_participant_cnt,
-           r.reservation_max_participant_cnt
+           r.reservation_max_participant_cnt,
+           r.reservation_ex2
     FROM reservation_table r
     LEFT JOIN store_table s ON r.store_id = s.store_id
     WHERE 1=1
@@ -300,6 +307,7 @@ exports.getReservationDetail = async (reservation_id) => {
     reservation_status: reservation.reservation_status,
     reservation_participant_cnt: reservation.reservation_participant_cnt,
     reservation_max_participant_cnt: reservation.reservation_max_participant_cnt,
+    reservation_ex2: reservation.reservation_ex2,  // 🆕 ex2 정보 추가
     participants: participants
   };
 };

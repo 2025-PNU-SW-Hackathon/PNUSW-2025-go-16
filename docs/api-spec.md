@@ -944,6 +944,9 @@ facilities.wifi.available ? '활성화 (주황색)' : '비활성화 (회색)';
 - `reservation_match_category`는 정수형 필드입니다 (문자열 입력 시 에러 발생)
 - 경기 기반 생성 시 `match_id`가 유효하지 않으면 400 에러가 발생합니다
 - 수동 입력 시 `reservation_title` 또는 `reservation_match` 중 하나는 반드시 필요합니다
+- 경기 기반 생성 시 `reservation_ex2` 칼럼에 해당 경기의 `competition_code`가 자동으로 저장됩니다
+- 수동 입력 시 `reservation_ex2` 칼럼은 `null`로 설정됩니다
+- 모임 조회 시 `reservation_ex2` 필드에 `competition_code` 값이 포함됩니다
 
 ### 3.2 모임 참여
 - **URL**: `POST /api/v1/reservations/{id}/join`
