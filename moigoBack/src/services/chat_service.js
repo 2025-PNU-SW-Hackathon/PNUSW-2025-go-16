@@ -233,7 +233,47 @@ exports.getAllMessages = async (user_id, room_id) => {
     [room_id, room_id]
   );
 
-  return messages;
+  // 메시지 타입 처리 및 가게 공유 메시지 정보 추가
+  const processedMessages = messages.map(message => {
+    const messageData = { ...message };
+    
+    // 가게 공유 메시지인지 확인
+    if (message.message && message.message.includes('🏪')) {
+      messageData.message_type = 'store_share';
+      
+      // 가게 공유 메시지에서 store_id 추출
+      const storeIdMatch = message.message.match(/store_id:\s*(\d+)/);
+      if (storeIdMatch) {
+        messageData.store_id = parseInt(storeIdMatch[1]);
+      }
+      
+      // 가게명 추출
+      const storeMatch = message.message.match(/🏪\s*(.+?)\n/);
+      if (storeMatch) {
+        messageData.store_name = storeMatch[1];
+      }
+      
+      // 주소 추출
+      const addressMatch = message.message.match(/📍\s*(.+?)\n/);
+      if (addressMatch) {
+        messageData.store_address = addressMatch[1];
+      }
+      
+      // 평점 추출
+      const ratingMatch = message.message.match(/⭐\s*(\d+(?:\.\d+)?)/);
+      if (ratingMatch) {
+        messageData.store_rating = parseFloat(ratingMatch[1]);
+      }
+    } else if (message.sender_id === 'system') {
+      messageData.message_type = 'system';
+    } else {
+      messageData.message_type = 'user_message';
+    }
+    
+    return messageData;
+  });
+
+  return processedMessages;
 };
 
 // 🛠️ 채팅방 생성 및 입장
@@ -565,6 +605,154 @@ exports.kickUnpaidParticipant = async (roomId, targetUserId, requesterId) => {
     if (!error.statusCode) {
       error.statusCode = 500;
       error.message = '참가자 강퇴 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
+
+// 🏪 채팅용 가게 리스트 조회 (간단한 정보만)
+exports.getStoreListForChat = async (keyword, limit = 10) => {
+  const conn = getConnection();
+  
+  try {
+    let query = `
+      SELECT 
+        store_id,
+        store_name,
+        store_address,
+        store_rating,
+        store_thumbnail
+      FROM store_table
+      WHERE 1=1
+    `;
+    const params = [];
+
+    // 키워드 검색 (가게명, 주소)
+    if (keyword) {
+      query += ` AND (
+        store_name LIKE ? OR 
+        store_address LIKE ?
+      )`;
+      params.push(`%${keyword}%`, `%${keyword}%`);
+    }
+
+    query += ` ORDER BY store_rating DESC, store_name ASC LIMIT ?`;
+    params.push(limit);
+
+    const [rows] = await conn.query(query, params);
+    
+    // store_id를 숫자로 변환
+    const convertedRows = rows.map(row => ({
+      ...row,
+      store_id: parseInt(row.store_id) || 0
+    }));
+    
+    return convertedRows;
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '가게 목록 조회 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
+
+// 🏪 가게 공유 메시지에서 store_id 추출 헬퍼 함수
+const extractStoreIdFromMessage = (message) => {
+  // 메시지에서 store_id를 추출하는 로직
+  // 현재는 메시지 내용에서 추출하는 방식이지만,
+  // 실제로는 별도 테이블이나 메타데이터에서 가져와야 함
+  const storeIdMatch = message.match(/store_id:\s*(\d+)/);
+  return storeIdMatch ? parseInt(storeIdMatch[1]) : null;
+};
+
+// 🏪 가게 공유 메시지 전송
+exports.shareStore = async (user_id, room_id, store_id) => {
+  const conn = getConnection();
+  
+  try {
+    // 1. 가게 정보 조회
+    const [storeInfo] = await conn.query(
+      `SELECT 
+        store_id, store_name, store_address, store_rating, store_thumbnail
+       FROM store_table 
+       WHERE store_id = ?`,
+      [store_id]
+    );
+
+    if (storeInfo.length === 0) {
+      const err = new Error('가게를 찾을 수 없습니다.');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const store = storeInfo[0];
+
+    // 2. 사용자 정보 조회
+    const [userInfo] = await conn.query(
+      `SELECT user_name FROM user_table WHERE user_id = ?`,
+      [user_id]
+    );
+
+    const userName = userInfo.length > 0 ? userInfo[0].user_name : '알 수 없는 사용자';
+
+    // 3. 공유 메시지 생성 (store_id 포함)
+    const shareMessage = `🏪 ${store.store_name}\n📍 ${store.store_address}\n⭐ ${store.store_rating || 0}점\n\n가게 상세 정보를 보려면 클릭하세요!\n\nstore_id: ${store.store_id}`;
+
+    // 4. 메시지 ID 생성
+    const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages');
+    const nextMessageId = (maxIdResult[0]?.maxId || 0) + 1;
+
+    // 5. 공유 메시지 저장
+    await conn.query(
+      `INSERT INTO chat_messages 
+       (message_id, chat_room_id, sender_id, message, created_at)
+       VALUES (?, ?, ?, ?, NOW())`,
+      [nextMessageId, room_id, user_id, shareMessage]
+    );
+
+    // 6. 가게 공유 메타데이터 저장 (추가 테이블이 있다면)
+    // 현재는 메시지에 store_id를 포함하는 방식으로 처리
+    const storeShareData = {
+      message_id: nextMessageId,
+      store_id: parseInt(store.store_id) || 0,
+      store_name: store.store_name,
+      store_address: store.store_address,
+      store_rating: store.store_rating,
+      store_thumbnail: store.store_thumbnail,
+      shared_by: user_id,
+      shared_by_name: userName
+    };
+
+    // 7. 실시간으로 공유 메시지 전송
+    try {
+      const { getIO } = require('../config/socket_hub');
+      const io = getIO();
+      
+      const messageData = {
+        message_id: nextMessageId,
+        chat_room_id: room_id,
+        sender_id: user_id,
+        message: shareMessage,
+        created_at: new Date(),
+        message_type: 'store_share',
+        store_share_data: storeShareData
+      };
+
+      io.to(`room_${room_id}`).emit('new_message', messageData);
+    } catch (socketError) {
+      console.error('소켓 전송 실패:', socketError);
+    }
+
+    return {
+      message_id: nextMessageId,
+      store_share_data: storeShareData
+    };
+
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '가게 공유 중 오류가 발생했습니다.';
     }
     throw error;
   }

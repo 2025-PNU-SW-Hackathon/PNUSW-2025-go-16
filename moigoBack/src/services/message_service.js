@@ -74,5 +74,13 @@ exports.saveNewMessage = async (user_id, room_id, message) => {
         messageData.message_type = 'user_message';
     }
 
+    // 가게 공유 메시지인지 확인 (메시지 내용에 가게 정보가 포함된 경우)
+    if (messageData.message && messageData.message.includes('🏪')) {
+        messageData.message_type = 'store_share';
+        
+        // 메시지에서 store_id 추출 시도 (실제로는 별도 테이블이나 메타데이터에서 가져와야 함)
+        // 현재는 메시지 내용으로만 판단
+    }
+
     return messageData;
 };

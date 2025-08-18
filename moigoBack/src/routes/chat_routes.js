@@ -24,6 +24,12 @@ router.get('/:roomId/all-messages', authMiddleware, chatController.getAllMessage
 // 채팅방 생성 및 입장
 router.post('/enter', authMiddleware, chatController.enterChatRoom);
 
+// 🏪 채팅용 가게 리스트 조회 (GET /chats/stores)
+router.get('/stores', authMiddleware, chatController.getStoreListForChat);
+
+// 🏪 가게 공유 (POST /chats/:roomId/share-store)
+router.post('/:roomId/share-store', authMiddleware, chatController.shareStore);
+
 /*
 // 💰 결제 관련 라우터
 // 방장의 예약금 결제 요청 (POST /chats/:roomId/payments/request)

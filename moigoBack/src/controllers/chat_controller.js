@@ -86,6 +86,48 @@ exports.enterChatRoom = async (req, res, next) => {
   }
 };
 
+// 🏪 채팅용 가게 리스트 조회
+exports.getStoreListForChat = async (req, res, next) => {
+  try {
+    const { keyword, limit = 10 } = req.query;
+    
+    const stores = await chatService.getStoreListForChat(keyword, parseInt(limit));
+    
+    res.status(200).json({ 
+      success: true, 
+      data: stores 
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 🏪 가게 공유 메시지 전송
+exports.shareStore = async (req, res, next) => {
+  try {
+    const user_id = req.user.user_id;
+    const { roomId } = req.params;
+    const { store_id } = req.body;
+
+    if (!store_id) {
+      return res.status(400).json({
+        success: false,
+        message: '가게 ID가 필요합니다.'
+      });
+    }
+
+    const result = await chatService.shareStore(user_id, roomId, store_id);
+    
+    res.status(200).json({ 
+      success: true, 
+      message: '가게 정보가 공유되었습니다.',
+      data: result 
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // 💰 결제 관련 컨트롤러
 
 // 방장의 예약금 결제 요청

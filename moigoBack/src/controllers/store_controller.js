@@ -39,7 +39,17 @@ exports.getStoreDetail = async (req, res, next) => {
       });
     }
     
-    const storeDetail = await storeService.getStoreDetail(storeId);
+    // storeId를 숫자로 변환
+    const numericStoreId = parseInt(storeId, 10);
+    
+    if (isNaN(numericStoreId) || numericStoreId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: '유효하지 않은 가게 ID입니다.'
+      });
+    }
+    
+    const storeDetail = await storeService.getStoreDetail(numericStoreId);
     console.log('✅ [getStoreDetail] 조회 성공:', storeDetail);
     
     res.json({ success: true, data: storeDetail });
@@ -53,7 +63,18 @@ exports.getStoreDetail = async (req, res, next) => {
 exports.getStorePaymentInfo = async (req, res, next) => {
   try {
     const { storeId } = req.params;
-    const paymentInfo = await storeService.getStorePaymentInfo(storeId);
+    
+    // storeId를 숫자로 변환
+    const numericStoreId = parseInt(storeId, 10);
+    
+    if (isNaN(numericStoreId) || numericStoreId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: '유효하지 않은 가게 ID입니다.'
+      });
+    }
+    
+    const paymentInfo = await storeService.getStorePaymentInfo(numericStoreId);
     res.json({ success: true, data: paymentInfo });
   } catch (err) {
     next(err);
@@ -66,6 +87,16 @@ exports.updateStorePaymentInfo = async (req, res, next) => {
     const { storeId } = req.params;
     const { bank_code, account_number, account_holder_name, business_number } = req.body;
     
+    // storeId를 숫자로 변환
+    const numericStoreId = parseInt(storeId, 10);
+    
+    if (isNaN(numericStoreId) || numericStoreId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: '유효하지 않은 가게 ID입니다.'
+      });
+    }
+    
     // 기본 유효성 검사
     if (!bank_code || !account_number || !account_holder_name) {
       return res.status(400).json({
@@ -74,7 +105,7 @@ exports.updateStorePaymentInfo = async (req, res, next) => {
       });
     }
 
-    const result = await storeService.updateStorePaymentInfo(storeId, {
+    const result = await storeService.updateStorePaymentInfo(numericStoreId, {
       bank_code,
       account_number,
       account_holder_name,
