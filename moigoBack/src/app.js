@@ -44,7 +44,7 @@ app.use('/api/v1/reservations', reservationRoutes);
 app.use('/api/v1/reviews', reviewRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/stores', storeRoutes);
-app.use('/api/v1/chats/rooms', chatRoutes);
+app.use('/api/v1/chats', chatRoutes);
 app.use('/api/v1/payment', paymentRoutes);
 app.use('/api/v1/matches', matchRoutes);
 
@@ -61,18 +61,33 @@ app.get('/health', async (req, res) => {
   try {
     const { getConnection } = require('./config/db_config');
     const conn = getConnection();
+    
+    if (!conn) {
+      throw new Error('데이터베이스 연결 풀이 초기화되지 않았습니다.');
+    }
+    
     await conn.query('SELECT 1');
+    
+    // store_table 존재 여부 확인
+    const [tables] = await conn.query('SHOW TABLES LIKE "store_table"');
+    const tableExists = tables.length > 0;
+    
     res.json({ 
       success: true, 
       message: '서버와 데이터베이스가 정상 작동 중입니다.',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      database: {
+        connected: true,
+        store_table_exists: tableExists
+      }
     });
   } catch (error) {
     console.error('❌ [HEALTH CHECK] 데이터베이스 연결 실패:', error);
     res.status(500).json({ 
       success: false, 
       message: '데이터베이스 연결에 문제가 있습니다.',
-      error: error.message
+      error: error.message,
+      error_code: error.code
     });
   }
 });

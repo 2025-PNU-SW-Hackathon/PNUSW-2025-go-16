@@ -60,14 +60,35 @@ exports.getStoreList = async (filters) => {
   query += ` ORDER BY s.store_rating DESC, s.store_name ASC`;
 
   const [rows] = await conn.query(query, params);
-  return rows;
+  
+  // store_id를 숫자로 변환
+  const convertedRows = rows.map(row => ({
+    ...row,
+    store_id: parseInt(row.store_id) || 0
+  }));
+  
+  return convertedRows;
 };
 
 // 가게 상세 정보 조회
 exports.getStoreDetail = async (storeId) => {
-  const conn = getConnection();
+  let conn;
   try {
     console.log('🔍 [DEBUG] 가게 상세 정보 조회 시작 - storeId:', storeId);
+    
+    // storeId가 숫자인지 확인
+    if (typeof storeId !== 'number' || storeId <= 0) {
+      const err = new Error('유효하지 않은 가게 ID입니다.');
+      err.statusCode = 400;
+      throw err;
+    }
+    
+    conn = getConnection();
+    if (!conn) {
+      throw new Error('데이터베이스 연결을 가져올 수 없습니다.');
+    }
+    
+    console.log('🔍 [DEBUG] 데이터베이스 연결 성공');
     
     const [rows] = await conn.query(
       `SELECT 
@@ -89,14 +110,34 @@ exports.getStoreDetail = async (storeId) => {
       throw err;
     }
     
-    return rows[0];
+    // store_id를 숫자로 변환
+    const storeDetail = {
+      ...rows[0],
+      store_id: parseInt(rows[0].store_id) || 0
+    };
+    
+    return storeDetail;
   } catch (error) {
     console.error('❌ [ERROR] 가게 상세 정보 조회 오류:', error);
     console.error('❌ [ERROR] 오류 스택:', error.stack);
+    console.error('❌ [ERROR] 오류 코드:', error.code);
+    console.error('❌ [ERROR] 오류 메시지:', error.message);
+    
+    if (error.code === 'ER_NO_SUCH_TABLE') {
+      error.message = 'store_table이 존재하지 않습니다. 데이터베이스를 초기화해주세요.';
+    } else if (error.code === 'ECONNREFUSED') {
+      error.message = '데이터베이스 서버에 연결할 수 없습니다. MySQL이 실행 중인지 확인해주세요.';
+    } else if (error.code === 'ER_ACCESS_DENIED_ERROR') {
+      error.message = '데이터베이스 접근 권한이 없습니다.';
+    } else if (error.code === 'ER_BAD_DB_ERROR') {
+      error.message = '데이터베이스가 존재하지 않습니다.';
+    }
     
     if (!error.statusCode) {
       error.statusCode = 500;
-      error.message = '가게 상세 정보 조회 중 오류가 발생했습니다.';
+      if (!error.message.includes('가게를 찾을 수 없습니다') && !error.message.includes('유효하지 않은 가게 ID')) {
+        error.message = '가게 상세 정보 조회 중 오류가 발생했습니다.';
+      }
     }
     throw error;
   }
@@ -106,6 +147,13 @@ exports.getStoreDetail = async (storeId) => {
 exports.getStorePaymentInfo = async (storeId) => {
   const conn = getConnection();
   try {
+    // storeId가 숫자인지 확인
+    if (typeof storeId !== 'number' || storeId <= 0) {
+      const err = new Error('유효하지 않은 가게 ID입니다.');
+      err.statusCode = 400;
+      throw err;
+    }
+    
     const [rows] = await conn.query(
       `SELECT 
         store_id, bank_code, account_number, account_holder_name, business_number
@@ -120,7 +168,13 @@ exports.getStorePaymentInfo = async (storeId) => {
       throw err;
     }
     
-    return rows[0];
+    // store_id를 숫자로 변환
+    const paymentInfo = {
+      ...rows[0],
+      store_id: parseInt(rows[0].store_id) || 0
+    };
+    
+    return paymentInfo;
   } catch (error) {
     if (!error.statusCode) {
       error.statusCode = 500;
@@ -136,6 +190,13 @@ exports.updateStorePaymentInfo = async (storeId, paymentData) => {
   const { bank_code, account_number, account_holder_name, business_number } = paymentData;
   
   try {
+    // storeId가 숫자인지 확인
+    if (typeof storeId !== 'number' || storeId <= 0) {
+      const err = new Error('유효하지 않은 가게 ID입니다.');
+      err.statusCode = 400;
+      throw err;
+    }
+    
     const [result] = await conn.query(
       `UPDATE store_table 
        SET bank_code = ?, account_number = ?, account_holder_name = ?, business_number = ?
@@ -150,7 +211,7 @@ exports.updateStorePaymentInfo = async (storeId, paymentData) => {
     }
     
     return {
-      store_id: storeId,
+      store_id: parseInt(storeId) || 0,
       bank_code,
       account_number,
       account_holder_name,
