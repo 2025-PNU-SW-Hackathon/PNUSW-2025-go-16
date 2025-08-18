@@ -30,9 +30,21 @@ exports.getStoreList = async (req, res, next) => {
 exports.getStoreDetail = async (req, res, next) => {
   try {
     const { storeId } = req.params;
+    console.log('🔍 [getStoreDetail] 요청된 storeId:', storeId);
+    
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        message: '가게 ID가 필요합니다.'
+      });
+    }
+    
     const storeDetail = await storeService.getStoreDetail(storeId);
+    console.log('✅ [getStoreDetail] 조회 성공:', storeDetail);
+    
     res.json({ success: true, data: storeDetail });
   } catch (err) {
+    console.error('❌ [getStoreDetail] 에러 발생:', err);
     next(err);
   }
 };

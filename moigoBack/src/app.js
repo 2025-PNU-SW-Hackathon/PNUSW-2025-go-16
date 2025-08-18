@@ -56,6 +56,27 @@ app.get('/', (req, res) => {
   res.send('API is running...');
 });
 
+// 데이터베이스 연결 상태 확인
+app.get('/health', async (req, res) => {
+  try {
+    const { getConnection } = require('./config/db_config');
+    const conn = getConnection();
+    await conn.query('SELECT 1');
+    res.json({ 
+      success: true, 
+      message: '서버와 데이터베이스가 정상 작동 중입니다.',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ [HEALTH CHECK] 데이터베이스 연결 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: '데이터베이스 연결에 문제가 있습니다.',
+      error: error.message
+    });
+  }
+});
+
 setIO(io);
 // 👇 소켓 핸들러 등록
 handleSocket(io);
