@@ -3,7 +3,7 @@ const authService = require('../services/auth_service');
 // 일반 사용자 로그인
 exports.login = async (req, res, next) => {
   try {
-    const { user_id, user_pwd } = req.body;
+    const { user_id, user_pwd, expo_token } = req.body;
 
     // 기본 검증
     if (!user_id || !user_pwd) {
@@ -13,7 +13,7 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    const result = await authService.login(user_id, user_pwd);
+    const result = await authService.login(user_id, user_pwd, expo_token);
     
     if (result.success) {
       res.json(result);
@@ -28,7 +28,7 @@ exports.login = async (req, res, next) => {
 // 사장님 로그인
 exports.storeLogin = async (req, res, next) => {
   try {
-    const { store_id, store_pwd } = req.body;
+    const { store_id, store_pwd, expo_token } = req.body;
 
     // 기본 검증
     if (!store_id || !store_pwd) {
@@ -38,7 +38,7 @@ exports.storeLogin = async (req, res, next) => {
       });
     }
 
-    const result = await authService.storeLogin(store_id, store_pwd);
+    const result = await authService.storeLogin(store_id, store_pwd, expo_token);
     
     if (result.success) {
       res.json(result);

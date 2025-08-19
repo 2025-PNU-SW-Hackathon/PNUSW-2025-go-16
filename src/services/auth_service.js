@@ -1,9 +1,11 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { getConnection } = require('../config/db_config');
+const { saveUserExpoToken, saveStoreExpoToken } = require('./push_service');
+
 
 // 일반 사용자 로그인
-exports.login = async (user_id, user_pwd) => {
+exports.login = async (user_id, user_pwd, expo_token) => {
   const conn = getConnection();
   
   try {
@@ -31,6 +33,10 @@ exports.login = async (user_id, user_pwd) => {
         message: '비밀번호가 일치하지 않습니다.'
       };
     }
+
+    // 3) (중요) Expo 토큰 업서트 — 다중 기기 지원
+    //    같은 계정의 다른 기기 토큰은 새 행으로 저장, 같은 토큰이면 updated_at만 갱신
+    await saveUserExpoToken(user_id, expo_token).catch(console.error);
 
     // JWT 토큰 생성
     const payload = {
@@ -63,7 +69,7 @@ exports.login = async (user_id, user_pwd) => {
 };
 
 // 사장님 로그인
-exports.storeLogin = async (store_id, store_pwd) => {
+exports.storeLogin = async (store_id, store_pwd, expo_token) => {
   const conn = getConnection();
   
   try {
@@ -104,6 +110,10 @@ exports.storeLogin = async (store_id, store_pwd) => {
         }
       };
     }
+
+    // 3) (중요) Expo 토큰 업서트 — 다중 기기 지원
+    //    같은 계정의 다른 기기 토큰은 새 행으로 저장, 같은 토큰이면 updated_at만 갱신
+    await saveStoreExpoToken(user_id, expo_token).catch(console.error);
 
     // JWT 토큰 생성
     const payload = {

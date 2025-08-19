@@ -27,9 +27,7 @@ exports.markAllMessagesAsRead = async (user_id, room_id) => {
         'SELECT MAX(message_id) AS maxId FROM chat_messages WHERE chat_room_id = ?',
         [room_id]
     )
-    const new_message_id = ((last_message_id[0]?.maxId) ?? 0);
-    console.log(last_message_id);
-    console.log(new_message_id);
+    const new_message_id = ((rows?.[0]?.maxId) ?? 0);
     
     // UPSERT 방식으로 읽음 상태 업데이트
     await conn.query(
