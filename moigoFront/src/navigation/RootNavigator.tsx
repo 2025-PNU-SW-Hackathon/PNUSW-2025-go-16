@@ -1,6 +1,7 @@
 // src/navigation/RootNavigator.tsx
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { LinkingOptions } from '@react-navigation/native';
 import MainTabNavigator from './MainTabNavigator';
 import OnboardingScreen from '@/screens/OnboardingScreen';
 import LoginScreen from '@/screens/LoginScreen';
@@ -24,8 +25,46 @@ import BusinessHoursScreen from '@/screens/business/Setting/BusinessHoursScreen'
 import ReservationTimeScreen from '@/screens/business/Setting/ReservationTimeScreen';
 import BusinessInfoEditScreen from '@/screens/business/Setting/BusinessInfoEditScreen';
 import ChatScreen from '@/screens/ChatScreen';
+import NotificationScreen from '@/screens/NotificationScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+// 딥링크 설정
+export const linking: LinkingOptions<RootStackParamList> = {
+  prefixes: ['moigo://', 'https://moigo.com'],
+  config: {
+    screens: {
+      // 로그인 관련 (공통)
+      Login: 'login',
+      Signup: 'signup',
+      Onboarding: 'onboarding',
+      
+      // 메인 화면 (공통 - 사용자 타입에 따라 분기)
+      Main: 'main',
+      
+      // 공통 기능 (사용자/사업자 모두 사용)
+      ChatRoom: 'chat/:chatId',
+      Chat: 'chat',
+      
+      // 사용자 전용 경로
+      Meeting: 'user/meeting/:eventId',
+      CreateMeeting: 'user/create-meeting',
+      MyInfoSetting: 'user/settings',
+      Profile: 'user/profile',
+      ParticipatedMatches: 'user/participated-matches',
+      ChangePassword: 'user/change-password',
+      Notification: 'notification',
+      
+      // 사업자 전용 경로
+      StoreBasicInfo: 'business/basic-info',
+      StoreDetailInfo: 'business/detail-info',
+      SportsRegistration: 'business/sports',
+      BusinessHours: 'business/hours',
+      ReservationTime: 'business/reservation-time',
+      BusinessInfoEdit: 'business/edit',
+      },
+    },
+};
 
 export default function RootNavigator() {
   const { isLoggedIn, user } = useAuthStore();
@@ -112,6 +151,11 @@ export default function RootNavigator() {
               headerShown: true,
               header: () => <CustomHeader title="채팅" />,
             }} 
+          />
+          <Stack.Screen 
+            name="Notification" 
+            component={NotificationScreen} 
+            options={{ headerShown: false }} 
           />
         </>
       ) : (

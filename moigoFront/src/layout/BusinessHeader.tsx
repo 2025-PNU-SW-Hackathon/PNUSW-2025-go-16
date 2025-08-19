@@ -25,7 +25,7 @@ export default function BusinessHeader({ currentScreen }: BusinessHeaderProps) {
         
         <TouchableOpacity 
           className="p-2 bg-gray-700 rounded-full"
-          onPress={() => console.log('알림 페이지로 이동')}
+          onPress={() => navigation.navigate('Notification')}
         >
           <Feather 
             name="bell" 

@@ -1,13 +1,17 @@
 import * as React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { LogBox, Platform } from 'react-native';
+import { LogBox, Platform, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Constants from 'expo-constants';
-import RootNavigator from '@/navigation/RootNavigator';
+import RootNavigator, { linking } from '@/navigation/RootNavigator';
 import { healthCheck } from '@/apis/apiClient';
 import './global.css';
 
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import PushNotificationBanner from '@/components/common/PushNotificationBanner';
+import { useAuthStore } from '@/store/authStore';
+import { useNotificationStore } from '@/store/notificationStore';
 
 // 환경변수 로깅
 const { API_URL, WS_URL } = (Constants.expoConfig?.extra ?? {}) as any;
@@ -46,27 +50,92 @@ const queryClient = new QueryClient({
 });
 
 export default function App() {
-  const { registerForPushNotificationsAsync } = usePushNotifications();
   const navigationRef = React.useRef<any>(null);
+  const { user } = useAuthStore();
+  const { addNotification } = useNotificationStore();
+  
+  // 푸시 알림 배너 상태
+  const [bannerVisible, setBannerVisible] = React.useState(false);
+  const [bannerData, setBannerData] = React.useState({
+    title: '',
+    body: '',
+    onPress: () => {},
+  });
 
-  // 앱 시작 시 푸시 알림 설정
-  React.useEffect(() => {
-    // 푸시 알림 등록
-    registerForPushNotificationsAsync().then(token => {
-      if (token) {
-        console.log('Push notification token:', token);
-        // 토큰은 로그인 시 서버로 전송됩니다
+  // 푸시 알림 핸들러
+  const { registerForPushNotificationsAsync } = usePushNotifications({
+    onNavigate: (screen: string, params?: any) => {
+      console.log('푸시 알림 네비게이션:', { screen, params });
+      if (navigationRef.current) {
+        navigationRef.current.navigate(screen, params);
       }
-    }).catch(error => {
-      console.error('Push notification registration failed:', error);
-    });
+    },
+    onShowBanner: (title: string, body: string, onPress: () => void) => {
+      console.log('푸시 알림 배너 표시:', { title, body });
+      setBannerData({ title, body, onPress });
+      setBannerVisible(true);
+    },
+    onSaveNotification: (notification) => {
+      console.log('알림 저장:', notification);
+      addNotification({
+        type: notification.type as any,
+        title: notification.title,
+        body: notification.body,
+        data: notification.data,
+      });
+    },
+    currentUserType: user?.userType,
+  });
+
+  // 앱 시작 시 자동 로그인 체크 및 푸시 알림 설정
+  React.useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        // 1. 자동 로그인 체크
+        console.log('자동 로그인 체크 시작...');
+        const isAutoLoginSuccess = await user ? true : false; // Zustand persist가 자동으로 복원
+        
+        if (isAutoLoginSuccess) {
+          console.log('자동 로그인 성공');
+        } else {
+          console.log('자동 로그인 없음 또는 실패');
+        }
+
+        // 2. 푸시 알림 등록
+        const token = await registerForPushNotificationsAsync();
+        if (token) {
+          console.log('Push notification token:', token);
+          // 토큰은 로그인 시 서버로 전송됩니다
+        }
+      } catch (error) {
+        console.error('앱 초기화 중 오류:', error);
+      }
+    };
+
+    initializeApp();
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <NavigationContainer ref={navigationRef}>
-        <RootNavigator />
-      </NavigationContainer>
-    </QueryClientProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <QueryClientProvider client={queryClient}>
+        <View style={{ flex: 1 }}>
+          <NavigationContainer ref={navigationRef} linking={linking}>
+            <RootNavigator />
+          </NavigationContainer>
+          
+          {/* 푸시 알림 배너 */}
+          <PushNotificationBanner
+            visible={bannerVisible}
+            title={bannerData.title}
+            body={bannerData.body}
+            onPress={() => {
+              setBannerVisible(false);
+              bannerData.onPress();
+            }}
+            onDismiss={() => setBannerVisible(false)}
+          />
+        </View>
+      </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 }
