@@ -13,6 +13,7 @@ export default function LoginScreen() {
   const { login, selectedUserType, setLoading, isLoading } = useAuthStore();
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true); // 자동 로그인 기본값 true
 
   // 로그인 훅들
   const loginMutation = useLogin();
@@ -129,6 +130,23 @@ export default function LoginScreen() {
             editable={!isLoading}
           />
         </View>
+      </View>
+
+      {/* 자동 로그인 체크박스 */}
+      <View className="flex-row items-center mb-4 w-full">
+        <TouchableOpacity 
+          onPress={() => setRememberMe(!rememberMe)}
+          className="flex-row items-center"
+        >
+          <View className={`w-5 h-5 rounded border-2 mr-2 items-center justify-center ${
+            rememberMe ? 'bg-mainOrange border-mainOrange' : 'border-gray-300'
+          }`}>
+            {rememberMe && (
+              <Text className="text-white text-xs font-bold">✓</Text>
+            )}
+          </View>
+          <Text className="text-gray-600">자동 로그인</Text>
+        </TouchableOpacity>
       </View>
 
       {/* 로그인 버튼 */}

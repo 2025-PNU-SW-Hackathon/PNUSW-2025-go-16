@@ -25,6 +25,7 @@ import BusinessHoursScreen from '@/screens/business/Setting/BusinessHoursScreen'
 import ReservationTimeScreen from '@/screens/business/Setting/ReservationTimeScreen';
 import BusinessInfoEditScreen from '@/screens/business/Setting/BusinessInfoEditScreen';
 import ChatScreen from '@/screens/ChatScreen';
+import NotificationScreen from '@/screens/NotificationScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -52,6 +53,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
       Profile: 'user/profile',
       ParticipatedMatches: 'user/participated-matches',
       ChangePassword: 'user/change-password',
+      Notification: 'notification',
       
       // 사업자 전용 경로
       StoreBasicInfo: 'business/basic-info',
@@ -149,6 +151,11 @@ export default function RootNavigator() {
               headerShown: true,
               header: () => <CustomHeader title="채팅" />,
             }} 
+          />
+          <Stack.Screen 
+            name="Notification" 
+            component={NotificationScreen} 
+            options={{ headerShown: false }} 
           />
         </>
       ) : (
