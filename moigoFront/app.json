@@ -7,6 +7,7 @@
     "icon": "./assets/spotple-icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "scheme": "moigo",
     "splash": {
       "image": "./assets/spotple-icon.png",
       "resizeMode": "contain",
@@ -16,6 +17,7 @@
       "icon": "./assets/spotple-icon.png",
       "supportsTablet": true,
       "bundleIdentifier": "com.sehankim.spotple",
+      "associatedDomains": ["applinks:moigo.com"],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -26,7 +28,20 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-        "package": "com.sehankim.moigoFront"
+      "package": "com.sehankim.moigoFront",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "moigo",
+              "host": "*"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",

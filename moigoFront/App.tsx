@@ -3,7 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LogBox, Platform } from 'react-native';
 import Constants from 'expo-constants';
-import RootNavigator from '@/navigation/RootNavigator';
+import RootNavigator, { linking } from '@/navigation/RootNavigator';
 import { healthCheck } from '@/apis/apiClient';
 import './global.css';
 
@@ -64,7 +64,7 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <NavigationContainer ref={navigationRef}>
+      <NavigationContainer ref={navigationRef} linking={linking}>
         <RootNavigator />
       </NavigationContainer>
     </QueryClientProvider>
