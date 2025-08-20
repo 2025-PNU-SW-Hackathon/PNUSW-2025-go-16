@@ -39,10 +39,16 @@ export interface ChatMessageDTO {
   created_at: string;
   read_count: number;
   // 시스템 메시지 관련 필드
-  message_type?: 'system_join' | 'system_leave' | 'system_kick';
+  message_type?: 'system_join' | 'system_leave' | 'system_kick' | 'store_share';
   user_name?: string;
   user_id?: string;
   kicked_by?: string;
+  // 가게 공유 메시지 관련 필드
+  store_id?: number;
+  store_name?: string;
+  store_address?: string;
+  store_rating?: number;
+  store_thumbnail?: string;
 }
 
 // 채팅방 상태 변경 요청
@@ -81,6 +87,12 @@ export interface NewMessageDTO {
   user_name?: string;
   user_id?: string;
   kicked_by?: string;
+  // 가게 공유 메시지 관련 필드
+  store_id?: number;
+  store_name?: string;
+  store_address?: string;
+  store_rating?: number;
+  store_thumbnail?: string;
 }
 
 // 에러 응답

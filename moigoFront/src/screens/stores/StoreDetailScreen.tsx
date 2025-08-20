@@ -17,11 +17,30 @@ export default function StoreDetailScreen() {
   const { storeId, chatRoom, isHost } = route.params;
   const { user } = useAuthStore();
 
+  // 디버깅용 로그
+  console.log('=== StoreDetailScreen 렌더링 ===');
+  console.log('storeId:', storeId);
+  console.log('storeId 타입:', typeof storeId);
+  console.log('storeId 유효성:', !isNaN(storeId) && storeId > 0);
+  console.log('chatRoom:', chatRoom);
+  console.log('isHost:', isHost);
+  console.log('user:', user);
+
   // 실제 방장 여부 사용
   const actualIsHost = isHost || false;
 
-  // 가게 상세 정보 조회
+  // storeId 유효성 검사
+  const isValidStoreId = !isNaN(storeId) && storeId > 0;
+
+  // 가게 상세 정보 조회 (유효한 storeId일 때만)
   const { data: storeDetailData, isLoading, error, refetch } = useStoreDetail(storeId);
+
+  // 디버깅용 로그
+  console.log('=== StoreDetailScreen API 상태 ===');
+  console.log('isLoading:', isLoading);
+  console.log('error:', error);
+  console.log('storeDetailData:', storeDetailData);
+  console.log('storeDetailData?.data:', storeDetailData?.data);
 
   // 실제 데이터 사용 (API 데이터가 없으면 기본값 사용)
   const storeDetail = storeDetailData?.data || {
@@ -150,6 +169,20 @@ export default function StoreDetailScreen() {
         <View className="flex-1 justify-center items-center">
           <ActivityIndicator size="large" color="#FF6B00" />
           <Text className="mt-4 text-gray-600">가게 정보를 불러오는 중...</Text>
+        </View>
+      ) : !isValidStoreId ? (
+        <View className="flex-1 justify-center items-center px-4">
+          <Feather name="alert-circle" size={48} color="#EF4444" />
+          <Text className="mt-4 text-gray-600 text-center">유효하지 않은 가게 ID입니다.</Text>
+          <Text className="text-sm text-gray-500 text-center mb-4">
+            storeId: {storeId} (타입: {typeof storeId})
+          </Text>
+          <TouchableOpacity 
+            className="bg-mainOrange px-6 py-3 rounded-lg"
+            onPress={() => navigation.goBack()}
+          >
+            <Text className="text-white font-semibold">뒤로 가기</Text>
+          </TouchableOpacity>
         </View>
       ) : error ? (
         <View className="flex-1 justify-center items-center px-4">

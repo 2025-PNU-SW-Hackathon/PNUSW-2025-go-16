@@ -6,6 +6,7 @@ import { RootStackParamList } from '@/types/RootStackParamList';
 import { ChatRoom, ChatMessage, MessageGroup } from '@/types/ChatTypes';
 import ChatBubble from '@/components/chat/ChatBubble';
 import ChatStatusMessage from '@/components/chat/ChatStatusMessage';
+import StoreShareMessage from '@/components/chat/StoreShareMessage';
 import ReservationDepositInfo from '@/components/chat/ReservationDepositInfo';
 import PaymentModal from '@/components/common/PaymentModal';
 import DropdownMenu, { DropdownOption } from '@/components/common/DropdownMenu';
@@ -251,20 +252,14 @@ export default function ChatRoomScreen() {
   // 결제 수단 선택 처리
   const handlePaymentMethodSelect = (method: 'kakao' | 'naver' | 'bank') => {
     console.log(`결제 수단 선택: ${method}, 참가자 ID: ${selectedParticipantId}`);
-    
     // TODO: 실제 결제 로직 구현
     // 여기서는 테스트용으로 바로 입금 완료 처리
     if (selectedParticipantId) {
       setDepositInfo(prev => ({
         ...prev,
-        participants: prev.participants.map(p => 
-          p.id === selectedParticipantId 
-            ? { ...p, hasDeposited: true }
-            : p
-        )
+        participants: prev.participants.map(p => p.id === selectedParticipantId ? { ...p, hasDeposited: true } : p )
       }));
     }
-    
     setShowPaymentModal(false);
     setSelectedParticipantId(null);
   };

@@ -53,3 +53,37 @@ export interface StoreDetailDTO {
   business_number: string;
 }
 
+// 채팅용 가게 목록 조회 요청 파라미터
+export interface ChatStoreListRequestDTO {
+  keyword?: string;
+  limit?: number;
+}
+
+// 채팅용 가게 목록 조회 응답
+export interface ChatStoreListResponseDTO {
+  success: boolean;
+  data: ChatStoreListItemDTO[];
+  message?: string;
+}
+
+// 채팅용 가게 목록 아이템
+export interface ChatStoreListItemDTO {
+  store_id: number;
+  store_name: string;
+  store_address: string;
+  store_rating: number;
+  store_thumbnail: string;
+}
+
+// 가게 공유 요청
+export interface ShareStoreRequestDTO {
+  store_id: number;
+}
+
+// 가게 공유 응답
+export interface ShareStoreResponseDTO {
+  success: boolean;
+  message?: string;
+}
+
+

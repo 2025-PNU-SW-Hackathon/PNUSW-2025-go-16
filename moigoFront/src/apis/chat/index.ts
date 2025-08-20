@@ -12,7 +12,7 @@ import type {
 // 1. 채팅방 목록 조회
 export const getChatRooms = async (): Promise<ChatRoomListResponseDTO> => {
   try {
-    const response = await chatApiClient.get<ChatRoomListResponseDTO>('/chats/rooms');
+    const response = await chatApiClient.get<ChatRoomListResponseDTO>('/chats');
     return response.data;
   } catch (error) {
     console.log('채팅방 목록 API 호출 실패, 더미 데이터 반환:', error);
@@ -52,7 +52,7 @@ export const enterChatRoom = async (
   data: EnterChatRoomRequestDTO
 ): Promise<EnterChatRoomResponseDTO> => {
   const response = await chatApiClient.post<EnterChatRoomResponseDTO>(
-    '/chats/rooms/enter',
+    '/chats/enter',
     data
   );
   return response.data;
@@ -64,7 +64,7 @@ export const getChatMessages = async (
 ): Promise<ChatMessagesResponseDTO> => {
   try {
     const response = await chatApiClient.get<ChatMessagesResponseDTO>(
-      `/chats/rooms/${roomId}/all-messages`
+      `/chats/${roomId}/all-messages`
     );
     return response.data;
   } catch (error) {
@@ -103,7 +103,7 @@ export const getChatMessages = async (
 // 4. 채팅방 나가기
 export const leaveChatRoom = async (roomId: number): Promise<ChatResponseDTO> => {
   const response = await chatApiClient.delete<ChatResponseDTO>(
-    `/chats/rooms/${roomId}/leave`
+    `/chats/${roomId}/leave`
   );
   return response.data;
 };
@@ -114,7 +114,7 @@ export const updateChatRoomStatus = async (
   data: UpdateChatRoomStatusRequestDTO
 ): Promise<UpdateChatRoomStatusResponseDTO> => {
   const response = await chatApiClient.patch<UpdateChatRoomStatusResponseDTO>(
-    `/chats/rooms/${roomId}/status`,
+    `/chats/${roomId}/status`,
     data
   );
   return response.data;
@@ -126,7 +126,7 @@ export const kickUserFromChatRoom = async (
   userId: string
 ): Promise<ChatResponseDTO> => {
   const response = await chatApiClient.delete<ChatResponseDTO>(
-    `/chats/rooms/${roomId}/kick/${userId}`
+    `/chats/${roomId}/kick/${userId}`
   );
   return response.data;
 }; 

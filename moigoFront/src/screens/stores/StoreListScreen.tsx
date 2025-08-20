@@ -40,11 +40,19 @@ export default function StoreListScreen() {
   const handleStorePress = (store: StoreListItemDTO) => {
     console.log('=== StoreCard 클릭됨 ===');
     console.log('store:', store);
+    console.log('store.store_id 원본값:', store.store_id);
+    console.log('store.store_id 타입:', typeof store.store_id);
+    console.log('store.store_id 길이:', String(store.store_id).length);
     console.log('chatRoom:', chatRoom);
     console.log('isHost:', isHost);
     
+    // storeId를 숫자로 변환
+    const numericStoreId = Number(store.store_id);
+    console.log('변환된 storeId:', numericStoreId, '타입:', typeof numericStoreId);
+    console.log('isNaN 체크:', isNaN(numericStoreId));
+    
     navigation.navigate('StoreDetail', { 
-      storeId: store.store_id,
+      storeId: numericStoreId,
       chatRoom: chatRoom,
       isHost: isHost
     });

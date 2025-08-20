@@ -129,13 +129,9 @@ export default function StoreCard({ store, onPress }: StoreCardProps) {
           </View>
 
           {/* 상세보기 버튼 */}
-          <TouchableOpacity
-            onPress={() => onPress(store)}
-            className="px-4 py-2 bg-mainOrange rounded-lg"
-            activeOpacity={0.8}
-          >
+          <View className="px-4 py-2 bg-mainOrange rounded-lg">
             <Text className="text-white text-sm font-medium">상세보기</Text>
-          </TouchableOpacity>
+          </View>
         </View>
       </View>
     </TouchableOpacity>
