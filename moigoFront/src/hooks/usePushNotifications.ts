@@ -47,6 +47,12 @@ export function usePushNotifications(handlers?: PushNotificationHandlerProps) {
 
   // 푸시 알림 등록
   const registerForPushNotificationsAsync = async () => {
+    // Expo Go에서는 푸시 알림 기능이 제한되므로 경고만 출력하고 종료
+    if (Constants.appOwnership === 'expo') {
+      console.warn('푸시 알림은 개발 빌드에서만 지원됩니다. Expo Go에서는 제한됩니다.');
+      return null;
+    }
+    
     if (Platform.OS === 'android') {
       Notifications.setNotificationChannelAsync('default', {
         name: 'default',

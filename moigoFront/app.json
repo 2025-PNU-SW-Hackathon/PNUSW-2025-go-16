@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/spotple-icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
+
     "scheme": "moigo",
     "splash": {
       "image": "./assets/spotple-icon.png",
@@ -21,24 +21,24 @@
         "applinks:moigo.com"
       ],
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false,
-        "UIViewControllerBasedStatusBarAppearance": false,
-        "UIStatusBarStyle": "light-content",
-        "UIRequiresFullScreen": false,
-        "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait"],
-        "UISupportedInterfaceOrientations~ipad": ["UIInterfaceOrientationPortrait", "UIInterfaceOrientationPortraitUpsideDown", "UIInterfaceOrientationLandscapeLeft", "UIInterfaceOrientationLandscapeRight"]
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
+      "icon": "./assets/spotple-icon.png",
       "adaptiveIcon": {
         "foregroundImage": "./assets/spotple-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.sehankim.moigoFront",
+      "versionCode": 1,
       "supportsTablet": true,
-      "allowBackup": true,
-      "largeHeap": true,
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.WAKE_LOCK",
+        "android.permission.ACCESS_NETWORK_STATE"
+      ],
       "intentFilters": [
         {
           "action": "VIEW",
@@ -67,6 +67,7 @@
       "API_URL": "https://spotple.kr",
       "WS_URL": "wss://spotple.kr"
     },
-    "owner": "sehankim"
+    "owner": "sehankim",
+    "platforms": ["ios", "android", "web"]
   }
 }

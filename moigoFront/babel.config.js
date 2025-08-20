@@ -24,8 +24,6 @@ module.exports = function (api) {
           },
         },
       ],
-      // ES 모듈 문제 해결
-      ['@babel/plugin-transform-modules-commonjs', { loose: true }],
     ],
   };
 };

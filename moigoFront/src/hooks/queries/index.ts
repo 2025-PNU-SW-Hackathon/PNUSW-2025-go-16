@@ -40,16 +40,7 @@ export { useHomeScreen } from '../useHomeScreen';
 export { useDeleteAccount } from './useUserQueries';
 
 // 일정 관련 훅
-export {
-  useMatches,
-  useStoreSchedule,
-} from './useUserQueries';
+export { useMatches, useStoreSchedule } from './useUserQueries';
 
 // 가게 정보 관련 훅
-export {
-  useStoreInfo,
-  useUpdateStoreBasicInfo,
-  useUpdateNotificationSettings,
-  useUpdateReservationSettings,
-  useUpdateStoreDetailInfo,
-} from './useUserQueries'; 
+export { useStoreInfo, useUpdateStoreBasicInfo, useUpdateNotificationSettings, useUpdateReservationSettings, useUpdateStoreDetailInfo } from './useUserQueries'; 
