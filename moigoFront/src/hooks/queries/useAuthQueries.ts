@@ -71,16 +71,13 @@ export const useStoreLogin = () => {
   
   return useMutation({
     mutationFn: async (data: Omit<StoreLoginRequestDTO, 'expo_token'>) => {
-      // expo token 가져오기
+      // expo token 가져오기 (선택적)
       const expoToken = await registerForPushNotificationsAsync();
-      if (!expoToken) {
-        throw new Error('푸시 알림 토큰을 가져올 수 없습니다.');
-      }
       
-      // expo token을 포함한 로그인 요청
+      // expo token을 포함한 로그인 요청 (토큰이 없어도 진행)
       const loginData: StoreLoginRequestDTO = {
         ...data,
-        expo_token: expoToken,
+        ...(expoToken && { expo_token: expoToken }),
       };
       
       return storeLogin(loginData);
@@ -132,16 +129,13 @@ export const useLogin = () => {
   
   return useMutation({
     mutationFn: async (data: Omit<LoginRequestDTO, 'expo_token'>) => {
-      // expo token 가져오기
+      // expo token 가져오기 (선택적)
       const expoToken = await registerForPushNotificationsAsync();
-      if (!expoToken) {
-        throw new Error('푸시 알림 토큰을 가져올 수 없습니다.');
-      }
       
-      // expo token을 포함한 로그인 요청
+      // expo token을 포함한 로그인 요청 (토큰이 없어도 진행)
       const loginData: LoginRequestDTO = {
         ...data,
-        expo_token: expoToken,
+        ...(expoToken && { expo_token: expoToken }),
       };
       
       return login(loginData);
