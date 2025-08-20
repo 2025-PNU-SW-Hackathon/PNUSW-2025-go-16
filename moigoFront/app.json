@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "spotple",
-    "slug": "spotple",
+    "slug": "moigoFront",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/spotple-icon.png",
@@ -17,7 +17,9 @@
       "icon": "./assets/spotple-icon.png",
       "supportsTablet": true,
       "bundleIdentifier": "com.sehankim.spotple",
-      "associatedDomains": ["applinks:moigo.com"],
+      "associatedDomains": [
+        "applinks:moigo.com"
+      ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -39,7 +41,10 @@
               "host": "*"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -53,6 +58,7 @@
       },
       "API_URL": "https://spotple.kr",
       "WS_URL": "wss://spotple.kr"
-    }
+    },
+    "owner": "sehankim"
   }
 }
