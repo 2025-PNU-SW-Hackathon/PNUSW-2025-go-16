@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { LogBox, Platform, View } from 'react-native';
+import { LogBox, Platform, View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Constants from 'expo-constants';
 import RootNavigator, { linking } from '@/navigation/RootNavigator';
@@ -62,6 +62,9 @@ export default function App() {
     onPress: () => {},
   });
 
+  // 푸시 토큰 상태 추가
+  const [pushToken, setPushToken] = React.useState<string | null>(null);
+
   // 푸시 알림 핸들러
   const { registerForPushNotificationsAsync } = usePushNotifications({
     onNavigate: (screen: string, params?: any) => {
@@ -101,11 +104,19 @@ export default function App() {
           console.log('자동 로그인 없음 또는 실패');
         }
 
-        // 2. 푸시 알림 등록
-        const token = await registerForPushNotificationsAsync();
-        if (token) {
-          console.log('Push notification token:', token);
-          // 토큰은 로그인 시 서버로 전송됩니다
+        // 2. 푸시 알림 등록 (선택적)
+        try {
+          const token = await registerForPushNotificationsAsync();
+          if (token) {
+            console.log('Push notification token:', token);
+            setPushToken(token); // 토큰을 상태에 저장
+            // 토큰은 로그인 시 서버로 전송됩니다
+          } else {
+            console.log('푸시 알림 토큰을 가져올 수 없습니다. 알림 없이 계속 진행합니다.');
+          }
+        } catch (pushError) {
+          console.log('푸시 알림 설정 실패:', pushError);
+          console.log('알림 없이 앱을 계속 사용할 수 있습니다.');
         }
       } catch (error) {
         console.error('앱 초기화 중 오류:', error);
@@ -122,6 +133,41 @@ export default function App() {
           <NavigationContainer ref={navigationRef} linking={linking}>
             <RootNavigator />
           </NavigationContainer>
+          
+          {/* 개발용: 푸시 토큰 표시 오버레이 */}
+          {__DEV__ && pushToken && (
+            <View style={{
+              position: 'absolute',
+              top: 50,
+              left: 10,
+              right: 10,
+              backgroundColor: 'rgba(0,0,0,0.8)',
+              padding: 10,
+              borderRadius: 5,
+              zIndex: 9999,
+            }}>
+              <Text style={{ color: 'white', fontSize: 12, fontWeight: 'bold', marginBottom: 5 }}>
+                푸시 토큰 (개발용):
+              </Text>
+              <ScrollView style={{ maxHeight: 60 }}>
+                <Text style={{ color: 'white', fontSize: 10, fontFamily: 'monospace' }}>
+                  {pushToken}
+                </Text>
+              </ScrollView>
+              <TouchableOpacity
+                style={{ backgroundColor: '#007AFF', padding: 5, borderRadius: 3, marginTop: 5 }}
+                onPress={() => {
+                  // 클립보드 복사 (Expo Clipboard 사용)
+                  console.log('푸시 토큰:', pushToken);
+                  Alert.alert('토큰 복사됨', '콘솔에서 확인하거나 수동으로 복사하세요');
+                }}
+              >
+                <Text style={{ color: 'white', fontSize: 10, textAlign: 'center' }}>
+                  콘솔 로그 출력
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
           
           {/* 푸시 알림 배너 */}
           <PushNotificationBanner
