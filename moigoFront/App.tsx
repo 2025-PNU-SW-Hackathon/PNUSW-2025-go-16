@@ -94,10 +94,9 @@ export default function App() {
   React.useEffect(() => {
     const initializeApp = async () => {
       try {
-        // 1. 자동 로그인 체크
-        console.log('자동 로그인 체크 시작...');
-        const isAutoLoginSuccess = await user ? true : false; // Zustand persist가 자동으로 복원
-        
+        // 1. 자동 로그인 체크 (태블릿에서 단순화)
+        console.log('태블릿 모드: 자동 로그인 체크 단순화');
+        const isAutoLoginSuccess = await user ? true : false;
         if (isAutoLoginSuccess) {
           console.log('자동 로그인 성공');
         } else {

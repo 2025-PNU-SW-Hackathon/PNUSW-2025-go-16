@@ -7,10 +7,12 @@ import { ChatRoom } from '@/types/ChatTypes';
 import ChatRoomItem from '@/components/chat/ChatRoomItem';
 import { formatTimeAgo } from '@/utils/dateUtils';
 import type { ChatRoomDTO } from '@/types/DTO/chat';
+import { useAuthStore } from '@/store/authStore';
 
 export default function ChatScreen() {
   const navigation = useNavigation();
   const { data, isLoading, error, refetch } = useChatRooms();
+  const { user } = useAuthStore();
 
   // API 데이터를 기존 ChatRoom 형식으로 변환
   const convertToChatRoom = (apiData: ChatRoomDTO): ChatRoom => {
@@ -42,6 +44,12 @@ export default function ChatScreen() {
     const type: 'matching' | 'store' = isStore ? 'store' : 'matching';
     const icon = getIcon(apiData.name, type);
 
+    // 방장 ID는 sender_id를 사용
+    const host_id = apiData.sender_id || '';
+    
+    // 실제 방장 여부 판단: 현재 사용자 ID와 sender_id 비교
+    const isHost = user?.id === apiData.sender_id;
+
     return {
       id: apiData.chat_room_id.toString(),
       type,
@@ -50,7 +58,8 @@ export default function ChatScreen() {
       lastMessage: apiData.last_message || '메시지가 없습니다.',
       timestamp: formatTimeAgo(apiData.last_message_time),
       unreadCount: Math.floor(Math.random() * 5), // 임시로 랜덤 값
-      isHost: Math.random() > 0.5, // 임시로 랜덤 값
+      isHost: isHost, // 실제 방장 여부 사용
+      host_id: host_id, // 방장 ID 추가
       icon,
       location: type === 'store' ? '강남역 2번 출구' : undefined
     };
@@ -61,13 +70,18 @@ export default function ChatScreen() {
     const apiData = data as any;
     const apiChatRoom = apiData?.data?.find((room: ChatRoomDTO) => room.chat_room_id.toString() === chatRoom.id);
     if (apiChatRoom) {
-      // 새로운 ChatRoom 형식으로 변환하여 전달
+      // 방장 여부를 다시 계산
+      const isHost = user?.id === apiChatRoom.sender_id;
+      
+      // 완전한 ChatRoom 객체로 전달
       const convertedChatRoom = {
         chat_room_id: apiChatRoom.chat_room_id,
         name: apiChatRoom.name,
         last_message: apiChatRoom.last_message,
         last_message_time: apiChatRoom.last_message_time,
-        sender_id: apiChatRoom.sender_id
+        sender_id: apiChatRoom.sender_id,
+        isHost: isHost, // 방장 여부 추가
+        host_id: apiChatRoom.sender_id // 방장 ID 추가
       };
       (navigation as any).navigate('ChatRoom', { chatRoom: convertedChatRoom });
     }

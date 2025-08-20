@@ -124,4 +124,34 @@ export interface AuthErrorResponseDTO {
   message: string;
   statusCode?: number;
   errorCode?: string;
+}
+
+// 모임 나가기 요청 DTO
+export interface LeaveMeetingRequestDTO {
+  group_id: number; // 모임 ID
+}
+
+// 모임 나가기 응답 DTO
+export interface LeaveMeetingResponseDTO {
+  success: boolean;
+  message: string;
+  data?: {
+    group_id: number;
+    left_at: string;
+  };
+}
+
+// 채팅방 나가기 요청 DTO
+export interface LeaveChatRoomRequestDTO {
+  roomId: number; // 채팅방 ID
+}
+
+// 채팅방 나가기 응답 DTO
+export interface LeaveChatRoomResponseDTO {
+  success: boolean;
+  message: string;
+  data?: {
+    roomId: number;
+    left_at: string;
+  };
 } 

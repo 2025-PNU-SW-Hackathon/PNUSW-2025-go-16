@@ -82,7 +82,7 @@ export function setAccessToken(token: string | null) {
   console.log('토큰 설정됨:', token ? '있음' : '없음');
 }
 
-// 헬스체크 함수 추가
+// 헬스체크 함수 추가 (비활성화)
 export async function healthCheck() {
   try {
     // 서버에서 지원하는 엔드포인트로 시도

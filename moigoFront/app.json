@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/spotple-icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+
     "scheme": "moigo",
     "splash": {
       "image": "./assets/spotple-icon.png",
@@ -25,12 +25,20 @@
       }
     },
     "android": {
+      "icon": "./assets/spotple-icon.png",
       "adaptiveIcon": {
         "foregroundImage": "./assets/spotple-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.sehankim.moigoFront",
+      "versionCode": 1,
+      "supportsTablet": true,
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.WAKE_LOCK",
+        "android.permission.ACCESS_NETWORK_STATE"
+      ],
       "intentFilters": [
         {
           "action": "VIEW",
@@ -59,6 +67,7 @@
       "API_URL": "https://spotple.kr",
       "WS_URL": "wss://spotple.kr"
     },
-    "owner": "sehankim"
+    "owner": "sehankim",
+    "platforms": ["ios", "android", "web"]
   }
 }

@@ -1,15 +1,10 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { PasswordChangeForm, PasswordValidation } from '@/types/reservation';
 
-// 로그인 사용자 타입 정의 - 서버 응답에 맞게 수정
+// 로그인 사용자 타입 정의
 interface AuthUser {
   id: string;
   email: string;
-  name: string;
-  phoneNumber: string;
-  gender: number;
   userType: 'sports_fan' | 'business';
 }
 
@@ -30,21 +25,18 @@ interface AuthState {
   setUserType: (userType: 'sports_fan' | 'business') => void; // 사용자 타입 설정
   changePassword: (passwordData: PasswordChangeForm) => Promise<boolean>;
   validatePassword: (password: string) => PasswordValidation;
-  checkAutoLogin: () => Promise<boolean>; // 자동 로그인 체크
 }
 
 // 인증 스토어 생성
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
-      // 초기 상태 - 로그아웃 상태로 시작
-      isLoggedIn: false,
-      user: null,
-      isLoading: false,
-      token: null,
-      selectedUserType: null,
+export const useAuthStore = create<AuthState>((set, get) => ({
+  // 초기 상태 - 로그아웃 상태로 시작
+  isLoggedIn: false,
+  user: null,
+  isLoading: false,
+  token: null,
+  selectedUserType: null,
   
-  // 로그인 액션 - 서버 응답에 맞게 수정
+  // 로그인 액션
   login: (userData: AuthUser, token: string) => {
     set({
       isLoggedIn: true,
@@ -62,8 +54,6 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       isLoading: false,
     });
-    // AsyncStorage에서도 제거
-    AsyncStorage.removeItem('auth-storage');
   },
   
   // 로딩 상태 설정
@@ -131,64 +121,4 @@ export const useAuthStore = create<AuthState>()(
       errors,
     };
   },
-
-  // 자동 로그인 체크
-  checkAutoLogin: async (): Promise<boolean> => {
-    const { token, user } = get();
-    
-    if (!token || !user) {
-      return false;
-    }
-
-    set({ isLoading: true });
-
-    try {
-      // TODO: 실제 API 호출로 토큰 유효성 검사
-      // const response = await fetch('/api/auth/verify', {
-      //   headers: { Authorization: `Bearer ${token}` }
-      // });
-      
-      // 개발용: 간단한 토큰 유효성 체크 (실제로는 서버에서 검증)
-      const isValidToken = token.startsWith('jwt-token-') || token.startsWith('new-jwt-token-');
-      
-      if (isValidToken) {
-        set({ 
-          isLoggedIn: true,
-          isLoading: false 
-        });
-        return true;
-      } else {
-        // 토큰이 유효하지 않으면 로그아웃
-        set({
-          isLoggedIn: false,
-          user: null,
-          token: null,
-          isLoading: false,
-        });
-        return false;
-      }
-    } catch (error) {
-      console.error('자동 로그인 체크 실패:', error);
-      set({
-        isLoggedIn: false,
-        user: null,
-        token: null,
-        isLoading: false,
-      });
-      return false;
-    }
-  },
-    }),
-    {
-      name: 'auth-storage',
-      storage: createJSONStorage(() => AsyncStorage),
-      // 보안상 토큰만 저장하고 민감한 정보는 제외
-      partialize: (state) => ({
-        isLoggedIn: state.isLoggedIn,
-        user: state.user,
-        token: state.token,
-        selectedUserType: state.selectedUserType,
-      }),
-    }
-  )
-);
+}));

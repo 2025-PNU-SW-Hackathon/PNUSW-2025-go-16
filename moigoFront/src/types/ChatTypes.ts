@@ -9,6 +9,7 @@ export interface ChatRoom {
   timestamp: string;
   unreadCount: number;
   isHost: boolean; // 방장 여부
+  host_id?: string; // 방장 ID
   icon: {
     text: string;
     backgroundColor: string;
@@ -16,6 +17,9 @@ export interface ChatRoom {
   };
   location?: string; // 가게 채팅의 경우 위치 정보
 }
+
+// 시스템 메시지 타입 정의
+export type SystemMessageType = 'system_join' | 'system_leave' | 'system_kick' | 'store_share';
 
 // 백엔드에서 받는 기본 메시지 구조
 export interface ChatMessage {
@@ -25,7 +29,18 @@ export interface ChatMessage {
   senderAvatar: string;
   message: string;
   timestamp: Date;
-  type: 'system' | 'text' | 'store'; // system: 시스템 메시지, text: 일반 텍스트, store: 가게 공유
+  type: 'system' | 'text' | 'store' | 'store_share'; // system: 시스템 메시지, text: 일반 텍스트, store: 가게 공유, store_share: 가게 공유 메시지
+  // 시스템 메시지 관련 필드
+  message_type?: SystemMessageType; // 시스템 메시지 타입
+  user_name?: string; // 관련 사용자 이름
+  user_id?: string; // 관련 사용자 ID
+  kicked_by?: string; // 강퇴한 사용자 ID
+  // 가게 공유 메시지 관련 필드
+  store_id?: number; // 가게 ID
+  store_name?: string; // 가게 이름
+  store_address?: string; // 가게 주소
+  store_rating?: number; // 가게 평점
+  store_thumbnail?: string; // 가게 썸네일
   storeInfo?: {
     storeName: string;
     rating: number;

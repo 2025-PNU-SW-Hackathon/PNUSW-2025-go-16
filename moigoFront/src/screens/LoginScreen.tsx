@@ -1,5 +1,18 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, Image } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  Alert, 
+  Image, 
+  SafeAreaView, 
+  KeyboardAvoidingView, 
+  Platform, 
+  ScrollView,
+  TouchableWithoutFeedback,
+  Keyboard
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/types/RootStackParamList';
@@ -89,48 +102,70 @@ export default function LoginScreen() {
   };
 
   return (
-    <View className="flex-1 justify-center items-center px-8 bg-white">
-      {/* 로고 */}
-      <View className="mb-12">
-        <Image
-          source={require('@/assets/moigoLogo.png')}
-          className="w-20 h-20"
-          resizeMode="contain"
-        />
-      </View>
+    <SafeAreaView className="flex-1 bg-white">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1"
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+            <View className="flex-1 justify-center items-center px-8 bg-white">
+              {/* 로고 */}
+              <View className="mb-12">
+                <Image
+                  source={require('@/assets/moigoLogo.png')}
+                  className="w-20 h-20"
+                  resizeMode="contain"
+                />
+              </View>
 
-      {/* 사용자 타입 표시 */}
-      {selectedUserType && (
-        <View className="px-4 py-2 mb-4 bg-gray-100 rounded-lg">
-          <Text className="text-sm text-center text-gray-600">
-            {selectedUserType === 'business' ? '사업자' : '스포츠 팬'} 모드로 로그인
-          </Text>
-        </View>
-      )}
+              {/* 사용자 타입 표시 */}
+              {selectedUserType && (
+                <View className="px-4 py-2 mb-4 bg-gray-100 rounded-lg">
+                  <Text className="text-sm text-center text-gray-600">
+                    {selectedUserType === 'business' ? '사업자' : '스포츠 팬'} 모드로 로그인
+                  </Text>
+                </View>
+              )}
 
-      {/* 입력 필드들 */}
-      <View className="mb-5 space-y-4 w-full">
-        <View className="px-4 py-2 mb-3 bg-white rounded-lg border border-gray-200">
-          <TextInput
-            placeholder={selectedUserType === 'business' ? '매장 ID' : '아이디'}
-            value={userId}
-            onChangeText={setUserId}
-            className="text-base"
-            autoCapitalize="none"
-            editable={!isLoading}
-          />
-        </View>
-        <View className="px-4 py-2 mb-3 bg-white rounded-lg border border-gray-200">
-          <TextInput
-            placeholder="비밀번호"
-            value={password}
-            onChangeText={setPassword}
-            className="text-base"
-            secureTextEntry
-            editable={!isLoading}
-          />
-        </View>
-      </View>
+              {/* 입력 필드들 */}
+              <View className="mb-5 space-y-4 w-full">
+                <View className="px-4 py-2 mb-3 bg-white rounded-lg border border-gray-200">
+                  <TextInput
+                    placeholder={selectedUserType === 'business' ? '매장 ID' : '아이디'}
+                    value={userId}
+                    onChangeText={setUserId}
+                    className="text-base"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isLoading}
+                    returnKeyType="next"
+                    blurOnSubmit={false}
+                    style={{
+                      fontSize: 16,
+                      lineHeight: 20,
+                    }}
+                  />
+                </View>
+                <View className="px-4 py-2 mb-3 bg-white rounded-lg border border-gray-200">
+                  <TextInput
+                    placeholder="비밀번호"
+                    value={password}
+                    onChangeText={setPassword}
+                    className="text-base"
+                    secureTextEntry
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isLoading}
+                    returnKeyType="done"
+                    onSubmitEditing={handleLogin}
+                    style={{
+                      fontSize: 16,
+                      lineHeight: 20,
+                    }}
+                  />
+                </View>
+              </View>
 
       {/* 자동 로그인 체크박스 */}
       <View className="flex-row items-center mb-4 w-full">
@@ -159,115 +194,119 @@ export default function LoginScreen() {
         />
       </View>
 
-      {/* 링크들 */}
-      <View className="flex-row justify-between mb-8 w-full">
-        <TouchableOpacity>
-          <Text className="text-mainGrayText">비밀번호 찾기</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-          <Text className="text-mainGrayText">회원가입</Text>
-        </TouchableOpacity>
-      </View>
+              {/* 링크들 */}
+              <View className="flex-row justify-between mb-8 w-full">
+                <TouchableOpacity>
+                  <Text className="text-mainGrayText">비밀번호 찾기</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
+                  <Text className="text-mainGrayText">회원가입</Text>
+                </TouchableOpacity>
+              </View>
 
-      {/* 구분선 */}
-      <View className="flex-row items-center mb-3 w-full">
-        <View className="flex-1 h-px bg-gray-200" />
-        <Text className="mx-4 text-mainGrayText">간편 로그인</Text>
-        <View className="flex-1 h-px bg-gray-200" />
-      </View>
+              {/* 구분선 */}
+              <View className="flex-row items-center mb-3 w-full">
+                <View className="flex-1 h-px bg-gray-200" />
+                <Text className="mx-4 text-mainGrayText">간편 로그인</Text>
+                <View className="flex-1 h-px bg-gray-200" />
+              </View>
 
-      {/* 소셜 로그인 버튼들 */}
-      <View className="space-y-3 w-full">
-        <View className="my-2">
-          <TouchableOpacity
-            onPress={() => {
-              Alert.alert('알림', '카카오 로그인 기능은 준비 중입니다.');
-            }}
-            activeOpacity={0.8}
-            className="overflow-hidden items-center w-full"
-            style={{
-              height: 60,
-              backgroundColor: '#FEE500',
-              borderRadius: 12,
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingHorizontal: 30,
-            }}
-          >
-                         {/* 카카오 아이콘 */}
-             <Image
-               source={require('@/assets/kakaoIcon.png')}
-               style={{
-                 width: 20,
-                 height: 20,
-                 marginRight: 15,
-               }}
-               resizeMode="contain"
-             />
-            
-            {/* 텍스트 */}
-            <Text
-              style={{
-                flex: 1,
-                fontSize: 20,
-                fontFamily: 'System',
-                color: 'rgba(0, 0, 0, 0.85)',
-                textAlign: 'center',
-              }}
-            >
-              카카오 로그인
-            </Text>
-            
-                         {/* 오른쪽 여백을 위한 빈 공간 */}
-             <View style={{ width: 15, height: 30 }} />
-          </TouchableOpacity>
-        </View>
-        <View className="my-2">
-          <TouchableOpacity
-            onPress={() => {
-              Alert.alert('알림', '네이버 로그인 기능은 준비 중입니다.');
-            }}
-            activeOpacity={0.8}
-            className="overflow-hidden items-center w-full"
-            style={{
-              height: 60,
-              backgroundColor: '#03C75A',
-              borderRadius: 12,
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingHorizontal: 30,
-            }}
-          >
-            {/* 네이버 로고 */}
-            <Text
-              style={{
-                fontSize: 20,
-                fontWeight: 'bold',
-                color: '#FFFFFF',
-                marginRight: 15,
-              }}
-            >
-              N
-            </Text>
-            
-            {/* 텍스트 */}
-            <Text
-              style={{
-                flex: 1,
-                fontSize: 20,
-                fontFamily: 'System',
-                color: '#FFFFFF',
-                textAlign: 'center',
-              }}
-            >
-              네이버 로그인
-            </Text>
-            
-            {/* 오른쪽 여백을 위한 빈 공간 */}
-            <View style={{ width: 15, height: 30 }} />
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
+              {/* 소셜 로그인 버튼들 */}
+              <View className="space-y-3 w-full">
+                <View className="my-1">
+                  <TouchableOpacity
+                    onPress={() => {
+                      Alert.alert('알림', '카카오 로그인 기능은 준비 중입니다.');
+                    }}
+                    activeOpacity={0.8}
+                    className="overflow-hidden items-center w-full"
+                    style={{
+                      height: 48,
+                      backgroundColor: '#FEE500',
+                      borderRadius: 10,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 20,
+                    }}
+                  >
+                    {/* 카카오 아이콘 */}
+                    <Image
+                      source={require('@/assets/kakaoIcon.png')}
+                      style={{
+                        width: 18,
+                        height: 18,
+                        marginRight: 25,
+                      }}
+                      resizeMode="contain"
+                    />
+                    
+                    {/* 텍스트 */}
+                    <Text
+                      style={{
+                        flex: 1,
+                        fontSize: 18,
+                        fontFamily: 'System',
+                        color: 'rgba(0, 0, 0, 0.85)',
+                        textAlign: 'center',
+                      }}
+                    >
+                      카카오 로그인
+                    </Text>
+                    
+                    {/* 오른쪽 여백을 위한 빈 공간 */}
+                    <View style={{ width: 25, height: 18 }} />
+                  </TouchableOpacity>
+                </View>
+                <View className="my-1">
+                  <TouchableOpacity
+                    onPress={() => {
+                      Alert.alert('알림', '네이버 로그인 기능은 준비 중입니다.');
+                    }}
+                    activeOpacity={0.8}
+                    className="overflow-hidden items-center w-full"
+                    style={{
+                      height: 48,
+                      backgroundColor: '#03C75A',
+                      borderRadius: 10,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 20,
+                    }}
+                  >
+                    {/* 네이버 로고 */}
+                    <Text
+                      style={{
+                        fontSize: 18,
+                        fontWeight: 'bold',
+                        color: '#FFFFFF',
+                        marginRight: 25,
+                      }}
+                    >
+                      N
+                    </Text>
+                    
+                    {/* 텍스트 */}
+                    <Text
+                      style={{
+                        flex: 1,
+                        fontSize: 18,
+                        fontFamily: 'System',
+                        color: '#FFFFFF',
+                        textAlign: 'center',
+                      }}
+                    >
+                      네이버 로그인
+                    </Text>
+                    
+                    {/* 오른쪽 여백을 위한 빈 공간 */}
+                    <View style={{ width: 25, height: 18 }} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }

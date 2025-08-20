@@ -12,7 +12,7 @@ export type RootStackParamList = {
   ReservationTime: undefined;
   BusinessInfoEdit: { storeId?: string; isSignup?: boolean };
   Chat: undefined;
-  ChatRoom: { chatId: string };
+  ChatRoom: { chatRoom: ChatRoom };
   CreateMeeting: undefined;
   Meeting: { eventId: string };
   ParticipatedMatches: undefined;
@@ -20,5 +20,7 @@ export type RootStackParamList = {
   Profile: undefined;
   ChangePassword: undefined;
   Favorite: undefined;
+  StoreList: { chatRoom?: ChatRoom; isHost?: boolean };
+  StoreDetail: { storeId: number; chatRoom?: ChatRoom; isHost?: boolean };
   Notification: undefined;
 };
