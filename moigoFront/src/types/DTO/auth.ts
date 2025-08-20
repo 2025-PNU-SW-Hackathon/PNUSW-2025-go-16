@@ -80,6 +80,7 @@ export interface BusinessRegistrationStatusResponseDTO {
 export interface LoginRequestDTO {
   user_id: string;
   user_pwd: string; // 서버에서 user_pwd로 받음
+  expo_token: string; // expo 푸시 토큰 추가
 }
 
 // 로그인 응답 DTO - 실제 서버 응답 형식에 맞게 수정
@@ -87,14 +88,10 @@ export interface LoginResponseDTO {
   success: boolean;
   message: string;
   data: {
-    // 토큰이 별도 필드로 오거나 data 안에 있을 수 있음
-    token?: string;
+    token: string;
     user: {
       user_id: string;
       user_name: string;
-      user_email: string;
-      user_phone_number: string;
-      user_gender: number;
     }
   };
 }
@@ -103,6 +100,7 @@ export interface LoginResponseDTO {
 export interface StoreLoginRequestDTO {
   store_id: string;
   store_pwd: string;
+  expo_token: string; // expo 푸시 토큰 추가
 }
 
 // 사장님 로그인 응답 DTO

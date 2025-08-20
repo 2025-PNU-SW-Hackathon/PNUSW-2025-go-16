@@ -22,4 +22,5 @@ export type RootStackParamList = {
   Favorite: undefined;
   StoreList: { chatRoom?: ChatRoom; isHost?: boolean };
   StoreDetail: { storeId: number; chatRoom?: ChatRoom; isHost?: boolean };
+  Notification: undefined;
 };

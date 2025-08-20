@@ -141,7 +141,7 @@ export const getBusinessRegistrationStatus = async (
   return response.data;
 };
 
-// POST /users/login - 로그인 (서버 코드에 맞게 수정)
+// POST /api/v1/users/login - 로그인 (서버 코드에 맞게 수정)
 export const login = async (
   data: LoginRequestDTO
 ): Promise<LoginResponseDTO> => {
@@ -152,7 +152,7 @@ export const login = async (
   return response.data;
 };
 
-// POST /users/store/login - 사장님 로그인
+// POST /api/v1/users/store/login - 사장님 로그인
 export const storeLogin = async (
   data: StoreLoginRequestDTO
 ): Promise<StoreLoginResponseDTO> => {

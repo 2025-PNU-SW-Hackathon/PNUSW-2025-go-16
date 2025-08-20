@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { useAuthStore } from './authStore';
 
 // 사용자 등급 타입
-type UserGrade = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'DIAMOND';
+type UserGrade = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'DIAMOND' | 'STORE_OWNER';
 
 // 마이페이지 사용자 정보 타입
 interface UserProfile {
