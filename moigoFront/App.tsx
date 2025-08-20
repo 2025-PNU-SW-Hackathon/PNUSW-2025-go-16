@@ -91,22 +91,11 @@ export default function App() {
   React.useEffect(() => {
     const initializeApp = async () => {
       try {
-        // 1. 자동 로그인 체크
-        console.log('자동 로그인 체크 시작...');
-        const isAutoLoginSuccess = await user ? true : false; // Zustand persist가 자동으로 복원
+        // 1. 자동 로그인 체크 (태블릿에서 단순화)
+        console.log('태블릿 모드: 자동 로그인 체크 단순화');
         
-        if (isAutoLoginSuccess) {
-          console.log('자동 로그인 성공');
-        } else {
-          console.log('자동 로그인 없음 또는 실패');
-        }
-
-        // 2. 푸시 알림 등록
-        const token = await registerForPushNotificationsAsync();
-        if (token) {
-          console.log('Push notification token:', token);
-          // 토큰은 로그인 시 서버로 전송됩니다
-        }
+        // 2. 푸시 알림 등록 (태블릿에서 비활성화)
+        console.log('태블릿 모드: 푸시 알림 등록 비활성화');
       } catch (error) {
         console.error('앱 초기화 중 오류:', error);
       }

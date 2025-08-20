@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/spotple-icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "scheme": "moigo",
     "splash": {
       "image": "./assets/spotple-icon.png",
@@ -36,6 +36,9 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.sehankim.moigoFront",
+      "supportsTablet": true,
+      "allowBackup": true,
+      "largeHeap": true,
       "intentFilters": [
         {
           "action": "VIEW",
