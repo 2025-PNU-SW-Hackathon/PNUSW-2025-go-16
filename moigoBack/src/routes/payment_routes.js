@@ -11,4 +11,20 @@ router.post('/release', authMiddleware, paymentController.releasePayments);
 router.get('/status/:chatRoomId', authMiddleware, paymentController.getPaymentStatus);
 router.post('/cancel', authMiddleware, paymentController.cancelPayment);
 
+
+// ✅ 예약 확정 / 거절 (사장님 동작)
+// 경로 예: /api/v1/payments/reservations/:reservationId/confirm|reject
+// ==============================
+router.post(
+  '/reservations/:reservationId/confirm',
+  authMiddleware,
+  paymentController.confirmReservationByStore
+);
+
+router.post(
+  '/reservations/:reservationId/reject',
+  authMiddleware,
+  paymentController.rejectReservationByStore
+);
+
 module.exports = router;
