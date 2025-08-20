@@ -48,7 +48,8 @@
 ```json
 {
   "user_id": "testuser123",
-  "user_pwd": "password123"
+  "user_pwd": "password123",
+  "expo_token" : "sdfasdf"
 }
 ```
 - **Response**:
@@ -151,7 +152,8 @@
 ```json
 {
   "store_id": "store_123",
-  "store_pwd": "storepass123"
+  "store_pwd": "storepass123",
+  "expo_token" : "asfdasdf"
 }
 ```
 - **Response**:
@@ -944,9 +946,6 @@ facilities.wifi.available ? '활성화 (주황색)' : '비활성화 (회색)';
 - `reservation_match_category`는 정수형 필드입니다 (문자열 입력 시 에러 발생)
 - 경기 기반 생성 시 `match_id`가 유효하지 않으면 400 에러가 발생합니다
 - 수동 입력 시 `reservation_title` 또는 `reservation_match` 중 하나는 반드시 필요합니다
-- 경기 기반 생성 시 `reservation_ex2` 칼럼에 해당 경기의 `competition_code`가 자동으로 저장됩니다
-- 수동 입력 시 `reservation_ex2` 칼럼은 `null`로 설정됩니다
-- 모임 조회 시 `reservation_ex2` 필드에 `competition_code` 값이 포함됩니다
 
 ### 3.2 모임 참여
 - **URL**: `POST /api/v1/reservations/{id}/join`
@@ -1653,4 +1652,3 @@ GET /api/v1/matches?venue=Park&sort=match_date:desc
 2. **날짜 형식**: 모든 날짜는 `YYYY-MM-DD HH:mm:ss` 형식을 사용합니다.
 3. **페이지네이션**: 목록 조회 API는 필요에 따라 페이지네이션을 지원할 수 있습니다.
 4. **실시간 통신**: 채팅 기능은 WebSocket을 통해 실시간으로 동작합니다.
-

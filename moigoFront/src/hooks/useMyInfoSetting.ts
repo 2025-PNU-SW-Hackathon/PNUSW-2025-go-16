@@ -4,6 +4,7 @@ import { useMyStore } from '@/store/myStore';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/types/RootStackParamList';
+import { useDeleteAccount } from './queries/useUserQueries';
 
 export function useMyInfoSetting() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -28,6 +29,7 @@ export function useMyInfoSetting() {
 
   const { logout: authLogout } = useAuthStore();
   const { resetUserProfile } = useMyStore();
+  const deleteAccountMutation = useDeleteAccount();
 
   // 프로필 관리
   const handleProfileManagement = () => {
@@ -125,12 +127,19 @@ export function useMyInfoSetting() {
   };
 
   // 회원탈퇴
-  const handleWithdraw = () => {
-    setLoading(true);
-    // myStore의 사용자 정보 초기화
-    resetUserProfile();
-    authLogout();
-    setLoading(false);
+  const handleWithdraw = async () => {
+    try {
+      console.log('🚀 [회원탈퇴] handleWithdraw 시작');
+      setLoading(true);
+      console.log('🚀 [회원탈퇴] API 호출 시작');
+      await deleteAccountMutation.mutateAsync();
+      console.log('✅ [회원탈퇴] API 호출 성공');
+      // 회원 탈퇴 성공 시 자동으로 로그아웃되고 로그인 전 화면으로 이동됨
+      // useDeleteAccount에서 logout() 호출
+    } catch (error) {
+      console.error('❌ [회원탈퇴] API 호출 실패:', error);
+      setLoading(false);
+    }
   };
 
   return {
@@ -163,5 +172,8 @@ export function useMyInfoSetting() {
     handleSendFeedback,
     handleLogout,
     handleWithdraw,
+    
+    // 회원 탈퇴 상태
+    isDeletingAccount: deleteAccountMutation.isPending,
   };
 }

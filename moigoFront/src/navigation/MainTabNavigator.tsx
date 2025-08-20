@@ -1,10 +1,10 @@
 // src/navigation/MainTabNavigator.tsx
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import HomeScreen from '@/screens/Home/HomeScreen';
-import MeetingScreen from '@/screens/Meeting/MeetingScreen';
+import HomeScreen from '@/screens/user/Home/HomeScreen';
+import MeetingScreen from '@/screens/user/Meeting/MeetingScreen';
 import ChatScreen from '@/screens/ChatScreen';
-import MyScreen from '@/screens/Mypage/MyScreen';
+import MyScreen from '@/screens/user/Mypage/MyScreen';
 import Header from '@/layout/Header';
 import Feather from 'react-native-vector-icons/Feather';
 import { COLORS } from '@/constants/colors';
@@ -31,7 +31,7 @@ export default function MainTabNavigator() {
           borderTopColor: '#E5E7EB',
           paddingBottom: 5,
           paddingTop: 5,
-          height: 70,
+          height: 80,
         },
       })}
     >
@@ -56,9 +56,7 @@ export default function MainTabNavigator() {
         component={ChatScreen}
         options={{
           tabBarLabel: '채팅',
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="message-circle" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Feather name="message-circle" size={size} color={color} />,
         }}
       />
       <Tab.Screen

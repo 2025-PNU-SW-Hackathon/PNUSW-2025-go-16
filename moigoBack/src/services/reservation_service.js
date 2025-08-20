@@ -265,6 +265,7 @@ exports.cancelReservation = async (reservation_id, user_id) => {
     [reservation_id]
   );
   // 모임 취소 알림.
+  
   // 참여자에게 kicked 설정
 
   return '모임이 정상적으로 취소되었습니다.';
