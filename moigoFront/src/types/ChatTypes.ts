@@ -1,5 +1,7 @@
 export interface ChatRoom {
   id: string;
+  chat_room_id?: number; // API에서 사용하는 ID
+  name?: string; // API에서 사용하는 이름
   type: 'matching' | 'store';
   title: string;
   subtitle: string;

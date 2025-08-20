@@ -13,7 +13,7 @@ export default function CheckModal({ visible, title, onClose, children }: CheckM
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent={true}>
       <View className="flex-1 bg-black/50">
         <View className="flex-1" />
-        <View className="w-11/12 p-8 mx-auto bg-white shadow-lg rounded-3xl">{children}</View>
+        <View className="p-8 mx-auto w-11/12 bg-white rounded-3xl shadow-lg">{children}</View>
         <View className="flex-1" />
       </View>
     </Modal>

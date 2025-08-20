@@ -22,9 +22,9 @@ export default function ModalBox({ visible, title, onClose, children }: ModalBox
           activeOpacity={1}
           onPress={onClose}
         />
-        <View className="w-11/12 mx-auto bg-white rounded-xl p-5 shadow-lg">
+        <View className="p-6 mx-auto w-11/12 bg-white rounded-xl shadow-lg">
           <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-lg font-bold">{title}</Text>
+            <Text className="text-xl font-bold">{title}</Text>
             <TouchableOpacity onPress={onClose}>
               <Text className="text-2xl font-bold">×</Text>
             </TouchableOpacity>
