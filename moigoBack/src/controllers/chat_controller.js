@@ -218,3 +218,21 @@ exports.kickUnpaidParticipant = async (req, res, next) => {
     next(err);
   }
 };
+
+// 🧹 전체 시스템 중복 데이터 정리 (관리자용)
+exports.cleanupDuplicateData = async (req, res, next) => {
+  try {
+    console.log('🧹 [API] 중복 데이터 정리 요청 받음');
+    
+    const result = await chatService.cleanupAllDuplicateChatRoomUsers();
+
+    res.status(200).json({
+      success: true,
+      message: '중복 데이터 정리가 완료되었습니다.',
+      data: result
+    });
+  } catch (err) {
+    console.error('❌ [API] 중복 데이터 정리 중 오류:', err);
+    next(err);
+  }
+};

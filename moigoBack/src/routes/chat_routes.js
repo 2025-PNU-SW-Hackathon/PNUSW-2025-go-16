@@ -30,6 +30,9 @@ router.get('/stores', authMiddleware, chatController.getStoreListForChat);
 // 🏪 가게 공유 (POST /chats/:roomId/share-store)
 router.post('/:roomId/share-store', authMiddleware, chatController.shareStore);
 
+// 🧹 중복 데이터 정리 (POST /chats/cleanup)
+router.post('/cleanup', authMiddleware, chatController.cleanupDuplicateData);
+
 /*
 // 💰 결제 관련 라우터
 // 방장의 예약금 결제 요청 (POST /chats/:roomId/payments/request)
