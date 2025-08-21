@@ -94,9 +94,9 @@ exports.getStoreDetail = async (storeId) => {
       `SELECT 
         store_id, store_name, store_address, store_bio,
         store_open_hour, store_close_hour, store_holiday,
-        store_max_people_cnt, store_max_table_cnt, store_max_parking_cnt, store_max_screen_cnt,
+        store_max_people_cnt, store_min_people_cnt, store_max_table_cnt, store_max_parking_cnt, store_max_screen_cnt,
         store_phonenumber, store_thumbnail, store_review_cnt, store_rating,
-        bank_code, account_number, account_holder_name, business_number
+        business_number, owner_name, email
        FROM store_table 
        WHERE store_id = ?`,
       [storeId]
@@ -154,27 +154,45 @@ exports.getStorePaymentInfo = async (storeId) => {
       throw err;
     }
     
-    const [rows] = await conn.query(
-      `SELECT 
-        store_id, bank_code, account_number, account_holder_name, business_number
-       FROM store_table 
-       WHERE store_id = ?`,
+    // 먼저 가게가 존재하는지 확인
+    const [storeRows] = await conn.query(
+      `SELECT store_id, business_number FROM store_table WHERE store_id = ?`,
       [storeId]
     );
     
-    if (rows.length === 0) {
+    if (storeRows.length === 0) {
       const err = new Error('가게를 찾을 수 없습니다.');
       err.statusCode = 404;
       throw err;
     }
     
-    // store_id를 숫자로 변환
-    const paymentInfo = {
-      ...rows[0],
-      store_id: parseInt(rows[0].store_id) || 0
-    };
+    // 결제 정보 테이블에서 조회 시도 (없으면 기본값 반환)
+    try {
+      const [paymentRows] = await conn.query(
+        `SELECT store_id, bank_code, account_number, account_holder_name, business_number
+         FROM store_payment_info WHERE store_id = ?`,
+        [storeId]
+      );
+      
+      if (paymentRows.length > 0) {
+        return {
+          ...paymentRows[0],
+          store_id: parseInt(paymentRows[0].store_id) || 0
+        };
+      }
+    } catch (tableError) {
+      // store_payment_info 테이블이 없는 경우
+      console.log('⚠️ store_payment_info 테이블이 없습니다. 기본값을 반환합니다.');
+    }
     
-    return paymentInfo;
+    // 기본값 반환
+    return {
+      store_id: parseInt(storeId) || 0,
+      bank_code: '000',
+      account_number: '미설정',
+      account_holder_name: '미설정',
+      business_number: storeRows[0].business_number || '미설정'
+    };
   } catch (error) {
     if (!error.statusCode) {
       error.statusCode = 500;
@@ -197,17 +215,34 @@ exports.updateStorePaymentInfo = async (storeId, paymentData) => {
       throw err;
     }
     
-    const [result] = await conn.query(
-      `UPDATE store_table 
-       SET bank_code = ?, account_number = ?, account_holder_name = ?, business_number = ?
-       WHERE store_id = ?`,
-      [bank_code, account_number, account_holder_name, business_number, storeId]
+    // 먼저 가게가 존재하는지 확인
+    const [storeRows] = await conn.query(
+      `SELECT store_id FROM store_table WHERE store_id = ?`,
+      [storeId]
     );
     
-    if (result.affectedRows === 0) {
+    if (storeRows.length === 0) {
       const err = new Error('가게를 찾을 수 없습니다.');
       err.statusCode = 404;
       throw err;
+    }
+    
+    // 결제 정보 테이블이 있다면 업데이트, 없다면 기본값 반환
+    try {
+      // 결제 정보 테이블에 UPSERT (INSERT ON DUPLICATE KEY UPDATE)
+      const [result] = await conn.query(
+        `INSERT INTO store_payment_info (store_id, bank_code, account_number, account_holder_name, business_number)
+         VALUES (?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE 
+         bank_code = VALUES(bank_code),
+         account_number = VALUES(account_number),
+         account_holder_name = VALUES(account_holder_name),
+         business_number = VALUES(business_number)`,
+        [storeId, bank_code, account_number, account_holder_name, business_number]
+      );
+    } catch (tableError) {
+      // store_payment_info 테이블이 없는 경우
+      console.log('⚠️ store_payment_info 테이블이 없습니다. 기본값을 반환합니다.');
     }
     
     return {
@@ -457,21 +492,19 @@ exports.registerStore = async (storeData) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(store_pwd, salt);
 
-    // 가게 등록
+    // 가게 등록 (존재하는 컬럼만 사용)
     const [result] = await conn.query(
       `INSERT INTO store_table (
         store_id, store_pwd, store_name, business_number, store_address,
         store_phonenumber, store_open_hour, store_close_hour,
         store_max_people_cnt, store_max_table_cnt, store_max_parking_cnt,
-        store_max_screen_cnt, store_bio, store_holiday, store_review_cnt, store_rating,
-        ex1, ex2, bank_code, account_number, account_holder_name
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        store_max_screen_cnt, store_bio, store_holiday, store_review_cnt, store_rating
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         store_id, hashedPassword, store_name, business_number, store_address,
         store_phonenumber, store_open_hour, store_close_hour,
         store_max_people_cnt, store_max_table_cnt, store_max_parking_cnt,
-        store_max_screen_cnt, store_bio, store_holiday, store_review_cnt, store_rating,
-        '기본값', '기본값', '000', '000000000000', '가게명'
+        store_max_screen_cnt, store_bio, store_holiday, store_review_cnt, store_rating
       ]
     );
 
