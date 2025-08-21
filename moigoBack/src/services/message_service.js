@@ -47,10 +47,7 @@ exports.saveNewMessage = async (user_id, room_id, message) => {
     const conn = getConnection();
     
     try {
-        // 트랜잭션 시작 (성능 및 데이터 무결성)
-        await conn.beginTransaction();
-
-        // 새 메시지 ID 생성 (AUTO_INCREMENT 대신 수동 관리)
+        // 새 메시지 ID 생성
         const [last_message_id] = await conn.query(
             'SELECT MAX(message_id) as maxId FROM chat_messages WHERE chat_room_id = ?',
             [room_id]
@@ -72,8 +69,6 @@ exports.saveNewMessage = async (user_id, room_id, message) => {
              WHERE m.message_id = ? AND m.chat_room_id = ?`,
             [new_message_id, room_id]
         );
-
-        await conn.commit();
 
         if (rows.length === 0) {
             throw new Error('메시지 저장 후 조회에 실패했습니다.');
@@ -117,7 +112,6 @@ exports.saveNewMessage = async (user_id, room_id, message) => {
         return messageData;
 
     } catch (error) {
-        await conn.rollback();
         console.error('❌ 메시지 저장 오류:', error);
         throw error;
     }
