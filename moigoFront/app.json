@@ -1,30 +1,64 @@
 {
   "expo": {
-    "name": "moigoFront",
+    "name": "spotple",
     "slug": "moigoFront",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/spotple-icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "scheme": "moigo",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/spotple-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "icon": "./assets/spotple-icon.png",
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sehankim.spotple",
+      "associatedDomains": [
+        "applinks:moigo.com"
+      ],
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/spotple-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.sehankim.moigoFront",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "moigo",
+              "host": "*"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "3ddd0517-7ac9-447f-85f3-60927f4aff61"
+      },
+      "API_URL": "https://spotple.kr",
+      "WS_URL": "wss://spotple.kr"
+    },
+    "owner": "sehankim"
   }
 }

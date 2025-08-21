@@ -154,7 +154,8 @@ exports.getMyMatchings = async (user_id) => {
             r.reservation_match,
             r.reservation_status,
             r.reservation_participant_cnt,
-            r.reservation_max_participant_cnt
+            r.reservation_max_participant_cnt,
+            r.reservation_ex2
      FROM chat_room_users cru
      JOIN chat_rooms cr ON cru.reservation_id = cr.reservation_id
      JOIN reservation_table r ON cr.reservation_id = r.reservation_id
@@ -179,7 +180,8 @@ exports.getMyReservations = async (user_id) => {
             r.reservation_match,
             r.reservation_status,
             r.reservation_participant_cnt,
-            r.reservation_max_participant_cnt
+            r.reservation_max_participant_cnt,
+            r.reservation_ex2
      FROM chat_room_users cru
      JOIN chat_rooms cr ON cru.reservation_id = cr.reservation_id
      JOIN reservation_table r ON cr.reservation_id = r.reservation_id

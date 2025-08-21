@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '@/types/RootStackParamList';
@@ -10,159 +10,26 @@ import PaymentModal from '@/components/common/PaymentModal';
 import DropdownMenu, { DropdownOption } from '@/components/common/DropdownMenu';
 import Feather from 'react-native-vector-icons/Feather';
 import { groupMessages } from '@/utils/chatUtils';
+import { useChatMessages } from '@/hooks/queries/useChatQueries';
+import { socketManager } from '@/utils/socketUtils';
+import { useAuthStore } from '@/store/authStore';
+import type { ChatMessageDTO, NewMessageDTO } from '@/types/DTO/chat';
 
 type ChatRoomScreenRouteProp = RouteProp<RootStackParamList, 'ChatRoom'>;
-
-// 테스트 데이터
-const testMessages: ChatMessage[] = [
-  {
-    id: '1',
-    senderId: 'system',
-    senderName: '시스템',
-    senderAvatar: '',
-    message: '새로운 멤버가 참여했습니다.',
-    timestamp: new Date('2024-01-15T10:00:00'),
-    type: 'system'
-  },
-  {
-    id: '2',
-    senderId: 'user123',
-    senderName: '박태원 (방장)',
-    senderAvatar: '방',
-    message: '안녕하세요! 오늘 함께 경기 볼 멤버분들 반갑습니다',
-    timestamp: new Date('2024-01-15T10:01:00'),
-    type: 'text'
-  },
-  {
-    id: '3',
-    senderId: 'currentUser',
-    senderName: '나',
-    senderAvatar: '나',
-    message: '안녕하세요! 저도 반갑습니다',
-    timestamp: new Date('2024-01-15T10:02:00'),
-    type: 'text'
-  },
-  {
-    id: '4',
-    senderId: 'currentUser',
-    senderName: '나',
-    senderAvatar: '나',
-    message: '오늘 경기 기대되네요!',
-    timestamp: new Date('2024-01-15T10:02:30'),
-    type: 'text'
-  },
-  {
-    id: '5',
-    senderId: 'currentUser',
-    senderName: '나',
-    senderAvatar: '나',
-    message: '몇 시에 만나나요?',
-    timestamp: new Date('2024-01-15T10:03:00'),
-    type: 'text'
-  },
-  {
-    id: '6',
-    senderId: 'user456',
-    senderName: '정예준',
-    senderAvatar: '정',
-    message: '네 안녕하세요~ 오늘 경기 기대되네요!',
-    timestamp: new Date('2024-01-15T10:04:00'),
-    type: 'text'
-  },
-  {
-    id: '7',
-    senderId: 'user789',
-    senderName: '김세한',
-    senderAvatar: '김',
-    message: '정말 긴 메시지를 보내면 어떻게 될까요? 이렇게 긴 텍스트가 들어가면 자동으로 줄바꿈이 되어서 다음 줄로 넘어가게 됩니다. 이제 말풍선이 더 자연스럽게 보일 거예요!',
-    timestamp: new Date('2024-01-15T10:05:00'),
-    type: 'text'
-  },
-  {
-    id: '8',
-    senderId: 'user789',
-    senderName: '김세한',
-    senderAvatar: '김',
-    message: '저도 기대됩니다!',
-    timestamp: new Date('2024-01-15T10:05:30'),
-    type: 'text'
-  },
-  {
-    id: '9',
-    senderId: 'system',
-    senderName: '시스템',
-    senderAvatar: '',
-    message: '매칭 모집이 마감되었습니다.',
-    timestamp: new Date('2024-01-15T10:06:00'),
-    type: 'system'
-  },
-  {
-    id: '10',
-    senderId: 'user123',
-    senderName: '박태원 (방장)',
-    senderAvatar: '방',
-    message: '마감했어요! 가게 찾아봅시다~',
-    timestamp: new Date('2024-01-15T10:07:00'),
-    type: 'text'
-  },
-  {
-    id: '11',
-    senderId: 'user123',
-    senderName: '박태원 (방장)',
-    senderAvatar: '방',
-    message: '',
-    timestamp: new Date('2024-01-15T10:07:02'),
-    type: 'store',
-    storeInfo: {
-      storeName: "챔피언 스포츠 펍",
-      rating: 4.8,
-      reviewCount: 128,
-      imageUrl: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
-    }
-  },
-  {
-    id: '12',
-    senderId: 'user123',
-    senderName: '박태원 (방장)',
-    senderAvatar: '방',
-    message: '이곳은 분위기가 좋고 TV도 크게 있어서 경기 보기 좋아요',
-    timestamp: new Date('2024-01-15T10:08:00'),
-    type: 'text'
-  },
-  {
-    id: '13',
-    senderId: 'currentUser',
-    senderName: '나',
-    senderAvatar: '나',
-    message: '',
-    timestamp: new Date('2024-01-15T10:08:02'),
-    type: 'store',
-    storeInfo: {
-      storeName: "챔피언 스포츠 펍",
-      rating: 5.0,
-      reviewCount: 1208,
-      imageUrl: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
-    }
-  },
-  {
-    id: '14',
-    senderId: 'currentUser',
-    senderName: '나',
-    senderAvatar: '나',
-    message: '여기가 더 좋은듯요',
-    timestamp: new Date('2024-01-15T10:08:05'),
-    type: 'text'
-  }
-];
 
 export default function ChatRoomScreen() {
   const navigation = useNavigation();
   const route = useRoute<ChatRoomScreenRouteProp>();
   const { chatRoom } = route.params;
+  const { user } = useAuthStore();
   const [message, setMessage] = useState('');
   const [showMenu, setShowMenu] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  
+  // API에서 메시지 데이터 가져오기
+  const { data: apiData, isLoading, error, refetch } = useChatMessages(chatRoom.chat_room_id || 1);
   
   // 예약금 관련 상태 (실시간 업데이트 가능)
   const [depositInfo, setDepositInfo] = useState({
@@ -177,7 +44,94 @@ export default function ChatRoomScreen() {
   });
 
   // 현재 사용자 ID (실제로는 세션에서 가져와야 함)
-  const currentUserId = 'currentUser';
+  const currentUserId = user?.id || 'test'; // user?.id가 있으면 사용, 없으면 'test' 사용
+  
+  console.log('=== ChatRoomScreen 디버깅 ===');
+  console.log('user 객체:', user);
+  console.log('user?.id:', user?.id);
+  console.log('user?.id 타입:', typeof user?.id);
+  console.log('currentUserId (최종):', currentUserId);
+  console.log('currentUserId 타입:', typeof currentUserId);
+  console.log('user?.id가 undefined인가?', user?.id === undefined);
+  console.log('user?.id가 null인가?', user?.id === null);
+  console.log('user?.id가 빈 문자열인가?', user?.id === '');
+
+  // API 데이터를 ChatMessage 형식으로 변환
+  useEffect(() => {
+    if (apiData?.data) {
+      console.log('API 데이터 변환 시작:', {
+        currentUserId,
+        currentUserIdType: typeof currentUserId,
+        apiDataLength: apiData.data.length,
+        firstMessage: apiData.data[0]
+      });
+      
+      const convertedMessages: ChatMessage[] = apiData.data.map((msg: ChatMessageDTO) => {
+        console.log('메시지 원본:', {
+          sender_id: msg.sender_id,
+          sender_idType: typeof msg.sender_id,
+          currentUserId,
+          currentUserIdType: typeof currentUserId,
+          isEqual: msg.sender_id === currentUserId,
+          isEqualStrict: msg.sender_id === currentUserId,
+          isEqualTrim: msg.sender_id?.trim() === currentUserId?.trim()
+        });
+        
+        const isMyMessage = msg.sender_id === currentUserId;
+        
+        return {
+          id: msg.id.toString(),
+          senderId: msg.sender_id,
+          senderName: isMyMessage ? '나' : msg.sender_id,
+          senderAvatar: isMyMessage ? '나' : msg.sender_id.charAt(0),
+          message: msg.message,
+          timestamp: new Date(msg.created_at),
+          type: 'text' as const
+        };
+      });
+      setMessages(convertedMessages);
+    }
+  }, [apiData, currentUserId]);
+
+  // 소켓 연결 및 실시간 메시지 처리
+  useEffect(() => {
+    // 소켓 연결
+    socketManager.connect();
+    
+    // 새 메시지 수신 콜백 등록
+    const handleNewMessage = (newMessage: NewMessageDTO) => {
+      console.log('새 메시지 원본:', {
+        sender_id: newMessage.sender_id,
+        sender_idType: typeof newMessage.sender_id,
+        currentUserId,
+        currentUserIdType: typeof currentUserId,
+        isEqual: newMessage.sender_id === currentUserId,
+        isEqualStrict: newMessage.sender_id === currentUserId,
+        isEqualTrim: newMessage.sender_id?.trim() === currentUserId?.trim()
+      });
+      
+      const isMyMessage = newMessage.sender_id === currentUserId;
+      
+      const convertedMessage: ChatMessage = {
+        id: newMessage.id.toString(),
+        senderId: newMessage.sender_id,
+        senderName: isMyMessage ? '나' : newMessage.sender_id,
+        senderAvatar: isMyMessage ? '나' : newMessage.sender_id.charAt(0),
+        message: newMessage.message,
+        timestamp: new Date(newMessage.created_at),
+        type: 'text'
+      };
+      setMessages(prev => [...prev, convertedMessage]);
+    };
+
+    socketManager.onNewMessage(handleNewMessage);
+    socketManager.joinRoom(chatRoom.chat_room_id || 1);
+
+    return () => {
+      socketManager.removeCallback(handleNewMessage);
+      socketManager.leaveRoom(chatRoom.chat_room_id || 1);
+    };
+  }, [chatRoom.chat_room_id, currentUserId]);
 
   // 방장용 메뉴 옵션
   const hostMenuOptions: DropdownOption[] = [
@@ -197,18 +151,21 @@ export default function ChatRoomScreen() {
     { id: '4', label: '채팅방 나가기', onPress: () => navigation.goBack() },
   ];
 
-  // 현재 사용자의 메뉴 옵션 결정
-  const menuOptions = chatRoom.isHost ? hostMenuOptions : participantMenuOptions;
+  // 현재 사용자의 메뉴 옵션 결정 (임시로 랜덤)
+  const menuOptions = Math.random() > 0.5 ? hostMenuOptions : participantMenuOptions;
 
   // 메시지 그룹화 로직
   const groupedMessages = useMemo(() => {
-    return groupMessages(testMessages, currentUserId);
-  }, [currentUserId]);
+    return groupMessages(messages, currentUserId);
+  }, [messages, currentUserId]);
 
   const handleSendMessage = () => {
     if (message.trim()) {
-      // TODO: 메시지 전송 로직 구현
-      console.log('메시지 전송:', message);
+      // 소켓을 통해 메시지 전송
+      socketManager.sendMessage({
+        room: chatRoom.chat_room_id || 1,
+        message: message.trim()
+      });
       setMessage('');
     }
   };
@@ -272,13 +229,37 @@ export default function ChatRoomScreen() {
     );
   };
 
+  // 로딩 상태
+  if (isLoading && messages.length === 0) {
+    return (
+      <View className="flex-1 bg-white justify-center items-center">
+        <Text className="text-gray-600">메시지를 불러오는 중...</Text>
+      </View>
+    );
+  }
+
+  // 에러 상태
+  if (error && messages.length === 0) {
+    return (
+      <View className="flex-1 bg-white justify-center items-center px-4">
+        <Text className="text-gray-600 text-center mb-4">메시지를 불러오는데 실패했습니다.</Text>
+        <TouchableOpacity 
+          className="bg-mainOrange px-6 py-3 rounded-lg"
+          onPress={() => refetch()}
+        >
+          <Text className="text-white font-semibold">다시 시도</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView 
       className="flex-1 bg-white"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
         {/* 헤더 */}
-        <View className="bg-white border-b border-gray-200 px-4 py-3 flex-row items-center">
+        <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-200">
           <TouchableOpacity 
             onPress={() => navigation.goBack()}
             className="mr-3"
@@ -288,10 +269,10 @@ export default function ChatRoomScreen() {
           
           <View className="flex-1">
             <Text className="text-lg font-semibold text-gray-900">
-              {chatRoom.title}
+              {chatRoom.title || chatRoom.name}
             </Text>
             <Text className="text-sm text-gray-600">
-              {chatRoom.subtitle}
+              {chatRoom.subtitle || '채팅방'}
             </Text>
           </View>
 
@@ -340,18 +321,18 @@ export default function ChatRoomScreen() {
        </ScrollView>
 
       {/* 메시지 입력 영역 */}
-      <View className="bg-white border-t border-gray-200 px-4 py-3 flex-row items-center">
+      <View className="flex-row items-center px-4 py-3 bg-white border-t border-gray-200">
         {/* 왼쪽 상점 아이콘 버튼 */}
         <TouchableOpacity
           onPress={() => console.log('상점 버튼 클릭')}
-          className="w-10 h-10 rounded-full bg-mainOrange items-center justify-center mr-3"
+          className="justify-center items-center mr-3 w-10 h-10 rounded-full bg-mainOrange"
           activeOpacity={0.8}
         >
             <Feather name="home" size={15} color="#F5F5F5" />
         </TouchableOpacity>
         
         {/* 메시지 입력 필드 (전송 버튼 포함) */}
-        <View className="flex-1 bg-gray-100 rounded-full px-4 py-2 mr-3 flex-row items-center">
+        <View className="flex-row flex-1 items-center px-4 py-2 mr-3 bg-gray-100 rounded-full">
           <TextInput
             value={message}
             onChangeText={setMessage}

@@ -86,7 +86,8 @@ exports.getReservationList = async (req, res, next) => {
         reservation_match: item.reservation_match,
         reservation_status: item.reservation_status,
         reservation_participant_cnt: item.reservation_participant_cnt,
-        reservation_max_participant_cnt: item.reservation_max_participant_cnt
+        reservation_max_participant_cnt: item.reservation_max_participant_cnt,
+        reservation_ex2: item.reservation_ex2  // 🆕 competition_code 정보 추가
       }))
     });
   } catch (err) {

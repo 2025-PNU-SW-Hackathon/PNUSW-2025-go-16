@@ -48,7 +48,8 @@
 ```json
 {
   "user_id": "testuser123",
-  "user_pwd": "password123"
+  "user_pwd": "password123",
+  "expo_token" : "sdfasdf"
 }
 ```
 - **Response**:
@@ -151,7 +152,8 @@
 ```json
 {
   "store_id": "store_123",
-  "store_pwd": "storepass123"
+  "store_pwd": "storepass123",
+  "expo_token" : "asfdasdf"
 }
 ```
 - **Response**:
@@ -1650,4 +1652,3 @@ GET /api/v1/matches?venue=Park&sort=match_date:desc
 2. **날짜 형식**: 모든 날짜는 `YYYY-MM-DD HH:mm:ss` 형식을 사용합니다.
 3. **페이지네이션**: 목록 조회 API는 필요에 따라 페이지네이션을 지원할 수 있습니다.
 4. **실시간 통신**: 채팅 기능은 WebSocket을 통해 실시간으로 동작합니다.
-
