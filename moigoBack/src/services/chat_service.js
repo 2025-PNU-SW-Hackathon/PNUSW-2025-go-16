@@ -8,10 +8,13 @@ const messageService = require('../services/message_service');
 exports.getChatRooms = async (user_id) => {
   const conn = getConnection();
 
+  console.log('🔍 [DEBUG] 채팅방 목록 조회 시작 - user_id:', user_id);
+
   const [rows] = await conn.query(
     `SELECT 
       cr.reservation_id AS chat_room_id,                         
-      cr.name AS name,                      
+      cr.name AS name,
+      rt.user_id AS host_id,                      -- 🆕 모임 생성자 (방장)
       (
         SELECT cm.message
         FROM chat_messages cm
@@ -26,20 +29,51 @@ exports.getChatRooms = async (user_id) => {
         ORDER BY cm.message_id DESC
         LIMIT 1
       ) AS last_message_time,
-       (
+      (
         SELECT cm.sender_id
         FROM chat_messages cm
         WHERE cm.chat_room_id = cr.reservation_id
         ORDER BY cm.message_id DESC
         LIMIT 1
-      ) AS sender_id
+      ) AS last_message_sender_id,               -- 🔧 명확한 네이밍
+      (
+        SELECT cm.sender_id
+        FROM chat_messages cm
+        WHERE cm.chat_room_id = cr.reservation_id
+        ORDER BY cm.message_id DESC
+        LIMIT 1
+      ) AS sender_id                             -- 🔧 하위 호환성 유지
    FROM chat_rooms cr
    JOIN chat_room_users cru ON cr.reservation_id = cru.reservation_id
+   JOIN reservation_table rt ON cr.reservation_id = rt.reservation_id  -- 🆕 방장 정보 조인
    WHERE cru.user_id = ? AND cru.is_kicked = 0`,
     [user_id]
   );
 
-  return rows;
+  console.log('🔍 [DEBUG] 조회된 채팅방 수:', rows.length);
+  
+  // 방장 여부 판별 로그 추가
+  const processedRows = rows.map(row => {
+    const isHost = row.host_id === user_id;
+    const role = isHost ? '방장' : '참가자';
+    
+    console.log('📋 [DEBUG] 채팅방 정보:', {
+      chat_room_id: row.chat_room_id,
+      name: row.name,
+      host_id: row.host_id,
+      current_user: user_id,
+      role: role,
+      last_message_sender: row.last_message_sender_id
+    });
+
+    return {
+      ...row,
+      is_host: isHost,                    // 🆕 방장 여부 플래그
+      user_role: role                     // 🆕 사용자 역할
+    };
+  });
+
+  return processedRows;
 };
 
 // 👋 2. 채팅방 나가기 (모임에서도 나가기)
@@ -213,29 +247,56 @@ exports.kickUser = async (room_id, target_user_id, requester_id) => {
 // 📨 5. 채팅방 전체 메시지 조회 + 읽음 처리
 exports.getAllMessages = async (user_id, room_id) => {
   const conn = getConnection();
-  console.log(user_id, room_id);
+  console.log('🔍 [DEBUG] 메시지 조회 - user_id:', user_id, 'room_id:', room_id);
+  
+  // 먼저 방장 정보 조회
+  const [hostInfo] = await conn.query(
+    `SELECT rt.user_id AS host_id FROM reservation_table rt WHERE rt.reservation_id = ?`,
+    [room_id]
+  );
+  const hostId = hostInfo.length > 0 ? hostInfo[0].host_id : null;
+  
+  console.log('🔍 [DEBUG] 방장 정보 - host_id:', hostId, 'current_user:', user_id, 'is_host:', hostId === user_id);
+  
   await messageService.markAllMessagesAsRead(user_id, room_id);
-  // 전체 메시지 조회 (최신순)
+  
+  // 전체 메시지 조회 (최신순) + 사용자 이름과 방장 여부 포함
   const [messages] = await conn.query(
     `SELECT m.message_id AS id,
           m.sender_id,
           m.message,
           m.created_at,
+          u.user_name,                                    -- 🆕 메시지 보낸 사용자 이름
+          CASE WHEN m.sender_id = ? THEN true ELSE false END AS is_sender_host,  -- 🆕 메시지 보낸 사람이 방장인지
           (
             SELECT COUNT(*)
             FROM chat_read_status
             WHERE chat_room_id = ? AND last_read_message_id IS NOT NULL AND last_read_message_id >= m.message_id
           ) AS read_count
    FROM chat_messages m
+   LEFT JOIN user_table u ON m.sender_id = u.user_id      -- 🆕 사용자 정보 조인
    WHERE m.chat_room_id = ?
    ORDER BY m.message_id DESC
    LIMIT 100`,
-    [room_id, room_id]
+    [hostId, room_id, room_id]
   );
 
   // 메시지 타입 처리 및 가게 공유 메시지 정보 추가
   const processedMessages = messages.map(message => {
     const messageData = { ...message };
+    
+    // 🆕 방장 관련 정보 추가
+    messageData.sender_role = messageData.is_sender_host ? '방장' : '참가자';
+    messageData.current_user_is_host = hostId === user_id;  // 현재 사용자가 방장인지
+    
+    console.log('📝 [DEBUG] 메시지 처리:', {
+      message_id: messageData.id,
+      sender_id: messageData.sender_id,
+      sender_name: messageData.user_name,
+      is_sender_host: messageData.is_sender_host,
+      sender_role: messageData.sender_role,
+      current_user_is_host: messageData.current_user_is_host
+    });
     
     // 가게 공유 메시지인지 확인
     if (message.message && message.message.includes('🏪')) {
@@ -273,6 +334,7 @@ exports.getAllMessages = async (user_id, room_id) => {
     return messageData;
   });
 
+  console.log('🔍 [DEBUG] 처리된 메시지 수:', processedMessages.length);
   return processedMessages;
 };
 
