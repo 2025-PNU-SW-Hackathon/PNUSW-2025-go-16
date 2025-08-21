@@ -24,6 +24,13 @@ module.exports = async function handleSocket(io) {
     });
 
     io.on('connection', async (socket) => {
+        console.log('🔌 [CONNECT] 새 소켓 연결:', {
+            socket_id: socket.id,
+            user_id: socket.user?.user_id,
+            user_name: socket.user?.user_name,
+            timestamp: new Date().toISOString()
+        });
+        
         // 클라이언트가 연결되면 socket이 필수
         // 채팅방에 참여
         socket.on('joinRoom', async (room_id) => {
@@ -51,7 +58,20 @@ module.exports = async function handleSocket(io) {
                     socket.join(room_id);
                     console.log('✅ 채팅방 입장 성공:', {
                         user_id: socket.user.user_id,
+                        user_name: socket.user.user_name,
                         room_id: room_id
+                    });
+
+                    // 현재 방에 있는 소켓들 확인
+                    const currentSockets = await io.in(room_id).fetchSockets();
+                    console.log('📊 [JOIN DEBUG] 현재 방 접속자:', {
+                        room_id: room_id,
+                        total_sockets: currentSockets.length,
+                        users: currentSockets.map(s => ({
+                            socket_id: s.id,
+                            user_id: s.user?.user_id,
+                            user_name: s.user?.user_name
+                        }))
                     });
 
                     // 성공 응답
@@ -153,19 +173,44 @@ module.exports = async function handleSocket(io) {
                 const activeUserIds = socketsInRoom.map(s => s.user.user_id);
 
                 console.log('💾 저장된 메시지:', new_message_result);
+                console.log('👥 현재 방 접속자 수:', activeUserIds.length, 'users:', activeUserIds);
 
                 // 5. 전송자에게 성공 응답 (즉시)
+                console.log('📤 [DEBUG] messageAck 전송 시작 to:', socket.user.user_id);
                 socket.emit('messageAck', {
                     success: true,
                     messageId: messageId,
                     timestamp: new Date().toISOString()
                 });
+                console.log('✅ [DEBUG] messageAck 전송 완료');
 
-                // 6. 메시지 브로드캐스트 (전송자 제외)
-                socket.to(room).emit('newMessage', {
+                // 6. 메시지 브로드캐스트 (방 전체에게 - 전송자 포함)
+                const broadcastMessage = {
                     ...new_message_result,
                     user_name: userName,
                     created_at: new Date().toISOString()
+                };
+                
+                console.log('📢 [DEBUG] newMessage 브로드캐스트 시작');
+                console.log('📢 [DEBUG] 브로드캐스트 대상 방:', room);
+                console.log('📢 [DEBUG] 브로드캐스트 메시지:', broadcastMessage);
+                
+                // 전송자 제외하고 다른 사용자들에게 전송
+                console.log('📢 [DEBUG] 다른 사용자들에게 전송 (전송자 제외)');
+                socket.to(room).emit('newMessage', broadcastMessage);
+                
+                // 전송자에게도 확인용 메시지 전송 (Optimistic UI 확정용)
+                console.log('📢 [DEBUG] 전송자에게도 확정 메시지 전송');
+                socket.emit('newMessage', broadcastMessage);
+                
+                console.log('✅ [DEBUG] newMessage 브로드캐스트 완료');
+                
+                // 소켓 방 상태 재확인
+                const finalSockets = await io.in(room).fetchSockets();
+                console.log('📊 [FINAL DEBUG] 메시지 전송 후 방 상태:', {
+                    room_id: room,
+                    total_sockets: finalSockets.length,
+                    users: finalSockets.map(s => s.user?.user_id)
                 });
 
                 // 7. 읽음 상태 업데이트 (비동기)
@@ -274,7 +319,13 @@ module.exports = async function handleSocket(io) {
 
         // 클라이언트가 연결 종료 시
         socket.on('disconnect', (reason) => {
-            console.log(`❌ User disconnected: ${socket.user.user_id}, reason: ${reason}`);
+            console.log('🔌 [DISCONNECT] 소켓 연결 해제:', {
+                socket_id: socket.id,
+                user_id: socket.user?.user_id,
+                user_name: socket.user?.user_name,
+                reason: reason,
+                timestamp: new Date().toISOString()
+            });
             
             // 연결 종료 이벤트를 다른 사용자들에게 브로드캐스트 (선택적)
             socket.broadcast.emit('userDisconnected', {
