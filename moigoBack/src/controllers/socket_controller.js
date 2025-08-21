@@ -113,15 +113,28 @@ module.exports = async function handleSocket(io) {
             try {
                 // 데이터 검증 및 정규화
                 const { room, message, sender_id } = data;
-                const userId = socket.user.user_id;
+                const tokenUserId = socket.user.user_id;
                 const userName = socket.user.user_name;
 
+                // 🔧 클라이언트가 보낸 sender_id 사용 (보안 검증 추가)
+                const actualSenderId = sender_id || tokenUserId;
+
                 console.log('📨 메시지 전송 요청:', {
-                    user_id: userId,
+                    token_user_id: tokenUserId,
+                    client_sender_id: sender_id,
+                    actual_sender_id: actualSenderId,
                     room: room,
-                    message: message,
-                    sender_id: sender_id
+                    message: message
                 });
+
+                // 🚨 보안 경고: sender_id와 토큰 사용자가 다른 경우
+                if (sender_id && sender_id !== tokenUserId) {
+                    console.warn('⚠️ [SECURITY] sender_id 불일치:', {
+                        token_user: tokenUserId,
+                        client_sender: sender_id,
+                        using: actualSenderId
+                    });
+                }
 
                 // 1. 입력 데이터 검증
                 if (!room || !message || typeof message !== 'string') {
@@ -148,9 +161,9 @@ module.exports = async function handleSocket(io) {
                     return;
                 }
 
-                // 2. 채팅방 권한 검증
+                // 2. 채팅방 권한 검증 (토큰 사용자로 검증)
                 const roomAuth = await messageService.authRoom(room);
-                const isAuthorized = roomAuth.some(user => user.user_id === userId);
+                const isAuthorized = roomAuth.some(user => user.user_id === tokenUserId);
                 
                 if (!isAuthorized) {
                     socket.emit('messageError', {
@@ -160,8 +173,8 @@ module.exports = async function handleSocket(io) {
                     return;
                 }
 
-                // 3. 메시지 저장 (병렬 처리 준비)
-                const messagePromise = messageService.saveNewMessage(userId, room, message);
+                // 3. 메시지 저장 (클라이언트가 보낸 sender_id 사용)
+                const messagePromise = messageService.saveNewMessage(actualSenderId, room, message);
                 
                 // 4. 현재 방 상태 조회 (병렬 처리)
                 const [new_message_result, socketsInRoom] = await Promise.all([
@@ -229,7 +242,7 @@ module.exports = async function handleSocket(io) {
                                 reservationId: room,
                                 targetUserIds: offlineUserIds,
                                 messageId,
-                                senderId: userId,
+                                senderId: actualSenderId,
                                 senderName: userName,
                                 text: message
                             });
