@@ -21,6 +21,9 @@ export interface ChatRoom {
 // 시스템 메시지 타입 정의
 export type SystemMessageType = 'system_join' | 'system_leave' | 'system_kick' | 'store_share';
 
+// 메시지 전송 상태 타입
+export type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
+
 // 백엔드에서 받는 기본 메시지 구조
 export interface ChatMessage {
   id: string;
@@ -30,6 +33,8 @@ export interface ChatMessage {
   message: string;
   timestamp: Date;
   type: 'system' | 'text' | 'store' | 'store_share'; // system: 시스템 메시지, text: 일반 텍스트, store: 가게 공유, store_share: 가게 공유 메시지
+  isTemporary?: boolean; // 임시 메시지 여부 (Optimistic UI용)
+  status?: MessageStatus; // 메시지 전송 상태
   // 시스템 메시지 관련 필드
   message_type?: SystemMessageType; // 시스템 메시지 타입
   user_name?: string; // 관련 사용자 이름

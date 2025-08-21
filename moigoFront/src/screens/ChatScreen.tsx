@@ -8,11 +8,55 @@ import ChatRoomItem from '@/components/chat/ChatRoomItem';
 import { formatTimeAgo } from '@/utils/dateUtils';
 import type { ChatRoomDTO } from '@/types/DTO/chat';
 import { useAuthStore } from '@/store/authStore';
+import { socketManager } from '@/utils/socketUtils';
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 
 export default function ChatScreen() {
   const navigation = useNavigation();
   const { data, isLoading, error, refetch } = useChatRooms();
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
+  
+  // 전역 소켓 리스너 - 모든 채팅방의 메시지 감지
+  useEffect(() => {
+    console.log('🌐 [ChatScreen] useEffect 시작 - 전역 소켓 리스너');
+    
+    if (!user) {
+      console.log('🚫 [ChatScreen] 사용자 정보 없음 - 전역 리스너 건너뜀');
+      return;
+    }
+    
+    // 새 메시지 수신 시 채팅방 리스트 무효화
+    const handleGlobalNewMessage = (messageData: any) => {
+      console.log('🌐 [ChatScreen] 전역 새 메시지 감지:', {
+        message: messageData.message?.substring(0, 20) + '...',
+        sender_id: messageData.sender_id,
+        room_id: messageData.room_id || messageData.room,
+        current_user: user?.id
+      });
+      
+      // 채팅방 리스트를 무효화하여 최신 메시지 반영
+      queryClient.invalidateQueries({ queryKey: ['chatRooms'] });
+      console.log('🔄 [ChatScreen] 채팅방 리스트 무효화 완료');
+    };
+    
+    // 소켓이 연결되어 있지 않다면 연결 시도
+    if (!socketManager.isConnected()) {
+      console.log('🔌 [ChatScreen] 소켓 연결 시도');
+      socketManager.connect();
+    }
+    
+    // 리스너 등록 (소켓 연결 상태와 무관하게)
+    socketManager.onNewMessage(handleGlobalNewMessage);
+    console.log('👂 [ChatScreen] 전역 메시지 리스너 등록 완료');
+    
+    return () => {
+      console.log('🗑️ [ChatScreen] 전역 메시지 리스너 제거 시작');
+      socketManager.removeCallback(handleGlobalNewMessage);
+      console.log('✅ [ChatScreen] 전역 메시지 리스너 제거 완료');
+    };
+  }, [user, queryClient]);
 
   // API 데이터를 기존 ChatRoom 형식으로 변환
   const convertToChatRoom = (apiData: ChatRoomDTO): ChatRoom => {
@@ -44,11 +88,33 @@ export default function ChatScreen() {
     const type: 'matching' | 'store' = isStore ? 'store' : 'matching';
     const icon = getIcon(apiData.name, type);
 
-    // 방장 ID는 sender_id를 사용
+    // ⚠️ 임시: sender_id가 모임 생성자가 아닐 수 있음 (서버 수정 대기중)
+    // TODO: 서버에서 host_id 필드를 별도로 제공하면 그것을 사용
     const host_id = apiData.sender_id || '';
     
-    // 실제 방장 여부 판단: 현재 사용자 ID와 sender_id 비교
+    // 🔒 임시 방장 판별 로직 (sender_id 기반, 부정확할 수 있음)
     const isHost = user?.id === apiData.sender_id;
+    
+    // 🚨 임시 경고: 방장 정보가 부정확할 수 있음을 사용자에게 알림
+    if (isHost) {
+      console.warn('⚠️ [방장 권한] 임시 방장 감지 - 서버 API 수정 필요', {
+        chatRoom: apiData.name,
+        assumedHostId: apiData.sender_id,
+        currentUserId: user?.id,
+        note: 'sender_id가 실제 모임 생성자가 아닐 수 있음'
+      });
+    }
+    
+    console.log('🔍 [ChatScreen] 방장 판별 상세 분석:', {
+      chatRoomId: apiData.chat_room_id,
+      chatRoomName: apiData.name,
+      '⚠️ SENDER_ID (마지막 메시지 발신자?)': apiData.sender_id,
+      '📊 현재 사용자 ID': user?.id,
+      '🤔 sender_id === user_id?': user?.id === apiData.sender_id,
+      '📝 마지막 메시지': apiData.last_message,
+      '🕐 마지막 메시지 시간': apiData.last_message_time,
+      '❓ 문제': 'sender_id가 모임 생성자가 아니라 마지막 메시지 보낸 사람일 수 있음'
+    });
 
     return {
       id: apiData.chat_room_id.toString(),

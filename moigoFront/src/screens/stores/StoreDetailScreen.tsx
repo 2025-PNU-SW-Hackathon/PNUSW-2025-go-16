@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types/RootStackParamList';
-import { useStoreDetail } from '@/hooks/queries/useStoreQueries';
+import { useStoreDetail, useShareStore } from '@/hooks/queries/useStoreQueries';
 import { useAuthStore } from '@/store/authStore';
 import Feather from 'react-native-vector-icons/Feather';
 
@@ -34,6 +34,9 @@ export default function StoreDetailScreen() {
 
   // 가게 상세 정보 조회 (유효한 storeId일 때만)
   const { data: storeDetailData, isLoading, error, refetch } = useStoreDetail(storeId);
+  
+  // 가게 공유 mutation 훅
+  const shareStoreMutation = useShareStore();
 
   // 디버깅용 로그
   console.log('=== StoreDetailScreen API 상태 ===');
@@ -41,6 +44,18 @@ export default function StoreDetailScreen() {
   console.log('error:', error);
   console.log('storeDetailData:', storeDetailData);
   console.log('storeDetailData?.data:', storeDetailData?.data);
+  
+  // 썸네일 URL 상세 로그
+  if (storeDetailData?.data) {
+    console.log('🖼️ === 가게 상세 썸네일 URL 분석 ===', {
+      store_id: storeDetailData.data.store_id,
+      store_name: storeDetailData.data.store_name,
+      store_thumbnail: storeDetailData.data.store_thumbnail,
+      thumbnail_type: typeof storeDetailData.data.store_thumbnail,
+      thumbnail_length: storeDetailData.data.store_thumbnail?.length || 0,
+      is_valid_url: storeDetailData.data.store_thumbnail && storeDetailData.data.store_thumbnail.startsWith('http')
+    });
+  }
 
   // 실제 데이터 사용 (API 데이터가 없으면 기본값 사용)
   const storeDetail = storeDetailData?.data || {
@@ -67,7 +82,8 @@ export default function StoreDetailScreen() {
 
   // 평점을 별점으로 변환
   const renderStars = (rating: number) => {
-    const fullStars = Math.floor(rating);
+    const safeRating = rating || 0;
+    const fullStars = Math.floor(Math.max(0, Math.min(5, safeRating)));
     const emptyStars = 5 - fullStars;
     return '★'.repeat(fullStars) + '☆'.repeat(emptyStars);
   };
@@ -104,19 +120,19 @@ export default function StoreDetailScreen() {
   const facilities = [];
   
   if (storeDetail.store_max_screen_cnt > 0) {
-    facilities.push({ icon: 'monitor', text: `대형 스크린 ${storeDetail.store_max_screen_cnt.toString()}개` });
+    facilities.push({ icon: 'monitor', text: `대형 스크린 ${(storeDetail.store_max_screen_cnt || 0).toString()}개` });
   }
   
   if (storeDetail.store_max_parking_cnt > 0) {
-    facilities.push({ icon: 'map-pin', text: `주차 ${storeDetail.store_max_parking_cnt.toString()}대 가능` });
+    facilities.push({ icon: 'map-pin', text: `주차 ${(storeDetail.store_max_parking_cnt || 0).toString()}대 가능` });
   }
   
   if (storeDetail.store_max_people_cnt > 0) {
-    facilities.push({ icon: 'users', text: `최대 ${storeDetail.store_max_people_cnt.toString()}명 수용` });
+    facilities.push({ icon: 'users', text: `최대 ${(storeDetail.store_max_people_cnt || 0).toString()}명 수용` });
   }
   
   if (storeDetail.store_max_table_cnt > 0) {
-    facilities.push({ icon: 'grid', text: `테이블 ${storeDetail.store_max_table_cnt.toString()}개` });
+    facilities.push({ icon: 'grid', text: `테이블 ${(storeDetail.store_max_table_cnt || 0).toString()}개` });
   }
 
   // 태그 정보 (실제 데이터 기반)
@@ -144,14 +160,84 @@ export default function StoreDetailScreen() {
   };
 
   // 공유하기 핸들러
-  const handleSharePress = () => {
-    Alert.alert('공유하기', `${storeDetail.store_name}을 공유합니다.`);
+  const handleSharePress = async () => {
+    if (!chatRoom?.chat_room_id) {
+      Alert.alert('오류', '채팅방 정보가 없습니다.');
+      return;
+    }
+
+    if (!storeId || storeId <= 0) {
+      Alert.alert('오류', '가게 정보가 올바르지 않습니다.');
+      return;
+    }
+
+    try {
+      console.log('=== 가게 공유 시작 ===');
+      console.log('chatRoom.chat_room_id:', chatRoom.chat_room_id);
+      console.log('storeId:', storeId);
+      
+      await shareStoreMutation.mutateAsync({
+        roomId: chatRoom.chat_room_id!,
+        storeId: storeId
+      });
+
+      Alert.alert('성공', `${storeDetail.store_name}을 채팅방에 공유했습니다!`, [
+        {
+          text: '확인',
+          onPress: () => navigation.goBack()
+        }
+      ]);
+    } catch (error: any) {
+      console.error('가게 공유 실패:', error);
+      Alert.alert('실패', error.message || '가게 공유에 실패했습니다.');
+    }
   };
 
   // 선택하기 핸들러 (방장만)
-  const handleSelectPress = () => {
-    Alert.alert('선택하기', `${storeDetail.store_name}을 선택했습니다.`);
-    navigation.goBack();
+  const handleSelectPress = async () => {
+    if (!chatRoom?.chat_room_id) {
+      Alert.alert('오류', '채팅방 정보가 없습니다.');
+      return;
+    }
+
+    if (!storeId || storeId <= 0) {
+      Alert.alert('오류', '가게 정보가 올바르지 않습니다.');
+      return;
+    }
+
+    Alert.alert(
+      '가게 선택',
+      `${storeDetail.store_name}을 최종 선택하시겠습니까?\n다른 가게로 변경할 수 없습니다.`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '선택하기',
+          onPress: async () => {
+            try {
+              console.log('=== 가게 선택 시작 ===');
+              console.log('chatRoom.chat_room_id:', chatRoom.chat_room_id);
+              console.log('storeId:', storeId);
+              
+              // 가게 공유 API 호출 (선택하기도 같은 API 사용)
+              await shareStoreMutation.mutateAsync({
+                roomId: chatRoom.chat_room_id!,
+                storeId: storeId
+              });
+
+              Alert.alert('성공', `${storeDetail.store_name}을 선택했습니다!`, [
+                {
+                  text: '확인',
+                  onPress: () => navigation.goBack()
+                }
+              ]);
+            } catch (error: any) {
+              console.error('가게 선택 실패:', error);
+              Alert.alert('실패', error.message || '가게 선택에 실패했습니다.');
+            }
+          }
+        }
+      ]
+    );
   };
 
   return (
@@ -208,6 +294,21 @@ export default function StoreDetailScreen() {
                   source={{ uri: storeDetail.store_thumbnail }}
                   className="w-full h-full"
                   resizeMode="cover"
+                  onLoad={() => {
+                    console.log('✅ [StoreDetail] 이미지 로드 성공:', {
+                      storeId: storeDetail.store_id,
+                      storeName: storeDetail.store_name,
+                      thumbnailUrl: storeDetail.store_thumbnail
+                    });
+                  }}
+                  onError={(error) => {
+                    console.log('❌ [StoreDetail] 이미지 로드 실패:', {
+                      storeId: storeDetail.store_id,
+                      storeName: storeDetail.store_name,
+                      thumbnailUrl: storeDetail.store_thumbnail,
+                      error: error.nativeEvent
+                    });
+                  }}
                 />
               ) : (
                 <View className="w-full h-full bg-gray-300 justify-center items-center">
@@ -230,7 +331,7 @@ export default function StoreDetailScreen() {
                     {renderStars(storeDetail.store_rating)}
                   </Text>
                   <Text className="text-sm text-gray-600">
-                    {storeDetail.store_rating > 0 ? `${storeDetail.store_rating.toString()} (리뷰 ${storeDetail.store_review_cnt.toString()})` : '평점 없음'}
+                    {storeDetail.store_rating > 0 ? `${(storeDetail.store_rating || 0).toString()} (리뷰 ${(storeDetail.store_review_cnt || 0).toString()})` : '평점 없음'}
                   </Text>
                 </View>
                 <Text className="text-sm text-gray-600">
@@ -250,15 +351,15 @@ export default function StoreDetailScreen() {
                 <View className="flex-row flex-wrap mb-4">
                   {tags.map((tag, index) => (
                     <View
-                      key={index.toString()}
+                      key={`tag-${index}`}
                       className="px-3 py-1 rounded-full mr-2 mb-2"
-                      style={{ backgroundColor: tag.color + '20' }}
+                      style={{ backgroundColor: (tag?.color || '#9CA3AF') + '20' }}
                     >
                       <Text
                         className="text-xs font-medium"
-                        style={{ color: tag.color }}
+                        style={{ color: tag?.color || '#9CA3AF' }}
                       >
-                        {tag.label}
+                        {tag?.label || '태그'}
                       </Text>
                     </View>
                   ))}
@@ -366,19 +467,45 @@ export default function StoreDetailScreen() {
             <View className="flex-row space-x-3">
               <TouchableOpacity
                 onPress={handleSharePress}
-                className="flex-1 py-3 bg-mainOrange rounded-lg"
+                disabled={shareStoreMutation.isPending}
+                className={`flex-1 py-3 rounded-lg ${
+                  shareStoreMutation.isPending ? 'bg-gray-400' : 'bg-blue-500'
+                }`}
                 activeOpacity={0.8}
               >
-                <Text className="text-white text-center font-medium">공유하기</Text>
+                {shareStoreMutation.isPending ? (
+                  <View className="flex-row items-center justify-center">
+                    <ActivityIndicator size="small" color="white" />
+                    <Text className="text-white text-center font-medium ml-2">공유 중...</Text>
+                  </View>
+                ) : (
+                  <View className="flex-row items-center justify-center">
+                    <Feather name="share-2" size={16} color="white" />
+                    <Text className="text-white text-center font-medium ml-2">공유하기</Text>
+                  </View>
+                )}
               </TouchableOpacity>
               
               {actualIsHost && (
                 <TouchableOpacity
                   onPress={handleSelectPress}
-                  className="flex-1 py-3 bg-mainOrange rounded-lg"
+                  disabled={shareStoreMutation.isPending}
+                  className={`flex-1 py-3 rounded-lg ${
+                    shareStoreMutation.isPending ? 'bg-gray-400' : 'bg-orange-500'
+                  }`}
                   activeOpacity={0.8}
                 >
-                  <Text className="text-white text-center font-medium">선택하기</Text>
+                  {shareStoreMutation.isPending ? (
+                    <View className="flex-row items-center justify-center">
+                      <ActivityIndicator size="small" color="white" />
+                      <Text className="text-white text-center font-medium ml-2">선택 중...</Text>
+                    </View>
+                  ) : (
+                    <View className="flex-row items-center justify-center">
+                      <Feather name="check-circle" size={16} color="white" />
+                      <Text className="text-white text-center font-medium ml-2">👑 선택하기</Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
               )}
             </View>

@@ -83,7 +83,7 @@ export interface NewMessageDTO {
   room_id: number;
   read_count?: number; // 선택적 필드로 추가
   // 시스템 메시지 관련 필드
-  message_type?: 'system_join' | 'system_leave' | 'system_kick';
+  message_type?: 'system_join' | 'system_leave' | 'system_kick' | 'store_share';
   user_name?: string;
   user_id?: string;
   kicked_by?: string;

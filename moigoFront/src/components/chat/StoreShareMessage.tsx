@@ -1,5 +1,8 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '@/types/RootStackParamList';
 import Feather from 'react-native-vector-icons/Feather';
 
 interface StoreShareMessageProps {
@@ -12,26 +15,98 @@ interface StoreShareMessageProps {
     reviewCount: number;
     imageUrl: string;
   };
+  storeId?: number; // 가게 ID 추가
+  chatRoom?: any; // 채팅방 정보 (선택사항)
+  isHost?: boolean; // 방장 여부 (선택사항)
 }
+
+type StoreShareNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const StoreShareMessage: React.FC<StoreShareMessageProps> = ({
   isMyMessage,
   senderName,
   senderAvatar,
-  storeInfo
+  storeInfo,
+  storeId,
+  chatRoom,
+  isHost
 }) => {
+  const navigation = useNavigation<StoreShareNavigationProp>();
+
+  // 썸네일 없음 로그
+  React.useEffect(() => {
+    if (!storeInfo.imageUrl) {
+      console.log('⚠️ [StoreShareMessage] 썸네일 없음:', {
+        storeName: storeInfo.storeName,
+        imageUrl: storeInfo.imageUrl
+      });
+    }
+  }, [storeInfo.imageUrl, storeInfo.storeName]);
+
+  // 가게 상세로 이동하는 핸들러
+  const handleStorePress = () => {
+    if (!storeId) {
+      console.warn('⚠️ [StoreShareMessage] storeId가 없어서 이동할 수 없습니다.');
+      return;
+    }
+
+    console.log('🏪 [StoreShareMessage] 가게 상세로 이동:', {
+      storeId,
+      storeName: storeInfo.storeName,
+      chatRoom,
+      isHost
+    });
+
+    // StoreList를 거쳐서 StoreDetail로 이동
+    navigation.navigate('StoreList', { 
+      chatRoom: chatRoom || undefined,
+      isHost: isHost || false
+    });
+
+    // 약간의 지연 후 StoreDetail로 이동 (StoreList 화면이 로드된 후)
+    setTimeout(() => {
+      navigation.navigate('StoreDetail', {
+        storeId: storeId,
+        chatRoom: chatRoom || undefined,
+        isHost: isHost || false
+      });
+    }, 100);
+  };
+
   return (
     <View className={`${isMyMessage ? 'self-end' : 'self-start'}`}>
       {!isMyMessage ? (
-            
-            <View className="rounded-2xl w-[240px] shadow-sm overflow-hidden bg-white">
+        <TouchableOpacity 
+          onPress={handleStorePress}
+          activeOpacity={0.8}
+          className="rounded-2xl w-[240px] shadow-sm overflow-hidden bg-white"
+        >
               {/* 가게 대표 사진 */}
               <View className="w-full h-32">
-                <Image
-                  source={{ uri: storeInfo.imageUrl }}
-                  className="w-full h-full"
-                  resizeMode="cover"
-                />
+                {storeInfo.imageUrl ? (
+                  <Image
+                    source={{ uri: storeInfo.imageUrl }}
+                    className="w-full h-full"
+                    resizeMode="cover"
+                    onLoad={() => {
+                      console.log('✅ [StoreShareMessage] 이미지 로드 성공:', {
+                        storeName: storeInfo.storeName,
+                        imageUrl: storeInfo.imageUrl
+                      });
+                    }}
+                    onError={(error) => {
+                      console.log('❌ [StoreShareMessage] 이미지 로드 실패:', {
+                        storeName: storeInfo.storeName,
+                        imageUrl: storeInfo.imageUrl,
+                        error: error.nativeEvent
+                      });
+                    }}
+                  />
+                ) : (
+                  <View className="w-full h-full bg-gray-300 justify-center items-center">
+                    <Text className="text-gray-500 text-xs">이미지 없음</Text>
+                  </View>
+                )}
               </View>
               
               {/* 가게 정보 */}
@@ -52,17 +127,40 @@ const StoreShareMessage: React.FC<StoreShareMessageProps> = ({
                   </Text>
                 </View>
               </View>
-            </View>
+        </TouchableOpacity>
       ) : (
         /* 내 메시지 */
-        <View className="bg-white w-[240px] rounded-2xl shadow-sm overflow-hidden">
+        <TouchableOpacity 
+          onPress={handleStorePress}
+          activeOpacity={0.8}
+          className="bg-white w-[240px] rounded-2xl shadow-sm overflow-hidden"
+        >
           {/* 가게 대표 사진 */}
           <View className="w-full h-32">
-            <Image
-              source={{ uri: storeInfo.imageUrl }}
-              className="w-full h-full"
-              resizeMode="cover"
-            />
+            {storeInfo.imageUrl ? (
+              <Image
+                source={{ uri: storeInfo.imageUrl }}
+                className="w-full h-full"
+                resizeMode="cover"
+                onLoad={() => {
+                  console.log('✅ [StoreShareMessage-내메시지] 이미지 로드 성공:', {
+                    storeName: storeInfo.storeName,
+                    imageUrl: storeInfo.imageUrl
+                  });
+                }}
+                onError={(error) => {
+                  console.log('❌ [StoreShareMessage-내메시지] 이미지 로드 실패:', {
+                    storeName: storeInfo.storeName,
+                    imageUrl: storeInfo.imageUrl,
+                    error: error.nativeEvent
+                  });
+                }}
+              />
+            ) : (
+              <View className="w-full h-full bg-gray-300 justify-center items-center">
+                <Text className="text-gray-500 text-xs">이미지 없음</Text>
+              </View>
+            )}
           </View>
           
             {/* 가게 정보 */}
@@ -83,7 +181,7 @@ const StoreShareMessage: React.FC<StoreShareMessageProps> = ({
                 </Text>
               </View>
             </View>
-        </View>
+        </TouchableOpacity>
       )}
     </View>
   );

@@ -35,27 +35,59 @@ export default function StoreListScreen() {
   console.log('storeListData:', storeListData);
   console.log('storeListData?.data:', storeListData?.data);
   console.log('storeListData?.data?.length:', storeListData?.data?.length);
+  
+  // 썸네일 URL 상세 로그
+  if (storeListData?.data && storeListData.data.length > 0) {
+    console.log('🖼️ === 가게 썸네일 URL 분석 ===');
+    storeListData.data.forEach((store, index) => {
+      console.log(`가게 ${index + 1}:`, {
+        store_id: store.store_id,
+        store_name: store.store_name,
+        store_thumbnail: store.store_thumbnail,
+        thumbnail_type: typeof store.store_thumbnail,
+        thumbnail_length: store.store_thumbnail?.length || 0,
+        is_valid_url: store.store_thumbnail && store.store_thumbnail.startsWith('http')
+      });
+    });
+  }
+  
+  // Key 중복 체크
+  if (storeListData?.data) {
+    const storeIds = storeListData.data.map(store => store.store_id);
+    const duplicateIds = storeIds.filter((id, index) => storeIds.indexOf(id) !== index);
+    if (duplicateIds.length > 0) {
+      console.warn('🚨 중복된 store_id 발견:', duplicateIds);
+    }
+    
+    console.log('📊 Store IDs:', storeIds);
+    console.log('📊 Store ID 타입들:', storeIds.map(id => typeof id));
+  }
 
   // 가게 카드 클릭 핸들러
   const handleStorePress = (store: StoreListItemDTO) => {
     console.log('=== StoreCard 클릭됨 ===');
     console.log('store:', store);
-    console.log('store.store_id 원본값:', store.store_id);
-    console.log('store.store_id 타입:', typeof store.store_id);
-    console.log('store.store_id 길이:', String(store.store_id).length);
+    console.log('store.store_id 원본값:', store?.store_id);
+    console.log('store.store_id 타입:', typeof store?.store_id);
+    console.log('store.store_id 길이:', String(store?.store_id || 0).length);
     console.log('chatRoom:', chatRoom);
     console.log('isHost:', isHost);
     
-    // storeId를 숫자로 변환
-    const numericStoreId = Number(store.store_id);
+    // storeId를 숫자로 변환 (안전하게)
+    const numericStoreId = Number(store?.store_id || 0);
     console.log('변환된 storeId:', numericStoreId, '타입:', typeof numericStoreId);
     console.log('isNaN 체크:', isNaN(numericStoreId));
     
-    navigation.navigate('StoreDetail', { 
-      storeId: numericStoreId,
-      chatRoom: chatRoom,
-      isHost: isHost
-    });
+    // 유효한 storeId인지 확인
+    if (numericStoreId > 0) {
+      navigation.navigate('StoreDetail', { 
+        storeId: numericStoreId,
+        chatRoom: chatRoom || undefined,
+        isHost: isHost || false
+      });
+    } else {
+      console.error('유효하지 않은 storeId:', numericStoreId);
+    }
   };
 
   // 필터 버튼 클릭 핸들러
@@ -70,10 +102,11 @@ export default function StoreListScreen() {
   };
 
   // 활성 필터 목록 (예시)
-  const activeFilters = filterParams.region ? ['지역'] : [];
-  if (filterParams.category) activeFilters.push('카테고리');
-  if (filterParams.date) activeFilters.push('날짜');
-  if (filterParams.keyword) activeFilters.push('키워드');
+  const activeFilters = [];
+  if (filterParams.region && filterParams.region.trim()) activeFilters.push('지역');
+  if (filterParams.category && filterParams.category.trim()) activeFilters.push('카테고리');
+  if (filterParams.date && filterParams.date.trim()) activeFilters.push('날짜');
+  if (filterParams.keyword && filterParams.keyword.trim()) activeFilters.push('키워드');
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
@@ -83,7 +116,7 @@ export default function StoreListScreen() {
           <Feather name="arrow-left" size={24} color="#374151" />
         </TouchableOpacity>
         <Text className="text-lg font-bold text-gray-900">가게 정하기</Text>
-        <View className="w-10" /> {/* 오른쪽 여백 */}
+        <View className="w-10" />
       </View>
 
       {/* 필터 섹션 */}
@@ -103,20 +136,22 @@ export default function StoreListScreen() {
             <ActivityIndicator size="large" color="#FF6B00" />
             <Text className="mt-4 text-gray-600">가게 목록을 불러오는 중...</Text>
           </View>
-        ) : storeListData?.data && storeListData.data.length > 0 ? (
-          storeListData.data.map((store) => (
-            <StoreCard
-              key={store.store_id.toString()}
-              store={store}
-              onPress={handleStorePress}
-            />
-          ))
+        ) : (storeListData?.data && Array.isArray(storeListData.data) && storeListData.data.length > 0) ? (
+          <>
+            {storeListData.data.map((store, index) => (
+              <StoreCard
+                key={`store-${store?.store_id || 'unknown'}-${index}-${store?.store_name || 'noname'}`}
+                store={store}
+                onPress={handleStorePress}
+              />
+            ))}
+          </>
         ) : error ? (
           <View className="flex-1 justify-center items-center py-20">
             <Feather name="alert-circle" size={48} color="#EF4444" />
             <Text className="mt-4 text-gray-600 text-center">가게 목록을 불러오는데 실패했습니다.</Text>
             <Text className="text-sm text-gray-500 text-center mb-4">
-              {error instanceof Error ? error.message : '네트워크 연결을 확인해주세요.'}
+              {error instanceof Error ? (error.message || '오류가 발생했습니다.') : '네트워크 연결을 확인해주세요.'}
             </Text>
             <TouchableOpacity 
               className="bg-mainOrange px-6 py-3 rounded-lg"
