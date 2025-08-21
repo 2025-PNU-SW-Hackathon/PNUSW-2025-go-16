@@ -14,10 +14,10 @@ exports.getChatRooms = async (user_id) => {
   await cleanupDuplicateChatRoomUsers(conn, user_id);
 
   const [rows] = await conn.query(
-    `SELECT DISTINCT                               -- 🔧 DISTINCT 추가로 중복 제거
+    `SELECT DISTINCT
       cr.reservation_id AS chat_room_id,                         
       cr.name AS name,
-      rt.user_id AS host_id,                      -- 🆕 모임 생성자 (방장)
+      rt.user_id AS host_id,
       (
         SELECT cm.message
         FROM chat_messages cm
@@ -38,19 +38,19 @@ exports.getChatRooms = async (user_id) => {
         WHERE cm.chat_room_id = cr.reservation_id
         ORDER BY cm.message_id DESC
         LIMIT 1
-      ) AS last_message_sender_id,               -- 🔧 명확한 네이밍
+      ) AS last_message_sender_id,
       (
         SELECT cm.sender_id
         FROM chat_messages cm
         WHERE cm.chat_room_id = cr.reservation_id
         ORDER BY cm.message_id DESC
         LIMIT 1
-      ) AS sender_id                             -- 🔧 하위 호환성 유지
+      ) AS sender_id
    FROM chat_rooms cr
    JOIN chat_room_users cru ON cr.reservation_id = cru.reservation_id
-   JOIN reservation_table rt ON cr.reservation_id = rt.reservation_id  -- 🆕 방장 정보 조인
+   JOIN reservation_table rt ON cr.reservation_id = rt.reservation_id
    WHERE cru.user_id = ? AND cru.is_kicked = 0
-   ORDER BY COALESCE(last_message_time, rt.reservation_created_time) DESC`,  -- 🔧 정렬 추가
+   ORDER BY COALESCE(last_message_time, rt.reservation_created_time) DESC`,
     [user_id]
   );
 
@@ -392,15 +392,15 @@ exports.getAllMessages = async (user_id, room_id) => {
           m.sender_id,
           m.message,
           m.created_at,
-          u.user_name,                                    -- 🆕 메시지 보낸 사용자 이름
-          CASE WHEN m.sender_id = ? THEN true ELSE false END AS is_sender_host,  -- 🆕 메시지 보낸 사람이 방장인지
+          u.user_name,
+          CASE WHEN m.sender_id = ? THEN true ELSE false END AS is_sender_host,
           (
             SELECT COUNT(*)
             FROM chat_read_status
             WHERE chat_room_id = ? AND last_read_message_id IS NOT NULL AND last_read_message_id >= m.message_id
           ) AS read_count
    FROM chat_messages m
-   LEFT JOIN user_table u ON m.sender_id = u.user_id      -- 🆕 사용자 정보 조인
+   LEFT JOIN user_table u ON m.sender_id = u.user_id
    WHERE m.chat_room_id = ?
    ORDER BY m.message_id DESC
    LIMIT 100`,
