@@ -27,75 +27,262 @@ module.exports = async function handleSocket(io) {
         // 클라이언트가 연결되면 socket이 필수
         // 채팅방에 참여
         socket.on('joinRoom', async (room_id) => {
-            const result = await messageService.authRoom(room_id);
-            if (result.length > 0) {
-                console.log('joined', room_id);
-                socket.join(room_id); // 여기 반드시 socket 사용
+            try {
+                console.log('🚪 채팅방 입장 요청:', {
+                    user_id: socket.user.user_id,
+                    room_id: room_id
+                });
 
-                // api 요청 시 읽음 처리를 구현함.
-                await messageService.markAllMessagesAsRead(socket.user.user_id, room_id);
-            }
-            else {
-                socket.emit('errorMessage', {
-                    code: 'INVALID_AUTH',
-                    message: '참여하지 않은 채팅방입니다.'
+                // 입력 검증
+                if (!room_id) {
+                    socket.emit('joinRoomError', {
+                        error: '채팅방 ID가 필요합니다.',
+                        code: 'MISSING_ROOM_ID'
+                    });
+                    return;
+                }
+
+                // 권한 확인
+                const result = await messageService.authRoom(room_id);
+                const isAuthorized = result.some(user => user.user_id === socket.user.user_id);
+
+                if (isAuthorized) {
+                    // 채팅방 입장
+                    socket.join(room_id);
+                    console.log('✅ 채팅방 입장 성공:', {
+                        user_id: socket.user.user_id,
+                        room_id: room_id
+                    });
+
+                    // 성공 응답
+                    socket.emit('joinRoomSuccess', {
+                        success: true,
+                        room_id: room_id,
+                        message: '채팅방에 입장했습니다.'
+                    });
+
+                    // 읽음 처리 (비동기)
+                    messageService.markAllMessagesAsRead(socket.user.user_id, room_id)
+                        .catch(err => console.error('읽음 처리 오류:', err));
+
+                    // 다른 사용자들에게 입장 알림 (선택적)
+                    socket.to(room_id).emit('userJoined', {
+                        user_id: socket.user.user_id,
+                        user_name: socket.user.user_name,
+                        timestamp: new Date().toISOString()
+                    });
+
+                } else {
+                    socket.emit('joinRoomError', {
+                        error: '채팅방에 참여 권한이 없습니다.',
+                        code: 'UNAUTHORIZED_ROOM'
+                    });
+                }
+
+            } catch (err) {
+                console.error('❌ 채팅방 입장 오류:', err);
+                socket.emit('joinRoomError', {
+                    error: '채팅방 입장 중 오류가 발생했습니다.',
+                    code: 'JOIN_ROOM_ERROR'
                 });
             }
         });
 
         // 클라이언트가 메시지 전송 시
-        socket.on('sendMessage', async ({ room, message }) => {
+        socket.on('sendMessage', async (data) => {
             try {
+                // 데이터 검증 및 정규화
+                const { room, message, sender_id } = data;
+                const userId = socket.user.user_id;
+                const userName = socket.user.user_name;
+
                 console.log('📨 메시지 전송 요청:', {
-                    user_id: socket.user.user_id,
+                    user_id: userId,
                     room: room,
-                    message: message
+                    message: message,
+                    sender_id: sender_id
                 });
+
+                // 1. 입력 데이터 검증
+                if (!room || !message || typeof message !== 'string') {
+                    socket.emit('messageError', {
+                        error: '잘못된 메시지 형식입니다.',
+                        code: 'INVALID_FORMAT'
+                    });
+                    return;
+                }
+
+                if (message.trim().length === 0) {
+                    socket.emit('messageError', {
+                        error: '빈 메시지는 전송할 수 없습니다.',
+                        code: 'EMPTY_MESSAGE'
+                    });
+                    return;
+                }
+
+                if (message.length > 1000) {
+                    socket.emit('messageError', {
+                        error: '메시지가 너무 깁니다. (최대 1000자)',
+                        code: 'MESSAGE_TOO_LONG'
+                    });
+                    return;
+                }
+
+                // 2. 채팅방 권한 검증
+                const roomAuth = await messageService.authRoom(room);
+                const isAuthorized = roomAuth.some(user => user.user_id === userId);
                 
-                // 메시지를 db에 저장
-                const new_message_result = await messageService.saveNewMessage(socket.user.user_id, room, message);
+                if (!isAuthorized) {
+                    socket.emit('messageError', {
+                        error: '채팅방에 참여 권한이 없습니다.',
+                        code: 'UNAUTHORIZED_ROOM'
+                    });
+                    return;
+                }
+
+                // 3. 메시지 저장 (병렬 처리 준비)
+                const messagePromise = messageService.saveNewMessage(userId, room, message);
+                
+                // 4. 현재 방 상태 조회 (병렬 처리)
+                const [new_message_result, socketsInRoom] = await Promise.all([
+                    messagePromise,
+                    io.in(room).fetchSockets()
+                ]);
+
                 const messageId = new_message_result?.message_id || new_message_result?.id;
+                const activeUserIds = socketsInRoom.map(s => s.user.user_id);
 
                 console.log('💾 저장된 메시지:', new_message_result);
 
-                // 메시지를 해당 방에 브로드캐스트
-                // 전송자 포함하지 않음.
-                socket.to(room).emit('newMessage', new_message_result);
+                // 5. 전송자에게 성공 응답 (즉시)
+                socket.emit('messageAck', {
+                    success: true,
+                    messageId: messageId,
+                    timestamp: new Date().toISOString()
+                });
 
-                // 현재 방에 연결된 유저 목록
-                const socketsInRoom = await io.in(room).fetchSockets();
-                const activeUserIds = socketsInRoom.map(s => s.user.user_id);
+                // 6. 메시지 브로드캐스트 (전송자 제외)
+                socket.to(room).emit('newMessage', {
+                    ...new_message_result,
+                    user_name: userName,
+                    created_at: new Date().toISOString()
+                });
 
-                // 현재 채팅창 읽음 갱신.
-                for (const socket of socketsInRoom) {
-                    await messageService.markAllMessagesAsRead(socket.user.user_id, room);
-                }
+                // 7. 읽음 상태 업데이트 (비동기)
+                Promise.all(
+                    socketsInRoom.map(s => 
+                        messageService.markAllMessagesAsRead(s.user.user_id, room)
+                    )
+                ).catch(err => console.error('읽음 상태 업데이트 오류:', err));
 
-                // DB 기준 방 참여자 전체
-                const allUserIds = await push_service.getUserIdsByReservation(room);
-
-                // 현재 방에 없는 유저에게만 Push 알림 전송
-                const offlineUserIds = allUserIds.filter(uid => !activeUserIds.includes(uid));
-                if (offlineUserIds.length) {
-                    await push_service.sendChatMessagePushToUserIds({
-                        reservationId: room,
-                        targetUserIds: offlineUserIds,
-                        messageId,
-                        senderId: socket.user.user_id,
-                        senderName: socket.user.user_name,
-                        text: message
-                    });
-                }
+                // 8. 푸시 알림 전송 (비동기)
+                push_service.getUserIdsByReservation(room)
+                    .then(allUserIds => {
+                        const offlineUserIds = allUserIds.filter(uid => !activeUserIds.includes(uid));
+                        if (offlineUserIds.length > 0) {
+                            return push_service.sendChatMessagePushToUserIds({
+                                reservationId: room,
+                                targetUserIds: offlineUserIds,
+                                messageId,
+                                senderId: userId,
+                                senderName: userName,
+                                text: message
+                            });
+                        }
+                    })
+                    .catch(err => console.error('푸시 알림 전송 오류:', err));
 
             } catch (err) {
-                console.error('메시지 저장 오류:', err);
-                socket.emit('error', '메시지를 보낼 수 없습니다.');
+                console.error('❌ 메시지 전송 오류:', err);
+                
+                // 구체적인 에러 메시지 제공
+                let errorMessage = '메시지를 보낼 수 없습니다.';
+                let errorCode = 'UNKNOWN_ERROR';
+
+                if (err.code === 'ER_NO_SUCH_TABLE') {
+                    errorMessage = '채팅 시스템이 준비되지 않았습니다.';
+                    errorCode = 'SYSTEM_NOT_READY';
+                } else if (err.code === 'ECONNREFUSED') {
+                    errorMessage = '데이터베이스 연결에 실패했습니다.';
+                    errorCode = 'DB_CONNECTION_FAILED';
+                } else if (err.message) {
+                    errorMessage = err.message;
+                }
+
+                socket.emit('messageError', {
+                    error: errorMessage,
+                    code: errorCode,
+                    timestamp: new Date().toISOString()
+                });
             }
         });
 
+        // 채팅방 나가기
+        socket.on('leaveRoom', async (room_id) => {
+            try {
+                console.log('🚪 채팅방 나가기 요청:', {
+                    user_id: socket.user.user_id,
+                    room_id: room_id
+                });
+
+                if (!room_id) {
+                    socket.emit('leaveRoomError', {
+                        error: '채팅방 ID가 필요합니다.',
+                        code: 'MISSING_ROOM_ID'
+                    });
+                    return;
+                }
+
+                // 채팅방에서 나가기
+                socket.leave(room_id);
+
+                // 성공 응답
+                socket.emit('leaveRoomSuccess', {
+                    success: true,
+                    room_id: room_id,
+                    message: '채팅방에서 나갔습니다.'
+                });
+
+                // 다른 사용자들에게 퇴장 알림 (선택적)
+                socket.to(room_id).emit('userLeft', {
+                    user_id: socket.user.user_id,
+                    user_name: socket.user.user_name,
+                    timestamp: new Date().toISOString()
+                });
+
+                console.log('✅ 채팅방 나가기 성공:', {
+                    user_id: socket.user.user_id,
+                    room_id: room_id
+                });
+
+            } catch (err) {
+                console.error('❌ 채팅방 나가기 오류:', err);
+                socket.emit('leaveRoomError', {
+                    error: '채팅방 나가기 중 오류가 발생했습니다.',
+                    code: 'LEAVE_ROOM_ERROR'
+                });
+            }
+        });
+
+        // 연결 상태 확인 (heartbeat)
+        socket.on('ping', () => {
+            socket.emit('pong', {
+                timestamp: new Date().toISOString(),
+                user_id: socket.user.user_id
+            });
+        });
+
         // 클라이언트가 연결 종료 시
-        socket.on('disconnect', () => {
-            console.log(`❌ User disconnected: ${socket.user.user_id}`);
+        socket.on('disconnect', (reason) => {
+            console.log(`❌ User disconnected: ${socket.user.user_id}, reason: ${reason}`);
+            
+            // 연결 종료 이벤트를 다른 사용자들에게 브로드캐스트 (선택적)
+            socket.broadcast.emit('userDisconnected', {
+                user_id: socket.user.user_id,
+                user_name: socket.user.user_name,
+                timestamp: new Date().toISOString(),
+                reason: reason
+            });
         });
     });
 

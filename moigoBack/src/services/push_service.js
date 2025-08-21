@@ -28,6 +28,10 @@ async function saveUserExpoToken(account_id, expo_token) {
         );
         console.log(`✅ Expo token 저장 성공: ${account_id} - ${expo_token}`);
     } catch (err) {
+        if (err.code === 'ER_NO_SUCH_TABLE') {
+            console.log('⚠️ [Push] user_push_tokens 테이블이 존재하지 않습니다. 토큰 저장을 건너뜁니다.');
+            return;
+        }
         console.error('❌ Expo token 저장 오류:', err);
         throw err;
     }
@@ -74,16 +78,34 @@ async function getStoreIdByReservation(reservationId) {
 
 async function getTokensByAccountIds(table, accountIds = []) {
     if (!Array.isArray(accountIds) || !accountIds.length) return [];
-    const rows = await q(
-        `SELECT expo_token FROM ${table} WHERE account_id IN (?)`,
-        [accountIds]
-    );
-    return rows.map(r => r.expo_token);
+    try {
+        const rows = await q(
+            `SELECT expo_token FROM ${table} WHERE account_id IN (?)`,
+            [accountIds]
+        );
+        return rows.map(r => r.expo_token);
+    } catch (error) {
+        // 테이블이 존재하지 않는 경우 빈 배열 반환
+        if (error.code === 'ER_NO_SUCH_TABLE') {
+            console.log(`⚠️ [Push] ${table} 테이블이 존재하지 않습니다. 푸시 알림을 건너뜁니다.`);
+            return [];
+        }
+        throw error;
+    }
 }
 
 async function deleteTokens(table, tokens = []) {
     if (!Array.isArray(tokens) || !tokens.length) return;
-    await q(`DELETE FROM ${table} WHERE expo_token IN (?)`, [tokens]);
+    try {
+        await q(`DELETE FROM ${table} WHERE expo_token IN (?)`, [tokens]);
+    } catch (error) {
+        // 테이블이 존재하지 않는 경우 조용히 건너뜀
+        if (error.code === 'ER_NO_SUCH_TABLE') {
+            console.log(`⚠️ [Push] ${table} 테이블이 존재하지 않습니다. 토큰 삭제를 건너뜁니다.`);
+            return;
+        }
+        throw error;
+    }
 }
 
 /* ============================================================

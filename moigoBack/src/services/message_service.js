@@ -44,35 +44,81 @@ exports.markAllMessagesAsRead = async (user_id, room_id) => {
 
 // 메시지 DB에 저장
 exports.saveNewMessage = async (user_id, room_id, message) => {
-
     const conn = getConnection();
-    const [last_message_id] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages WHERE chat_room_id = ?',
-        [room_id]
-    )
-    const new_message_id = ((last_message_id[0]?.maxId) ?? 0) + 1;
-    const [result] = await conn.query(
-        `INSERT INTO chat_messages (message_id, chat_room_id, sender_id, message) VALUES (?, ?, ?, ?)`,
-        [new_message_id, room_id, user_id, message]
-    );
+    
+    try {
+        // 트랜잭션 시작 (성능 및 데이터 무결성)
+        await conn.beginTransaction();
 
-    const [rows] = await conn.query(
-        `SELECT * FROM chat_messages WHERE message_id = ? AND chat_room_id = ?`,
-        [new_message_id, room_id]
-    );
+        // 새 메시지 ID 생성 (AUTO_INCREMENT 대신 수동 관리)
+        const [last_message_id] = await conn.query(
+            'SELECT MAX(message_id) as maxId FROM chat_messages WHERE chat_room_id = ?',
+            [room_id]
+        );
+        const new_message_id = ((last_message_id[0]?.maxId) ?? 0) + 1;
 
-    // 일반 사용자 메시지인 경우 추가 정보 포함
-    const messageData = rows[0];
-    if (messageData.sender_id !== 'system') {
-        messageData.message_type = 'user_message';
+        // 메시지 삽입
+        await conn.query(
+            `INSERT INTO chat_messages (message_id, chat_room_id, sender_id, message, created_at) 
+             VALUES (?, ?, ?, ?, NOW())`,
+            [new_message_id, room_id, user_id, message]
+        );
+
+        // 삽입된 메시지 조회
+        const [rows] = await conn.query(
+            `SELECT m.*, u.user_name 
+             FROM chat_messages m 
+             LEFT JOIN user_table u ON m.sender_id = u.user_id 
+             WHERE m.message_id = ? AND m.chat_room_id = ?`,
+            [new_message_id, room_id]
+        );
+
+        await conn.commit();
+
+        if (rows.length === 0) {
+            throw new Error('메시지 저장 후 조회에 실패했습니다.');
+        }
+
+        // 메시지 데이터 처리
+        const messageData = {
+            ...rows[0],
+            id: rows[0].message_id, // 클라이언트 호환성을 위한 별칭
+        };
+
+        // 메시지 타입 결정
+        if (messageData.sender_id === 'system') {
+            messageData.message_type = 'system';
+        } else if (messageData.message && messageData.message.includes('🏪')) {
+            messageData.message_type = 'store_share';
+            
+            // 가게 공유 메시지에서 추가 정보 추출
+            try {
+                const storeIdMatch = messageData.message.match(/store_id:\s*(\d+)/);
+                if (storeIdMatch) {
+                    messageData.store_id = parseInt(storeIdMatch[1]);
+                }
+                
+                const storeNameMatch = messageData.message.match(/🏪\s*([^\n]+)/);
+                if (storeNameMatch) {
+                    messageData.store_name = storeNameMatch[1].trim();
+                }
+            } catch (parseError) {
+                console.error('가게 정보 파싱 오류:', parseError);
+            }
+        } else {
+            messageData.message_type = 'user_message';
+        }
+
+        // 타임스탬프 정규화
+        if (messageData.created_at) {
+            messageData.created_at = new Date(messageData.created_at).toISOString();
+        }
+
+        return messageData;
+
+    } catch (error) {
+        await conn.rollback();
+        console.error('❌ 메시지 저장 오류:', error);
+        throw error;
     }
-
-    // 가게 공유 메시지인지 확인 (메시지 내용에 가게 정보가 포함된 경우)
-    if (messageData.message && messageData.message.includes('🏪')) {
-        messageData.message_type = 'store_share';
-        
-        // 메시지에서 store_id 추출 시도 (실제로는 별도 테이블이나 메타데이터에서 가져와야 함)
-        // 현재는 메시지 내용으로만 판단
-    }
-
-    return messageData;
 };
