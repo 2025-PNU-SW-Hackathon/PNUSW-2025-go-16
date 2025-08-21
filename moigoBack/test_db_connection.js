@@ -53,3 +53,4 @@ async function testDBConnection() {
 }
 
 testDBConnection();
+
