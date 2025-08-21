@@ -4,14 +4,17 @@
 const e = require('express');
 const { getConnection } = require('../config/db_config');
 const messageService = require('../services/message_service');
-// 💬 1. 채팅방 목록 조회
+// 💬 1. 채팅방 목록 조회 (중복 제거)
 exports.getChatRooms = async (user_id) => {
   const conn = getConnection();
 
   console.log('🔍 [DEBUG] 채팅방 목록 조회 시작 - user_id:', user_id);
 
+  // 🧹 먼저 중복된 chat_room_users 데이터 정리
+  await cleanupDuplicateChatRoomUsers(conn, user_id);
+
   const [rows] = await conn.query(
-    `SELECT 
+    `SELECT DISTINCT                               -- 🔧 DISTINCT 추가로 중복 제거
       cr.reservation_id AS chat_room_id,                         
       cr.name AS name,
       rt.user_id AS host_id,                      -- 🆕 모임 생성자 (방장)
@@ -46,11 +49,12 @@ exports.getChatRooms = async (user_id) => {
    FROM chat_rooms cr
    JOIN chat_room_users cru ON cr.reservation_id = cru.reservation_id
    JOIN reservation_table rt ON cr.reservation_id = rt.reservation_id  -- 🆕 방장 정보 조인
-   WHERE cru.user_id = ? AND cru.is_kicked = 0`,
+   WHERE cru.user_id = ? AND cru.is_kicked = 0
+   ORDER BY COALESCE(last_message_time, rt.reservation_created_time) DESC`,  -- 🔧 정렬 추가
     [user_id]
   );
 
-  console.log('🔍 [DEBUG] 조회된 채팅방 수:', rows.length);
+  console.log('🔍 [DEBUG] 중복 제거 후 채팅방 수:', rows.length);
   
   // 방장 여부 판별 로그 추가
   const processedRows = rows.map(row => {
@@ -74,6 +78,128 @@ exports.getChatRooms = async (user_id) => {
   });
 
   return processedRows;
+};
+
+// 🧹 중복된 chat_room_users 데이터 정리 함수 (개별 사용자)
+async function cleanupDuplicateChatRoomUsers(conn, user_id) {
+  console.log('🧹 [CLEANUP] 중복 채팅방 사용자 데이터 정리 시작 - user_id:', user_id);
+  
+  try {
+    // 1. 현재 사용자의 중복 데이터 확인
+    const [duplicates] = await conn.query(
+      `SELECT reservation_id, COUNT(*) as count 
+       FROM chat_room_users 
+       WHERE user_id = ? 
+       GROUP BY reservation_id 
+       HAVING COUNT(*) > 1`,
+      [user_id]
+    );
+
+    if (duplicates.length > 0) {
+      console.log('🚨 [CLEANUP] 발견된 중복 데이터:', duplicates.length, '개의 채팅방');
+      
+      // 2. 각 reservation_id별로 가장 오래된 것만 남기고 나머지 삭제
+      for (const duplicate of duplicates) {
+        console.log(`🧹 [CLEANUP] 채팅방 ${duplicate.reservation_id}에서 ${duplicate.count}개 중복 데이터 정리`);
+        
+        // ROW_NUMBER()를 사용하여 중복 제거 (id 컬럼이 없을 수도 있으므로)
+        const [deleteResult] = await conn.query(
+          `DELETE t1 FROM chat_room_users t1
+           INNER JOIN chat_room_users t2 
+           WHERE t1.user_id = ? AND t1.reservation_id = ?
+           AND t1.user_id = t2.user_id AND t1.reservation_id = t2.reservation_id
+           AND t1.rowid > t2.rowid`,
+          [user_id, duplicate.reservation_id]
+        );
+        
+        // 위 쿼리가 실패하면 대안 방법 사용
+        if (deleteResult.affectedRows === 0) {
+          await conn.query(
+            `DELETE FROM chat_room_users 
+             WHERE user_id = ? AND reservation_id = ?`,
+            [user_id, duplicate.reservation_id]
+          );
+          
+          // 다시 하나만 추가
+          await conn.query(
+            `INSERT IGNORE INTO chat_room_users (reservation_id, user_id, is_kicked)
+             VALUES (?, ?, false)`,
+            [duplicate.reservation_id, user_id]
+          );
+        }
+        
+        console.log(`✅ [CLEANUP] 채팅방 ${duplicate.reservation_id} 중복 데이터 정리 완료`);
+      }
+    } else {
+      console.log('✅ [CLEANUP] 중복 데이터 없음');
+    }
+  } catch (error) {
+    console.error('❌ [CLEANUP] 중복 데이터 정리 중 오류:', error);
+    // 정리 실패해도 메인 기능에 영향주지 않도록 에러를 던지지 않음
+  }
+}
+
+// 🧹 전체 시스템 중복 데이터 정리 함수 (관리자용)
+exports.cleanupAllDuplicateChatRoomUsers = async () => {
+  const conn = getConnection();
+  
+  console.log('🧹 [SYSTEM CLEANUP] 전체 시스템 중복 채팅방 데이터 정리 시작');
+  
+  try {
+    // 1. 전체 중복 데이터 현황 파악
+    const [allDuplicates] = await conn.query(
+      `SELECT user_id, reservation_id, COUNT(*) as count 
+       FROM chat_room_users 
+       GROUP BY user_id, reservation_id 
+       HAVING COUNT(*) > 1
+       ORDER BY count DESC`
+    );
+
+    if (allDuplicates.length > 0) {
+      console.log('🚨 [SYSTEM CLEANUP] 전체 중복 데이터 현황:', allDuplicates.length, '개 그룹');
+      
+      let totalCleaned = 0;
+      
+      // 2. 각 중복 그룹별로 정리
+      for (const duplicate of allDuplicates) {
+        console.log(`🧹 [SYSTEM CLEANUP] 사용자 ${duplicate.user_id}, 채팅방 ${duplicate.reservation_id}: ${duplicate.count}개 중복`);
+        
+        // 가장 최근 레코드 하나만 남기고 나머지 삭제 (created_at 기준)
+        const [deleteResult] = await conn.query(
+          `DELETE FROM chat_room_users 
+           WHERE user_id = ? AND reservation_id = ?
+           AND id NOT IN (
+             SELECT * FROM (
+               SELECT MAX(id) FROM chat_room_users 
+               WHERE user_id = ? AND reservation_id = ?
+             ) as temp
+           )`,
+          [duplicate.user_id, duplicate.reservation_id, duplicate.user_id, duplicate.reservation_id]
+        );
+        
+        totalCleaned += deleteResult.affectedRows;
+        console.log(`✅ [SYSTEM CLEANUP] ${deleteResult.affectedRows}개 중복 레코드 삭제`);
+      }
+      
+      console.log(`🎉 [SYSTEM CLEANUP] 전체 정리 완료: 총 ${totalCleaned}개 중복 레코드 삭제`);
+      
+      return {
+        success: true,
+        duplicateGroups: allDuplicates.length,
+        totalCleaned: totalCleaned
+      };
+    } else {
+      console.log('✅ [SYSTEM CLEANUP] 전체 시스템에 중복 데이터 없음');
+      return {
+        success: true,
+        duplicateGroups: 0,
+        totalCleaned: 0
+      };
+    }
+  } catch (error) {
+    console.error('❌ [SYSTEM CLEANUP] 전체 중복 데이터 정리 중 오류:', error);
+    throw error;
+  }
 };
 
 // 👋 2. 채팅방 나가기 (모임에서도 나가기)
@@ -377,12 +503,18 @@ exports.enterChatRoom = async (user_id, reservation_id) => {
     chat_room_id = reservation_id;
   }
 
-  // 2. chat_room_users에 등록 (중복 방지)
-  await conn.query(
-    `INSERT INTO chat_room_users (reservation_id, user_id, is_kicked)
-     VALUES (?, ?, false)`,
-    [reservation_id, user_id]
-  );
+  // 2. chat_room_users에 등록 (강화된 중복 방지)
+  try {
+    await conn.query(
+      `INSERT IGNORE INTO chat_room_users (reservation_id, user_id, is_kicked)
+       VALUES (?, ?, false)`,
+      [reservation_id, user_id]
+    );
+    console.log('✅ [ENTER] 채팅방 사용자 등록 완료 - user_id:', user_id, 'reservation_id:', reservation_id);
+  } catch (insertError) {
+    // 이미 존재하는 경우 무시하고 계속 진행
+    console.log('⚠️ [ENTER] 이미 등록된 사용자 - user_id:', user_id, 'reservation_id:', reservation_id);
+  }
 
   // 3. 시스템 메시지 생성 - 사용자 입장 알림
   const messageService = require('../services/message_service');
