@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   View, 
   Text, 
@@ -21,12 +21,13 @@ import PrimaryButton from '@/components/common/PrimaryButton';
 import { useAuthStore } from '@/store';
 import { useLogin, useStoreLogin } from '@/hooks/queries/useAuthQueries';
 
+
 export default function LoginScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { login, selectedUserType, setLoading, isLoading } = useAuthStore();
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(true); // 자동 로그인 기본값 true
+  const [rememberMe, setRememberMe] = useState(true); // 자동 로그인 설정 (Zustand persist가 자동 처리)
 
   // 로그인 훅들
   const loginMutation = useLogin();
@@ -46,7 +47,6 @@ export default function LoginScreen() {
     try {
       setLoading(true);
       console.log('로그인 시도:', { userId: userId.trim(), password: '***', userType: selectedUserType });
-      
       if (selectedUserType === 'business') {
         // 사장님 로그인
         await storeLoginMutation.mutateAsync({
@@ -177,7 +177,7 @@ export default function LoginScreen() {
             rememberMe ? 'bg-mainOrange border-mainOrange' : 'border-gray-300'
           }`}>
             {rememberMe && (
-              <Text className="text-white text-xs font-bold">✓</Text>
+              <Text className="text-xs font-bold text-white">✓</Text>
             )}
           </View>
           <Text className="text-gray-600">자동 로그인</Text>
