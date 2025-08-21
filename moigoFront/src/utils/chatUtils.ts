@@ -83,7 +83,9 @@ export function groupMessages(messages: ChatMessage[], currentUserId: string): M
       messages: group.messages.map(msg => ({
         id: msg.id,
         type: msg.type,
-        message: msg.message.substring(0, 20) + '...'
+        message: msg.message.substring(0, 20) + '...',
+        status: msg.status, // 상태도 로깅
+        isTemporary: msg.isTemporary
       }))
     });
   });

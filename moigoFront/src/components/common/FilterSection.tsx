@@ -21,7 +21,7 @@ export default function FilterSection({ onFilterPress, activeFilters = [] }: Fil
           <Text className="ml-1 text-sm text-gray-600 font-medium">필터</Text>
           {activeFilters.length > 0 && (
             <View className="ml-1 w-5 h-5 bg-mainOrange rounded-full justify-center items-center">
-              <Text className="text-xs text-white font-bold">{activeFilters.length.toString()}</Text>
+              <Text className="text-xs text-white font-bold">{(activeFilters.length || 0).toString()}</Text>
             </View>
           )}
         </TouchableOpacity>

@@ -8,6 +8,17 @@ interface StoreCardProps {
 }
 
 export default function StoreCard({ store, onPress }: StoreCardProps) {
+  // 썸네일 없음 로그
+  React.useEffect(() => {
+    if (!store.store_thumbnail) {
+      console.log('⚠️ [StoreCard] 썸네일 없음:', {
+        storeId: store.store_id,
+        storeName: store.store_name,
+        thumbnail: store.store_thumbnail
+      });
+    }
+  }, [store.store_thumbnail, store.store_id, store.store_name]);
+
   // 평점을 별점으로 변환
   const renderStars = (rating: number) => {
     const fullStars = Math.floor(rating);
@@ -73,6 +84,21 @@ export default function StoreCard({ store, onPress }: StoreCardProps) {
             source={{ uri: store.store_thumbnail }}
             className="w-full h-full"
             resizeMode="cover"
+            onLoad={() => {
+              console.log('✅ [StoreCard] 이미지 로드 성공:', {
+                storeId: store.store_id,
+                storeName: store.store_name,
+                thumbnailUrl: store.store_thumbnail
+              });
+            }}
+            onError={(error) => {
+              console.log('❌ [StoreCard] 이미지 로드 실패:', {
+                storeId: store.store_id,
+                storeName: store.store_name,
+                thumbnailUrl: store.store_thumbnail,
+                error: error.nativeEvent
+              });
+            }}
           />
         ) : (
           <View className="w-full h-full bg-gray-300 justify-center items-center">
@@ -85,35 +111,33 @@ export default function StoreCard({ store, onPress }: StoreCardProps) {
       <View className="p-4">
         {/* 가게명 */}
         <Text className="text-lg font-bold text-gray-900 mb-1">
-          {store.store_name}
+          {store.store_name || '가게명 없음'}
         </Text>
 
         {/* 평점 */}
         <View className="flex-row items-center mb-2">
           <Text className="text-yellow-400 text-base mr-1">
-            {renderStars(store.store_rating)}
+            {renderStars(store.store_rating || 0)}
           </Text>
           <Text className="text-sm text-gray-600">
-            {store.store_rating.toString()} (리뷰 {(Math.floor(Math.random() * 200) + 50).toString()})
+            {(store.store_rating || 0).toString()} (리뷰 {(Math.floor(Math.random() * 200) + 50).toString()})
           </Text>
         </View>
 
         {/* 위치 정보 */}
         <Text className="text-sm text-gray-600 mb-2">
-          <Text>📍 </Text>
-          <Text>{extractLocationInfo(store.store_address)}</Text>
+          📍 {extractLocationInfo(store.store_address || '')}
         </Text>
 
         {/* 스크린 정보 */}
         <Text className="text-sm text-gray-600 mb-3">
-          <Text>📺 </Text>
-          <Text>{getScreenInfo(store.store_id)}</Text>
+          📺 {getScreenInfo(store.store_id || 0)}
         </Text>
 
         {/* 상태 태그 */}
         <View className="flex-row items-center justify-between">
           <View className="flex-row">
-            {hasGameToday(store.store_id) ? (
+            {hasGameToday(store.store_id || 0) ? (
               <View className="px-3 py-1 bg-green-100 rounded-full mr-2">
                 <Text className="text-green-700 text-xs font-medium">
                   오늘 경기 있음
@@ -122,7 +146,7 @@ export default function StoreCard({ store, onPress }: StoreCardProps) {
             ) : (
               <View className="px-3 py-1 bg-yellow-100 rounded-full mr-2">
                 <Text className="text-yellow-700 text-xs font-medium">
-                  {getSportType(store.store_id)} 전문
+                  {getSportType(store.store_id || 0)} 전문
                 </Text>
               </View>
             )}
