@@ -790,8 +790,8 @@ exports.getChatParticipants = async (user_id, room_id) => {
        JOIN user_table u ON cru.user_id = u.user_id
        WHERE cru.reservation_id = ? AND cru.is_kicked = 0
        ORDER BY 
-         CASE WHEN cru.user_id = ? THEN 0 ELSE 1 END,  -- 방장을 맨 위로
-         cru.joined_at ASC`,  -- 가입 순서대로
+         CASE WHEN cru.user_id = ? THEN 0 ELSE 1 END,
+         cru.joined_at ASC`,
       [hostId, hostId, room_id, hostId]
     );
     
