@@ -225,6 +225,50 @@ exports.kickUnpaidParticipant = async (req, res, next) => {
   }
 };
 
+// 👥 채팅방 참여자 목록 조회
+exports.getChatParticipants = async (req, res, next) => {
+  try {
+    const user_id = req.user.user_id;
+    const { roomId } = req.params;
+
+    const data = await chatService.getChatParticipants(user_id, roomId);
+
+    res.status(200).json({
+      success: true,
+      message: '참여자 목록 조회 성공',
+      data: data
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 🚫 참여자 강퇴 (방장 전용) - 새로운 엔드포인트
+exports.kickParticipant = async (req, res, next) => {
+  try {
+    const requester_id = req.user.user_id;
+    const { roomId, userId } = req.params;
+    const { reason } = req.body || {};
+
+    // 기존 kickUser 함수 재사용하되 응답 형태 개선
+    const result = await chatService.kickUser(roomId, userId, requester_id);
+
+    res.status(200).json({
+      success: true,
+      message: '참여자가 강퇴되었습니다',
+      data: {
+        kicked_user_id: result.kicked_user_id,
+        kicked_user_name: result.kicked_user_name || '알 수 없는 사용자',
+        remaining_participants: result.remaining_participants || 0,
+        kicked_at: new Date().toISOString(),
+        reason: reason || '관리자 권한으로 강퇴'
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // 🧹 전체 시스템 중복 데이터 정리 (관리자용)
 exports.cleanupDuplicateData = async (req, res, next) => {
   try {

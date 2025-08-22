@@ -482,6 +482,12 @@ exports.kickUser = async (room_id, target_user_id, requester_id) => {
         [nextMessageId, room_id, 'system', systemMessage]
       );
 
+      // 현재 참여자 수 조회 (소켓 이벤트에서 사용하기 위해)
+      const [participantCount] = await conn.query(
+        `SELECT reservation_participant_cnt FROM reservation_table WHERE reservation_id = ?`,
+        [room_id]
+      );
+      
       // 실시간으로 시스템 메시지 전송
       try {
         const { getIO } = require('../config/socket_hub');
@@ -499,19 +505,41 @@ exports.kickUser = async (room_id, target_user_id, requester_id) => {
         };
         
         io.to(room_id.toString()).emit('newMessage', systemMessageData);
+        
+        // 🆕 참여자 강퇴 전용 소켓 이벤트 추가
+        const kickEventData = {
+          room_id: parseInt(room_id),
+          kicked_user_id: target_user_id,
+          kicked_user_name: userName,
+          kicked_by: requester_id,
+          remaining_participants: participantCount.length > 0 ? participantCount[0].reservation_participant_cnt : 0,
+          timestamp: new Date().toISOString()
+        };
+        
+        io.to(room_id.toString()).emit('participantKicked', kickEventData);
+        
       } catch (error) {
         console.log('소켓 전송 실패 (서버 시작 중일 수 있음):', error.message);
       }
+      
+      return { 
+        kicked_user_id: target_user_id,
+        kicked_user_name: userName,
+        remaining_participants: participantCount.length > 0 ? participantCount[0].reservation_participant_cnt : 0
+      };
     }
     else {
       console.log("user not found");
+      const err = new Error("강퇴할 사용자를 찾을 수 없습니다.");
+      err.statusCode = 404;
+      err.errorCode = "USER_NOT_FOUND";
+      throw err;
     }
-    return { kicked_user_id: target_user_id };
   }
   else {
-    const err = new Error("권한이 없습니다.");
-    err.statusCode = 401;
-    err.errorCode = "INVALID_APPROACH";
+    const err = new Error("권한이 없습니다. 방장만 참여자를 강퇴할 수 있습니다.");
+    err.statusCode = 403;
+    err.errorCode = "FORBIDDEN";
     throw err;
   }
 };
@@ -708,6 +736,95 @@ exports.enterChatRoom = async (user_id, reservation_id) => {
     reservation_id,
     message: '입장 완료',
   };
+};
+
+// 👥 참여자 목록 조회
+exports.getChatParticipants = async (user_id, room_id) => {
+  const conn = getConnection();
+  
+  try {
+    console.log('🔍 [DEBUG] 참여자 목록 조회 - user_id:', user_id, 'room_id:', room_id);
+    
+    // 1. 요청자가 해당 채팅방 참여자인지 확인
+    const [authCheck] = await conn.query(
+      `SELECT * FROM chat_room_users 
+       WHERE reservation_id = ? AND user_id = ? AND is_kicked = 0`,
+      [room_id, user_id]
+    );
+    
+    if (!authCheck.length) {
+      const err = new Error('채팅방에 참여하지 않았거나 접근 권한이 없습니다.');
+      err.statusCode = 403;
+      err.errorCode = 'FORBIDDEN';
+      throw err;
+    }
+    
+    // 2. 모임 정보 조회 (방장 확인용)
+    const [reservationInfo] = await conn.query(
+      `SELECT user_id as host_id, reservation_participant_cnt 
+       FROM reservation_table WHERE reservation_id = ?`,
+      [room_id]
+    );
+    
+    if (!reservationInfo.length) {
+      const err = new Error('존재하지 않는 모임입니다.');
+      err.statusCode = 404;
+      err.errorCode = 'ROOM_NOT_FOUND';
+      throw err;
+    }
+    
+    const hostId = reservationInfo[0].host_id;
+    const totalParticipants = reservationInfo[0].reservation_participant_cnt;
+    
+    // 3. 참여자 목록 조회 (강퇴되지 않은 사용자만)
+    const [participants] = await conn.query(
+      `SELECT 
+         cru.user_id,
+         u.user_name as name,
+         u.user_email as email,
+         u.user_thumbnail as profile_image,
+         cru.joined_at,
+         CASE WHEN cru.user_id = ? THEN true ELSE false END as is_host,
+         CASE WHEN cru.user_id = ? THEN '방장' ELSE '참가자' END as role
+       FROM chat_room_users cru
+       JOIN user_table u ON cru.user_id = u.user_id
+       WHERE cru.reservation_id = ? AND cru.is_kicked = 0
+       ORDER BY 
+         CASE WHEN cru.user_id = ? THEN 0 ELSE 1 END,  -- 방장을 맨 위로
+         cru.joined_at ASC`,  -- 가입 순서대로
+      [hostId, hostId, room_id, hostId]
+    );
+    
+    // 4. 온라인 상태는 현재 소켓 연결 정보로 확인 (간단 구현)
+    const processedParticipants = participants.map(participant => {
+      return {
+        user_id: participant.user_id,
+        name: participant.name,
+        email: participant.email || null,
+        profile_image: participant.profile_image || null,
+        joined_at: participant.joined_at ? participant.joined_at.toISOString() : new Date().toISOString(),
+        is_host: participant.is_host,
+        role: participant.role,
+        is_online: false,  // 추후 소켓 연결 상태로 업데이트 가능
+        last_seen: null    // 추후 구현 가능
+      };
+    });
+    
+    console.log(`🔍 [DEBUG] 참여자 목록 조회 완료 - 총 ${processedParticipants.length}명`);
+    
+    return {
+      room_id: parseInt(room_id),
+      total_participants: totalParticipants,
+      participants: processedParticipants
+    };
+    
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '참여자 목록 조회 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
 };
 
 // 💰 결제 관련 서비스

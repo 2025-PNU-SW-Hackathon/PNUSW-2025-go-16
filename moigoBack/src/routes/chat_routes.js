@@ -15,7 +15,13 @@ router.delete('/:roomId/leave', authMiddleware, chatController.leaveChatRoom);
 // 채팅방 상태 변경 (PATCH /chats/:roomId/status)
 router.patch('/:roomId/status', authMiddleware, chatController.updateChatRoomStatus);
 
-// 채팅방 유저 강퇴 (DELETE /chats/:roomId/kick/:userId)
+// 👥 채팅방 참여자 목록 조회 (GET /chats/:roomId/participants)
+router.get('/:roomId/participants', authMiddleware, chatController.getChatParticipants);
+
+// 🚫 참여자 강퇴 - 새로운 엔드포인트 (DELETE /chats/:roomId/participants/:userId)
+router.delete('/:roomId/participants/:userId', authMiddleware, chatController.kickParticipant);
+
+// 채팅방 유저 강퇴 (DELETE /chats/:roomId/kick/:userId) - 기존 호환성 유지
 router.delete('/:roomId/kick/:userId', authMiddleware, chatController.kickUserFromRoom);
 
 // 채팅방 전체 메시지 조회 (GET /chats/:roomId/all-messages)
