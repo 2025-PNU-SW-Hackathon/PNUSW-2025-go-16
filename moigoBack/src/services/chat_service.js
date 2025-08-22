@@ -207,8 +207,8 @@ exports.leaveChatRoom = async (user_id, room_id) => {
   const conn = getConnection();
   
   try {
-    // 트랜잭션 시작
-    await conn.beginTransaction();
+    // 트랜잭션 시작 (MySQL2 방식)
+    await conn.execute('START TRANSACTION');
     
     // 1. 현재 모임 정보 및 방장 여부 확인
     const [reservationInfo] = await conn.query(
@@ -313,7 +313,7 @@ exports.leaveChatRoom = async (user_id, room_id) => {
     );
     
     // 트랜잭션 커밋
-    await conn.commit();
+    await conn.execute('COMMIT');
     
     // 8. 실시간 알림 전송
     try {
@@ -375,7 +375,11 @@ exports.leaveChatRoom = async (user_id, room_id) => {
     
   } catch (error) {
     // 트랜잭션 롤백
-    await conn.rollback();
+    try {
+      await conn.execute('ROLLBACK');
+    } catch (rollbackError) {
+      console.error('롤백 실패:', rollbackError);
+    }
     throw error;
   }
 };
