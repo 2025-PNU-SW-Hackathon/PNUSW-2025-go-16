@@ -202,68 +202,181 @@ exports.cleanupAllDuplicateChatRoomUsers = async () => {
   }
 };
 
-// 👋 2. 채팅방 나가기 (모임에서도 나가기)
+// 👋 2. 채팅방 나가기 = 모임 완전 탈퇴 (방장 권한 이양 포함)
 exports.leaveChatRoom = async (user_id, room_id) => {
   const conn = getConnection();
   
-  // 사용자 정보 조회
-  const [userInfo] = await conn.query(
-    `SELECT user_name FROM user_table WHERE user_id = ?`,
-    [user_id]
-  );
-  
-  const userName = userInfo.length > 0 ? userInfo[0].user_name : '알 수 없는 사용자';
-  
-  // 1. 채팅방에서 제거
-  await conn.query(
-    `DELETE FROM chat_room_users WHERE reservation_id = ? AND user_id = ?`,
-    [room_id, user_id]
-  );
-  
-  // 2. 모임 참여자 수 감소
-  await conn.query(
-    `UPDATE reservation_table
-    SET reservation_participant_cnt = reservation_participant_cnt - 1,
-    reservation_status = CASE 
-      WHEN reservation_participant_cnt - 1 < reservation_max_participant_cnt THEN 0 
-      ELSE reservation_status 
-    END
-    WHERE reservation_id = ?`,
-    [room_id]
-  );
-  
-  // 3. 시스템 메시지 생성 - 사용자 퇴장 알림
-  const systemMessage = `${userName}님이 모임을 나가셨습니다.`;
-  
-  // 시스템 메시지 저장
-  const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages');
-  const nextMessageId = (maxIdResult[0]?.maxId || 0) + 1;
-  
-  await conn.query(
-    `INSERT INTO chat_messages 
-     (message_id, chat_room_id, sender_id, message, created_at)
-     VALUES (?, ?, ?, ?, NOW())`,
-    [nextMessageId, room_id, 'system', systemMessage]
-  );
-
-  // 4. 실시간으로 시스템 메시지 전송
   try {
-    const { getIO } = require('../config/socket_hub');
-    const io = getIO();
-    const systemMessageData = {
-      message_id: nextMessageId,
-      chat_room_id: room_id,
-      sender_id: 'system',
-      message: systemMessage,
-      created_at: new Date(),
-      message_type: 'system_leave', // 시스템 메시지 타입 추가
-      user_name: userName, // 퇴장한 사용자 이름
-      user_id: user_id // 퇴장한 사용자 ID
+    // 트랜잭션 시작
+    await conn.beginTransaction();
+    
+    // 1. 현재 모임 정보 및 방장 여부 확인
+    const [reservationInfo] = await conn.query(
+      `SELECT user_id as host_id, reservation_participant_cnt, reservation_max_participant_cnt, 
+              reservation_status, reservation_match 
+       FROM reservation_table WHERE reservation_id = ?`,
+      [room_id]
+    );
+    
+    if (!reservationInfo.length) {
+      throw new Error('존재하지 않는 모임입니다.');
+    }
+    
+    const isHost = reservationInfo[0].host_id === user_id;
+    const currentParticipantCount = reservationInfo[0].reservation_participant_cnt;
+    
+    // 2. 사용자 정보 조회
+    const [userInfo] = await conn.query(
+      `SELECT user_name FROM user_table WHERE user_id = ?`,
+      [user_id]
+    );
+    
+    const userName = userInfo.length > 0 ? userInfo[0].user_name : '알 수 없는 사용자';
+    
+    // 3. 사용자가 실제 참여자인지 확인
+    const [participantCheck] = await conn.query(
+      `SELECT * FROM chat_room_users WHERE reservation_id = ? AND user_id = ? AND is_kicked = 0`,
+      [room_id, user_id]
+    );
+    
+    if (!participantCheck.length) {
+      throw new Error('이미 나간 모임이거나 참여하지 않은 모임입니다.');
+    }
+    
+    let newHostId = null;
+    let hostTransferMessage = '';
+    
+    // 4. 방장인 경우 권한 이양 처리
+    if (isHost && currentParticipantCount > 1) {
+      // 가장 먼저 가입한 다른 참여자에게 방장 권한 이양
+      const [nextHost] = await conn.query(
+        `SELECT cru.user_id, u.user_name 
+         FROM chat_room_users cru
+         JOIN user_table u ON cru.user_id = u.user_id
+         WHERE cru.reservation_id = ? AND cru.user_id != ? AND cru.is_kicked = 0
+         ORDER BY cru.joined_at ASC
+         LIMIT 1`,
+        [room_id, user_id]
+      );
+      
+      if (nextHost.length > 0) {
+        newHostId = nextHost[0].user_id;
+        const newHostName = nextHost[0].user_name;
+        
+        // 방장 권한 이양
+        await conn.query(
+          `UPDATE reservation_table SET user_id = ? WHERE reservation_id = ?`,
+          [newHostId, room_id]
+        );
+        
+        hostTransferMessage = ` 방장 권한이 ${newHostName}님에게 이양되었습니다.`;
+      }
+    } else if (isHost && currentParticipantCount <= 1) {
+      // 마지막 참여자(방장)가 나가는 경우 - 모임 해산
+      await conn.query(
+        `UPDATE reservation_table SET reservation_status = 3 WHERE reservation_id = ?`,
+        [room_id]
+      );
+    }
+    
+    // 5. 채팅방에서 사용자 제거
+    await conn.query(
+      `DELETE FROM chat_room_users WHERE reservation_id = ? AND user_id = ?`,
+      [room_id, user_id]
+    );
+    
+    // 6. 모임 참여자 수 감소
+    const newParticipantCount = currentParticipantCount - 1;
+    await conn.query(
+      `UPDATE reservation_table
+       SET reservation_participant_cnt = ?,
+           reservation_status = CASE 
+             WHEN ? = 0 THEN 3  -- 참여자가 0명이면 완료 상태
+             WHEN ? < reservation_max_participant_cnt THEN 0  -- 정원 미달이면 모집중
+             ELSE reservation_status 
+           END
+       WHERE reservation_id = ?`,
+      [newParticipantCount, newParticipantCount, newParticipantCount, room_id]
+    );
+    
+    // 7. 시스템 메시지 생성
+    const systemMessage = `${userName}님이 모임을 나가셨습니다.${hostTransferMessage}`;
+    
+    const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages');
+    const nextMessageId = (maxIdResult[0]?.maxId || 0) + 1;
+    
+    await conn.query(
+      `INSERT INTO chat_messages 
+       (message_id, chat_room_id, sender_id, message, created_at)
+       VALUES (?, ?, ?, ?, NOW())`,
+      [nextMessageId, room_id, 'system', systemMessage]
+    );
+    
+    // 트랜잭션 커밋
+    await conn.commit();
+    
+    // 8. 실시간 알림 전송
+    try {
+      const { getIO } = require('../config/socket_hub');
+      const io = getIO();
+      
+      // 시스템 메시지 전송
+      const systemMessageData = {
+        message_id: nextMessageId,
+        chat_room_id: room_id,
+        sender_id: 'system',
+        message: systemMessage,
+        created_at: new Date(),
+        message_type: 'system_leave',
+        user_name: userName,
+        user_id: user_id
+      };
+      
+      io.to(room_id.toString()).emit('newMessage', systemMessageData);
+      
+      // 사용자 퇴장 이벤트 전송
+      const leaveEventData = {
+        room_id: parseInt(room_id),
+        user_id: user_id,
+        user_name: userName,
+        left_at: new Date().toISOString(),
+        remaining_participants: newParticipantCount,
+        is_host_left: isHost,
+        new_host_id: newHostId,
+        meeting_status: newParticipantCount === 0 ? 3 : (newParticipantCount < reservationInfo[0].reservation_max_participant_cnt ? 0 : reservationInfo[0].reservation_status)
+      };
+      
+      io.to(room_id.toString()).emit('userLeftRoom', leaveEventData);
+      
+      // 방장 권한 이양 시 추가 알림
+      if (newHostId) {
+        io.to(room_id.toString()).emit('hostTransferred', {
+          room_id: parseInt(room_id),
+          previous_host: user_id,
+          new_host: newHostId,
+          transferred_at: new Date().toISOString()
+        });
+      }
+      
+    } catch (error) {
+      console.log('소켓 전송 실패:', error.message);
+    }
+    
+    // 9. 응답 데이터 반환
+    return {
+      roomId: parseInt(room_id),
+      left_at: new Date().toISOString(),
+      reservation_id: parseInt(room_id),
+      remaining_participants: newParticipantCount,
+      is_host_left: isHost,
+      new_host_id: newHostId,
+      meeting_status: newParticipantCount === 0 ? 3 : (newParticipantCount < reservationInfo[0].reservation_max_participant_cnt ? 0 : reservationInfo[0].reservation_status)
     };
     
-    io.to(room_id.toString()).emit('newMessage', systemMessageData);
   } catch (error) {
-    console.log('소켓 전송 실패 (서버 시작 중일 수 있음):', error.message);
+    // 트랜잭션 롤백
+    await conn.rollback();
+    throw error;
   }
 };
 

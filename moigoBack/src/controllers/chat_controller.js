@@ -15,15 +15,21 @@ exports.getChatRooms = async (req, res, next) => {
   }
 };
 
-// 👋 채팅방 나가기
+// 👋 채팅방 나가기 = 모임 완전 탈퇴
 exports.leaveChatRoom = async (req, res, next) => {
   try {
     const user_id = req.user.user_id;
     const { roomId } = req.params;
 
-    await chatService.leaveChatRoom(user_id, roomId);
+    const result = await chatService.leaveChatRoom(user_id, roomId);
 
-    res.status(200).json({ success: true, message: '채팅방을 나갔습니다' });
+    res.status(200).json({ 
+      success: true, 
+      message: result.is_host_left 
+        ? (result.new_host_id ? '모임을 나가고 방장 권한이 이양되었습니다.' : '모임을 나가고 모임이 해산되었습니다.')
+        : '모임을 나갔습니다.',
+      data: result
+    });
   } catch (err) {
     next(err);
   }
