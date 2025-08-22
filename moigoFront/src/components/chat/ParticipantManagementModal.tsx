@@ -1,15 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Modal, TouchableOpacity, FlatList, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
+import { getChatParticipants, kickParticipant } from '@/apis/chat';
+import type { ParticipantDTO } from '@/types/DTO/chat';
 
-interface Participant {
-  id: string;
-  name: string;
-  email: string;
-  joinedAt: string;
-  isHost: boolean;
-}
+// ParticipantDTO를 사용하므로 기존 인터페이스 제거
 
 interface ParticipantManagementModalProps {
   isVisible: boolean;
@@ -24,39 +20,47 @@ export default function ParticipantManagementModal({
   chatRoomId, 
   isCurrentUserHost 
 }: ParticipantManagementModalProps) {
-  const [participants, setParticipants] = useState<Participant[]>([
-    // 임시 데이터 - 실제로는 API에서 가져와야 함
-    {
-      id: 'user123',
-      name: '김철수',
-      email: 'kim@example.com',
-      joinedAt: '2024-01-15T10:30:00Z',
-      isHost: true
-    },
-    {
-      id: 'user456',
-      name: '이영희',
-      email: 'lee@example.com',
-      joinedAt: '2024-01-15T11:00:00Z',
-      isHost: false
-    },
-    {
-      id: 'user789',
-      name: '박민수',
-      email: 'park@example.com',
-      joinedAt: '2024-01-15T11:30:00Z',
-      isHost: false
-    }
-  ]);
+  const [participants, setParticipants] = useState<ParticipantDTO[]>([]);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
-  const handleKickParticipant = (participant: Participant) => {
+  // 🆕 참여자 목록 로드
+  const loadParticipants = async () => {
+    try {
+      console.log('👥 참여자 목록 로딩 시작:', chatRoomId);
+      setInitialLoading(true);
+      
+      const response = await getChatParticipants(chatRoomId);
+      
+      if (response.success) {
+        console.log('✅ 참여자 목록 로딩 성공:', response.data);
+        setParticipants(response.data.participants);
+      } else {
+        console.error('❌ 참여자 목록 로딩 실패:', response.message);
+        Alert.alert('오류', '참여자 목록을 불러올 수 없습니다.');
+      }
+    } catch (error: any) {
+      console.error('❌ 참여자 목록 API 에러:', error);
+      Alert.alert('오류', '참여자 목록을 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setInitialLoading(false);
+    }
+  };
+
+  // 🆕 모달이 열릴 때마다 참여자 목록 로드
+  useEffect(() => {
+    if (isVisible) {
+      loadParticipants();
+    }
+  }, [isVisible, chatRoomId]);
+
+  const handleKickParticipant = (participant: ParticipantDTO) => {
     if (!isCurrentUserHost) {
       Alert.alert('권한 없음', '방장만 참여자를 강퇴할 수 있습니다.');
       return;
     }
 
-    if (participant.isHost) {
+    if (participant.is_host) {
       Alert.alert('불가능', '방장은 강퇴할 수 없습니다.');
       return;
     }
@@ -72,19 +76,25 @@ export default function ParticipantManagementModal({
           onPress: async () => {
             setLoading(true);
             try {
-              // TODO: 실제 강퇴 API 호출
-              // await kickUserFromChatRoom(chatRoomId, participant.id);
-              
-              console.log('👑 [방장 권한] 참여자 강퇴:', {
+              console.log('👑 [방장 권한] 참여자 강퇴 시작:', {
                 chatRoomId,
-                participantId: participant.id,
+                participantId: participant.user_id,
                 participantName: participant.name
               });
 
-              // 참여자 목록에서 제거
-              setParticipants(prev => prev.filter(p => p.id !== participant.id));
+              // 🆕 실제 강퇴 API 호출
+              const response = await kickParticipant(chatRoomId, participant.user_id, "부적절한 행동");
               
-              Alert.alert('완료', `${participant.name}님이 강퇴되었습니다.`);
+              if (response.success) {
+                console.log('✅ 강퇴 성공:', response.data);
+                
+                // 참여자 목록에서 제거
+                setParticipants(prev => prev.filter(p => p.user_id !== participant.user_id));
+                
+                Alert.alert('완료', `${participant.name}님이 강퇴되었습니다.`);
+              } else {
+                Alert.alert('오류', response.message || '강퇴에 실패했습니다.');
+              }
             } catch (error: any) {
               console.error('❌ 강퇴 실패:', error);
               
@@ -102,13 +112,13 @@ export default function ParticipantManagementModal({
     );
   };
 
-  const handleBanParticipant = (participant: Participant) => {
+  const handleBanParticipant = (participant: ParticipantDTO) => {
     if (!isCurrentUserHost) {
       Alert.alert('권한 없음', '방장만 참여자를 차단할 수 있습니다.');
       return;
     }
 
-    if (participant.isHost) {
+    if (participant.is_host) {
       Alert.alert('불가능', '방장은 차단할 수 없습니다.');
       return;
     }
@@ -124,19 +134,16 @@ export default function ParticipantManagementModal({
           onPress: async () => {
             setLoading(true);
             try {
-              // TODO: 실제 차단 API 호출
-              // await banUserFromSystem(participant.id);
+              // TODO: 실제 차단 API 호출 (추후 구현)
+              // await banUserFromSystem(participant.user_id);
               
-              console.log('👑 [방장 권한] 참여자 차단:', {
+              console.log('👑 [방장 권한] 참여자 차단 (미구현):', {
                 chatRoomId,
-                participantId: participant.id,
+                participantId: participant.user_id,
                 participantName: participant.name
               });
 
-              // 참여자 목록에서 제거
-              setParticipants(prev => prev.filter(p => p.id !== participant.id));
-              
-              Alert.alert('완료', `${participant.name}님이 차단되었습니다.`);
+              Alert.alert('알림', '차단 기능은 추후 구현 예정입니다.');
             } catch (error: any) {
               console.error('❌ 차단 실패:', error);
               
@@ -164,28 +171,40 @@ export default function ParticipantManagementModal({
     });
   };
 
-  const renderParticipant = ({ item }: { item: Participant }) => (
+  const renderParticipant = ({ item }: { item: ParticipantDTO }) => (
     <View className="flex-row items-center justify-between p-4 bg-white border-b border-gray-100">
       {/* 참여자 정보 */}
       <View className="flex-1">
         <View className="flex-row items-center mb-1">
           <Text className="text-base font-semibold text-gray-900 mr-2">
-            {item.name}
+            {item.name || '알 수 없는 사용자'}
           </Text>
-          {item.isHost && (
+          {item.is_host ? (
             <View className="px-2 py-0.5 bg-yellow-100 rounded-full border border-yellow-200">
               <Text className="text-xs font-bold text-yellow-700">👑 방장</Text>
             </View>
-          )}
+          ) : null}
+          {item.is_online ? (
+            <View className="ml-2 px-2 py-0.5 bg-green-100 rounded-full border border-green-200">
+              <Text className="text-xs font-bold text-green-700">🟢 온라인</Text>
+            </View>
+          ) : null}
         </View>
-        <Text className="text-sm text-gray-600 mb-1">{item.email}</Text>
+        {item.email ? (
+          <Text className="text-sm text-gray-600 mb-1">{item.email}</Text>
+        ) : null}
         <Text className="text-xs text-gray-500">
-          참여시간: {formatJoinTime(item.joinedAt)}
+          참여시간: {formatJoinTime(item.joined_at)}
         </Text>
+        {item.role ? (
+          <Text className="text-xs text-gray-500">
+            역할: {item.role}
+          </Text>
+        ) : null}
       </View>
 
       {/* 관리 버튼들 */}
-      {isCurrentUserHost && !item.isHost && (
+      {isCurrentUserHost && !item.is_host ? (
         <View className="flex-row space-x-2">
           <TouchableOpacity
             onPress={() => handleKickParticipant(item)}
@@ -203,7 +222,7 @@ export default function ParticipantManagementModal({
             <Text className="text-sm font-semibold text-red-700">차단</Text>
           </TouchableOpacity>
         </View>
-      )}
+      ) : null}
     </View>
   );
 
@@ -226,18 +245,30 @@ export default function ParticipantManagementModal({
         <View className="p-4 bg-white border-b border-gray-100">
           <Text className="text-sm text-gray-600">
             총 {participants.length}명 참여 중
-            {isCurrentUserHost && " • 방장은 참여자를 강퇴하거나 차단할 수 있습니다"}
+            {isCurrentUserHost ? " • 방장은 참여자를 강퇴하거나 차단할 수 있습니다" : ""}
           </Text>
         </View>
 
         {/* 참여자 목록 */}
-        <FlatList
-          data={participants}
-          renderItem={renderParticipant}
-          keyExtractor={(item) => item.id}
-          className="flex-1"
-          showsVerticalScrollIndicator={false}
-        />
+        {initialLoading ? (
+          <View className="flex-1 justify-center items-center">
+            <ActivityIndicator size="large" color="#F97316" />
+            <Text className="mt-2 text-gray-600">참여자 목록을 불러오는 중...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={participants}
+            renderItem={renderParticipant}
+            keyExtractor={(item) => item.user_id}
+            className="flex-1"
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View className="flex-1 justify-center items-center p-8">
+                <Text className="text-gray-500">참여자가 없습니다.</Text>
+              </View>
+            }
+          />
+        )}
 
         {/* 로딩 오버레이 */}
         {loading && (

@@ -116,4 +116,56 @@ export interface ReservationStatusChangedEventDTO {
   status_message: string; // "모집 마감", "진행 중" 등
   changed_by: string; // 변경한 사용자 ID (방장)
   timestamp: string; // 변경 시간
+}
+
+// 🆕 채팅방 참여자 DTO
+export interface ParticipantDTO {
+  user_id: string;           // 사용자 ID
+  name: string;              // 사용자 이름
+  email?: string;            // 이메일 (선택사항)
+  profile_image?: string;    // 프로필 이미지 URL
+  joined_at: string;         // 참여 시간 (ISO 8601)
+  is_host: boolean;          // 방장 여부
+  role: string;              // "방장" | "참가자"
+  is_online: boolean;        // 온라인 상태
+  last_seen?: string;        // 마지막 접속 시간
+}
+
+// 🆕 참여자 목록 조회 응답 DTO
+export interface ChatParticipantsResponseDTO {
+  success: boolean;
+  message: string;
+  data: {
+    room_id: number;
+    total_participants: number;
+    participants: ParticipantDTO[];
+  };
+}
+
+// 🆕 참여자 강퇴 요청 DTO
+export interface KickParticipantRequestDTO {
+  action: "kick";
+  reason: string;
+}
+
+// 🆕 참여자 강퇴 응답 DTO
+export interface KickParticipantResponseDTO {
+  success: boolean;
+  message: string;
+  data: {
+    kicked_user_id: string;
+    kicked_user_name: string;
+    remaining_participants: number;
+    kicked_at: string;
+  };
+}
+
+// 🆕 참여자 강퇴 소켓 이벤트 DTO
+export interface ParticipantKickedEventDTO {
+  room_id: number;
+  kicked_user_id: string;
+  kicked_user_name: string;
+  kicked_by: string;
+  remaining_participants: number;
+  timestamp: string;
 } 

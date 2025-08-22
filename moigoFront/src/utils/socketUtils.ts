@@ -1,6 +1,6 @@
 import { useAuthStore } from '@/store/authStore';
 import Constants from 'expo-constants';
-import type { NewMessageDTO, SocketMessageDTO, ReservationStatusChangedEventDTO } from '@/types/DTO/chat';
+import type { NewMessageDTO, SocketMessageDTO, ReservationStatusChangedEventDTO, ParticipantKickedEventDTO } from '@/types/DTO/chat';
 import type { UserLeftRoomEventDTO, HostTransferredEventDTO } from '@/types/DTO/auth';
 
 // Socket.IO 클라이언트를 any로 import
@@ -28,6 +28,8 @@ class SocketManager {
   private userLeftRoomCallbacks: ((data: UserLeftRoomEventDTO) => void)[] = [];
   // 🆕 방장 권한 이양 이벤트 콜백
   private hostTransferredCallbacks: ((data: HostTransferredEventDTO) => void)[] = [];
+  // 🆕 참여자 강퇴 이벤트 콜백
+  private participantKickedCallbacks: ((data: ParticipantKickedEventDTO) => void)[] = [];
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectInterval: any = null;
@@ -157,6 +159,12 @@ class SocketManager {
     this.socket.on('hostTransferred', (data: HostTransferredEventDTO) => {
       console.log('👑 [소켓] 방장 권한 이양 알림 수신:', data);
       this.hostTransferredCallbacks.forEach(callback => callback(data));
+    });
+
+    // 🆕 참여자 강퇴 이벤트
+    this.socket.on('participantKicked', (data: ParticipantKickedEventDTO) => {
+      console.log('🚫 [소켓] 참여자 강퇴 알림 수신:', data);
+      this.participantKickedCallbacks.forEach(callback => callback(data));
     });
 
     this.socket.on('error', (error: any) => {
@@ -345,6 +353,11 @@ class SocketManager {
   // 🆕 방장 권한 이양 이벤트 콜백 등록
   onHostTransferred(callback: (data: HostTransferredEventDTO) => void) {
     this.hostTransferredCallbacks.push(callback);
+  }
+
+  // 🆕 참여자 강퇴 이벤트 콜백 등록
+  onParticipantKicked(callback: (data: ParticipantKickedEventDTO) => void) {
+    this.participantKickedCallbacks.push(callback);
   }
 
   // 메시지 콜백 제거
