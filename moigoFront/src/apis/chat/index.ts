@@ -100,13 +100,13 @@ export const getChatMessages = async (
   }
 };
 
-// 4. 채팅방 나가기
-export const leaveChatRoom = async (roomId: number): Promise<ChatResponseDTO> => {
-  const response = await chatApiClient.delete<ChatResponseDTO>(
-    `/chats/${roomId}/leave`
-  );
-  return response.data;
-};
+// 4. 채팅방 나가기 (⚠️ 사용 중단 - src/apis/auth/index.ts의 함수 사용할 것)
+// export const leaveChatRoom = async (roomId: number): Promise<ChatResponseDTO> => {
+//   const response = await chatApiClient.delete<ChatResponseDTO>(
+//     `/chats/${roomId}/leave`  // ❌ 잘못된 경로
+//   );
+//   return response.data;
+// };
 
 // 5. 채팅방 상태 변경
 export const updateChatRoomStatus = async (

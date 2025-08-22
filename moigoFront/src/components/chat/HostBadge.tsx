@@ -39,8 +39,8 @@ const HostBadge: React.FC<HostBadgeProps> = ({
   const sizeClasses = getSizeClasses();
 
   const renderCrownStyle = () => (
-    <View className={`flex-row items-center bg-yellow-100 rounded-full ${sizeClasses.container}`}>
-      <Feather name="crown" size={sizeClasses.iconSize} color="#F59E0B" />
+    <View className={`flex-row items-center bg-gradient-to-r from-yellow-100 to-orange-100 rounded-full ${sizeClasses.container} border border-yellow-200`}>
+      <Text style={{ fontSize: sizeClasses.iconSize }}>👑</Text>
       {showText && (
         <Text className={`${sizeClasses.text} font-bold text-yellow-700 ml-1`}>
           방장
@@ -50,8 +50,8 @@ const HostBadge: React.FC<HostBadgeProps> = ({
   );
 
   const renderBadgeStyle = () => (
-    <View className={`flex-row items-center bg-orange-500 rounded-md ${sizeClasses.container}`}>
-      <Feather name="star" size={sizeClasses.iconSize} color="#FFFFFF" />
+    <View className={`flex-row items-center bg-orange-500 rounded-md ${sizeClasses.container} shadow-sm`}>
+      <Text style={{ fontSize: sizeClasses.iconSize, color: '#FFFFFF' }}>⭐</Text>
       {showText && (
         <Text className={`${sizeClasses.text} font-bold text-white ml-1`}>
           방장
@@ -61,10 +61,10 @@ const HostBadge: React.FC<HostBadgeProps> = ({
   );
 
   const renderSimpleStyle = () => (
-    <View className={`flex-row items-center bg-gray-100 rounded-full ${sizeClasses.container}`}>
+    <View className={`flex-row items-center bg-orange-50 rounded-full ${sizeClasses.container} border border-orange-200`}>
       <View className="w-2 h-2 bg-orange-500 rounded-full" />
       {showText && (
-        <Text className={`${sizeClasses.text} font-semibold text-gray-700 ml-1`}>
+        <Text className={`${sizeClasses.text} font-semibold text-orange-700 ml-1`}>
           방장
         </Text>
       )}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { ChatRoom } from '@/types/ChatTypes';
+import HostBadge from './HostBadge';
 
 interface ChatRoomItemProps {
   chatRoom: ChatRoom;
@@ -32,9 +33,15 @@ export default function ChatRoomItem({ chatRoom, onPress }: ChatRoomItemProps) {
         {/* 채팅방 정보 */}
         <View className="flex-1">
           <View className="flex-row items-center justify-between mb-1">
-            <Text className="text-base font-semibold text-gray-900 flex-1">
-              {chatRoom.title}
-            </Text>
+            <View className="flex-row items-center flex-1">
+              <Text className="text-base font-semibold text-gray-900 mr-2">
+                {chatRoom.title}
+              </Text>
+              {/* 🆕 방장 배지 추가 */}
+              {chatRoom.isHost && (
+                <HostBadge size="small" style="simple" showText={false} />
+              )}
+            </View>
             <Text className="text-xs text-gray-500 ml-2">
               {chatRoom.timestamp}
             </Text>

@@ -168,12 +168,15 @@ export const logout = async (): Promise<void> => {
   await apiClient.post('/auth/logout');
 };
 
-// DELETE /api/v1/chats/rooms/:roomId/leave - 채팅방 나가기
+// DELETE /api/v1/chats/:roomId/leave - 채팅방 나가기
 export const leaveChatRoom = async (roomId: number): Promise<LeaveChatRoomResponseDTO> => {
-  console.log('채팅방 나가기 API 호출:', roomId);
+  console.log('🚪 채팅방 나가기 API 호출:', roomId);
+  console.log('🔗 최종 URL:', `https://spotple.kr/api/v1/chats/${roomId}/leave`);
+  
   const response = await apiClient.delete<LeaveChatRoomResponseDTO>(
-    `/chats/rooms/${roomId}/leave`
+    `/chats/${roomId}/leave`  // 🔧 baseURL에 이미 /api/v1이 포함되어 있음
   );
-  console.log('채팅방 나가기 API 응답:', response.data);
+  
+  console.log('✅ 채팅방 나가기 API 응답:', response.data);
   return response.data;
 };

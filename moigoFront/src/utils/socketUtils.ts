@@ -1,6 +1,7 @@
 import { useAuthStore } from '@/store/authStore';
 import Constants from 'expo-constants';
 import type { NewMessageDTO, SocketMessageDTO, ReservationStatusChangedEventDTO } from '@/types/DTO/chat';
+import type { UserLeftRoomEventDTO, HostTransferredEventDTO } from '@/types/DTO/auth';
 
 // Socket.IO 클라이언트를 any로 import
 const io = require('socket.io-client');
@@ -23,6 +24,10 @@ class SocketManager {
   private messageAckCallbacks: ((data: any) => void)[] = [];
   private messageErrorCallbacks: ((error: any) => void)[] = [];
   private reservationStatusCallbacks: ((data: ReservationStatusChangedEventDTO) => void)[] = []; // 🆕 추가
+  // 🆕 사용자 퇴장 이벤트 콜백
+  private userLeftRoomCallbacks: ((data: UserLeftRoomEventDTO) => void)[] = [];
+  // 🆕 방장 권한 이양 이벤트 콜백
+  private hostTransferredCallbacks: ((data: HostTransferredEventDTO) => void)[] = [];
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectInterval: any = null;
@@ -140,6 +145,18 @@ class SocketManager {
     this.socket.on('reservationStatusChanged', (data: ReservationStatusChangedEventDTO) => {
       console.log('🔔 모임 상태 변경 이벤트 수신:', data);
       this.reservationStatusCallbacks.forEach(callback => callback(data));
+    });
+
+    // 🆕 사용자 퇴장 이벤트
+    this.socket.on('userLeftRoom', (data: UserLeftRoomEventDTO) => {
+      console.log('🚪 [소켓] 사용자 퇴장 알림 수신:', data);
+      this.userLeftRoomCallbacks.forEach(callback => callback(data));
+    });
+
+    // 🆕 방장 권한 이양 이벤트
+    this.socket.on('hostTransferred', (data: HostTransferredEventDTO) => {
+      console.log('👑 [소켓] 방장 권한 이양 알림 수신:', data);
+      this.hostTransferredCallbacks.forEach(callback => callback(data));
     });
 
     this.socket.on('error', (error: any) => {
@@ -318,6 +335,16 @@ class SocketManager {
   // 🆕 모임 상태 변경 이벤트 리스너 등록
   onReservationStatusChanged(callback: (data: ReservationStatusChangedEventDTO) => void) {
     this.reservationStatusCallbacks.push(callback);
+  }
+
+  // 🆕 사용자 퇴장 이벤트 콜백 등록
+  onUserLeftRoom(callback: (data: UserLeftRoomEventDTO) => void) {
+    this.userLeftRoomCallbacks.push(callback);
+  }
+
+  // 🆕 방장 권한 이양 이벤트 콜백 등록
+  onHostTransferred(callback: (data: HostTransferredEventDTO) => void) {
+    this.hostTransferredCallbacks.push(callback);
   }
 
   // 메시지 콜백 제거

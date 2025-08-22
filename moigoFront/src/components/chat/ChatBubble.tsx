@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import StoreShareMessage from './StoreShareMessage';
 import SystemMessage from './SystemMessage';
+import HostBadge from './HostBadge';
 import type { SystemMessageType, MessageStatus } from '@/types/ChatTypes';
 import Feather from 'react-native-vector-icons/Feather';
 
@@ -123,9 +124,15 @@ export default function ChatBubble({
           <View className="flex-col">
             {/* 프로필 이름 - senderName이 있을 때만 표시 */}
             {senderName && (
-              <Text className="text-sm font-semibold text-gray-800 mb-1">
-                {senderName}
-              </Text>
+              <View className="flex-row items-center mb-1">
+                <Text className="text-sm font-semibold text-gray-800 mr-2">
+                  {senderName}
+                </Text>
+                {/* 🆕 방장 배지 추가 */}
+                {isHost && (
+                  <HostBadge size="small" style="crown" showText={false} />
+                )}
+              </View>
             )}
             
             {/* 메시지들을 순서대로 렌더링 */}
