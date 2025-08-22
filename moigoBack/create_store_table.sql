@@ -39,3 +39,4 @@ INSERT INTO store_table (store_id, store_pwd, store_name, business_number, store
 ('test2', '$2a$10$hashedpassword', '테스트 가게 2', '123-45-67891', '서울시 서초구 서초대로 456', '02-2345-6789', '두 번째 테스트 가게입니다.'),
 ('store_123', '$2a$10$hashedpassword', '챔피언 스포츠 펍', '123-45-67892', '서울시 강남구 테헤란로 789', '02-3456-7890', '최고의 스포츠 관람 공간입니다.');
 
+

@@ -270,18 +270,47 @@ exports.leaveChatRoom = async (user_id, room_id) => {
 // 📌 3. 채팅방 상태 변경
 exports.updateChatRoomStatus = async (user_id, room_id, status) => {
   const conn = getConnection();
-  // 나갔을때는 다시 들어올 수 있게 삭제.
-  await conn.query('DELETE FROM chat_room_users WHERE reservation_id = ? AND user_id = ?;',
-    [room_id, user_id]
-  )
-  // 참여자 수 줄이기
-  await conn.query(
-    `UPDATE reservation_table
-    SET reservation_participant_cnt = reservation_participant_cnt - 1,
-    reservation_status = 0
-    WHERE reservation_id = ?`,
+  
+  // 🆕 방장 권한 확인 추가
+  const [hostCheck] = await conn.query(
+    'SELECT user_id FROM reservation_table WHERE reservation_id = ?',
     [room_id]
   );
+  
+  if (!hostCheck.length || hostCheck[0].user_id !== user_id) {
+    const err = new Error("권한이 없습니다. 방장만 모임 상태를 변경할 수 있습니다.");
+    err.statusCode = 403;
+    err.errorCode = "UNAUTHORIZED";
+    throw err;
+  }
+  
+  // 모임 상태 변경
+  await conn.query(
+    `UPDATE reservation_table SET reservation_status = ? WHERE reservation_id = ?`,
+    [status, room_id]
+  );
+  
+  // 🆕 실시간 상태 변경 알림
+  try {
+    const { getIO } = require('../config/socket_hub');
+    const io = getIO();
+    const statusMessages = {
+      0: '모집 중',
+      1: '모집 마감',
+      2: '진행 중', 
+      3: '완료'
+    };
+    
+    io.to(room_id.toString()).emit('reservationStatusChanged', {
+      reservation_id: room_id,
+      new_status: status,
+      status_message: statusMessages[status],
+      changed_by: user_id,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.log('소켓 상태 변경 알림 실패:', error.message);
+  }
 };
 
 // 🚫 4. 유저 강퇴

@@ -42,6 +42,8 @@ exports.createReservation = async (req, res, next) => {
       success: true,
       data: {
         reservation_id: result.reservation_id,
+        host_id: user_id,  // 🆕 방장 ID 추가
+        chat_room_id: result.reservation_id,  // 🆕 채팅방 ID 추가 (reservation_id와 동일)
         created_at: result.created_at
       }
     });
