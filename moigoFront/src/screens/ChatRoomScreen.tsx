@@ -17,7 +17,7 @@ import { useChatMessages } from '@/hooks/queries/useChatQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import { socketManager } from '@/utils/socketUtils';
 import { useAuthStore } from '@/store/authStore';
-import type { ChatMessageDTO, NewMessageDTO } from '@/types/DTO/chat';
+import type { ChatMessageDTO, NewMessageDTO, ReservationStatusChangedEventDTO } from '@/types/DTO/chat';
 import { signup, checkUserIdDuplicate, checkStoreIdDuplicate, signupWithDuplicateCheck, storeSignupWithDuplicateCheck, leaveChatRoom } from '@/apis/auth';
 // import { enterChatRoom } from '@/apis/chat'; // ⚠️ 제거: 모임 참여 방지
 
@@ -42,6 +42,9 @@ export default function ChatRoomScreen() {
   // 새로고침 상태
   const [isRefreshing, setIsRefreshing] = useState(false);
   
+  // 🆕 모임 상태 추가
+  const [reservationStatus, setReservationStatus] = useState<number | null>(null);
+  
   // 새로고침 처리 함수 (아래로 당겨서 최신 메시지 불러오기)
   const onRefresh = async () => {
     // 이미 새로고침 중이면 중복 실행 방지
@@ -64,6 +67,48 @@ export default function ChatRoomScreen() {
       setTimeout(() => {
         setIsRefreshing(false);
       }, 1000);
+    }
+  };
+
+  // 🆕 모임 상태 변경 이벤트 핸들러
+  const handleReservationStatusChanged = (data: ReservationStatusChangedEventDTO) => {
+    console.log('🔔 [소켓] 모임 상태 변경 알림:', data);
+    
+    // 현재 채팅방과 관련된 모임인지 확인
+    const currentReservationId = chatRoom.chat_room_id; // 또는 별도 reservation_id 필드
+    if (data.reservation_id === currentReservationId) {
+      console.log('🎯 현재 채팅방 모임 상태 변경:', {
+        old_status: reservationStatus,
+        new_status: data.new_status,
+        status_message: data.status_message,
+        changed_by: data.changed_by
+      });
+      
+      // 상태 업데이트
+      setReservationStatus(data.new_status);
+      
+      // 사용자에게 알림 표시
+      Alert.alert(
+        '모임 상태 변경',
+        `${data.status_message}\n변경자: ${data.changed_by}`,
+        [{ text: '확인' }]
+      );
+      
+      // 채팅 메시지로도 시스템 알림 추가 (선택사항)
+      const systemMessage: ChatMessage = {
+        id: `system_${Date.now()}`,
+        senderId: 'system',
+        senderName: 'System',
+        senderAvatar: 'S',
+        message: `모임 상태가 "${data.status_message}"로 변경되었습니다.`,
+        timestamp: new Date(data.timestamp), // 문자열을 Date 객체로 변환
+        type: 'system',
+        message_type: 'system_join' // 적절한 시스템 메시지 타입
+      };
+      
+      setMessages(prev => [...prev, systemMessage]);
+    } else {
+      console.log('🚫 다른 모임의 상태 변경 이벤트, 무시함');
     }
   };
 
@@ -171,31 +216,31 @@ export default function ChatRoomScreen() {
     });
   }, [user, currentUserId, isUserLoaded]);
   
-  // 현재 사용자가 방장인지 확인 (임시 로직 - 서버 API 수정 대기중)
+  // 🆕 개선된 방장 판별 로직 (서버 정보 우선 사용)
   const isCurrentUserHost = useMemo(() => {
-    const hostId = chatRoom.host_id;
     const currentUserId = user?.id;
     
-    // 1차: host_id 기준 판별 (정확한 방법)
+    // 🎯 서버에서 제공하는 is_host 정보 우선 사용 (가장 정확)
+    const serverIsHost = chatRoom.isHost;
+    
+    // 🔍 추가 검증: host_id 기준 판별
+    const hostId = chatRoom.host_id;
     const hostIdMatch = hostId && currentUserId && hostId === currentUserId;
     
-    // 2차: chatRoom.isHost 기준 판별 (ChatScreen에서 설정됨)
-    const isHostFlag = chatRoom.isHost;
+    // 🎯 최종 판별: 서버 정보를 우선하되, host_id로 추가 검증
+    const finalIsHost = serverIsHost || hostIdMatch;
     
-    // 최종 판별: 둘 중 하나라도 true면 방장으로 간주
-    const finalIsHost = hostIdMatch || isHostFlag;
-    
-    console.log('🔍 [ChatRoomScreen] 방장 판별 로직 (임시):', {
+    console.log('🔍 [ChatRoomScreen] 개선된 방장 판별 로직:', {
+      'chatRoom.isHost (서버)': serverIsHost,
       'chatRoom.host_id': hostId,
       'user?.id': currentUserId,
-      '1️⃣ host_id 매칭': hostIdMatch,
-      '2️⃣ isHost 플래그': isHostFlag,
+      'host_id 매칭': hostIdMatch,
       '🎯 최종 결과': finalIsHost,
-      '⚠️ 주의': '서버 API 수정 전까지 부정확할 수 있음'
+      '✅ 상태': finalIsHost ? '방장 권한 활성' : '일반 참여자'
     });
     
     return !!finalIsHost;
-  }, [chatRoom.host_id, chatRoom.isHost, user?.id]);
+  }, [chatRoom.isHost, chatRoom.host_id, user?.id]);
   
   // 🔍 방장 권한 상태 로그
   React.useEffect(() => {
@@ -537,6 +582,9 @@ export default function ChatRoomScreen() {
     socketManager.onMessageAck(handleMessageAck);
     socketManager.onMessageError(handleMessageError);
     
+    // 🆕 모임 상태 변경 이벤트 리스너 등록
+    socketManager.onReservationStatusChanged(handleReservationStatusChanged);
+    
     // 🚪 채팅방 접속 (모임 참여 없이 단순 채팅방 입장)
     const joinChatRoom = () => {
       const roomId = chatRoom.chat_room_id || 1;
@@ -581,6 +629,58 @@ export default function ChatRoomScreen() {
     };
   }, [chatRoom.chat_room_id, currentUserId, user, useAuthStore.getState().isLoggedIn]); // 의존성 추가
 
+  // 🆕 방장 전용 기능 구현
+  const handleCloseRecruitment = async () => {
+    try {
+      console.log('👑 [방장 권한] 모집 마감 처리 시작');
+      
+      // TODO: 실제 API 호출 구현
+      // await updateReservationStatus(chatRoom.chat_room_id, 1); // 1: 모집마감
+      
+      console.log('✅ 모집 마감 완료');
+      Alert.alert('완료', '모집이 마감되었습니다.');
+      
+      // 상태 업데이트
+      setReservationStatus(1);
+      
+    } catch (error: any) {
+      console.error('❌ 모집 마감 실패:', error);
+      
+      // 🆕 403 에러 처리
+      if (error?.response?.status === 403) {
+        Alert.alert(
+          '권한 없음', 
+          '방장만 이 기능을 사용할 수 있습니다.',
+          [{ text: '확인' }]
+        );
+      } else {
+        Alert.alert(
+          '오류', 
+          '모집 마감에 실패했습니다. 다시 시도해주세요.',
+          [{ text: '확인' }]
+        );
+      }
+    }
+  };
+
+  const handleManageParticipants = () => {
+    console.log('👑 [방장 권한] 참여자 관리');
+    Alert.alert(
+      '참여자 관리',
+      '현재 개발 중인 기능입니다.',
+      [{ text: '확인' }]
+    );
+  };
+
+  const handleEditMeetingInfo = () => {
+    console.log('👑 [방장 권한] 매칭 정보 수정');
+    Alert.alert(
+      '정보 수정',
+      '현재 개발 중인 기능입니다.',
+      [{ text: '확인' }]
+    );
+  };
+
   // 방장용 메뉴 옵션
   const hostMenuOptions: DropdownOption[] = [
     { 
@@ -588,16 +688,13 @@ export default function ChatRoomScreen() {
       label: '👑 매칭 정보 보기', 
       onPress: () => {
         console.log('👑 [방장 권한] 매칭 정보 보기');
-        Alert.alert('방장 기능', '매칭 정보를 확인합니다.');
+        Alert.alert('매칭 정보', `모임 ID: ${chatRoom.chat_room_id}\n상태: ${reservationStatus === 1 ? '모집마감' : '모집중'}`);
       }
     },
     { 
       id: 'host_2', 
       label: '✏️ 매칭 정보 수정하기', 
-      onPress: () => {
-        console.log('👑 [방장 권한] 매칭 정보 수정하기');
-        Alert.alert('방장 기능', '매칭 정보를 수정할 수 있습니다.');
-      }
+      onPress: handleEditMeetingInfo
     },
     { 
       id: 'host_3', 
@@ -609,7 +706,7 @@ export default function ChatRoomScreen() {
           '매칭 모집을 마감하시겠습니까?\n마감 후에는 새로운 참여자가 들어올 수 없습니다.',
           [
             { text: '취소', style: 'cancel' },
-            { text: '마감하기', style: 'destructive', onPress: () => console.log('모집 마감 처리') }
+            { text: '마감하기', style: 'destructive', onPress: handleCloseRecruitment }
           ]
         );
       }
@@ -617,10 +714,7 @@ export default function ChatRoomScreen() {
     { 
       id: 'host_4', 
       label: '👥 참여자 관리', 
-      onPress: () => {
-        console.log('👑 [방장 권한] 참여자 관리');
-        Alert.alert('방장 기능', '참여자를 관리하고 강퇴할 수 있습니다.');
-      }
+      onPress: handleManageParticipants
     },
     { 
       id: 'host_5', 

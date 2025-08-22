@@ -10,6 +10,13 @@ export interface ChatRoomDTO {
   last_message: string;
   last_message_time: string;
   sender_id: string;
+  // 🆕 서버팀에서 추가한 방장 정보 필드들
+  host_id?: string; // 실제 방장 ID
+  is_host?: boolean; // 현재 사용자가 방장인지
+  current_user_is_host?: boolean; // 현재 사용자가 방장인지 (대안 필드명)
+  user_role?: string; // 사용자 역할 ("방장" 또는 "참가자")
+  reservation_id?: number; // 연결된 모임 ID
+  reservation_status?: number; // 모임 상태 (0: 모집중, 1: 마감, 2: 진행중, 3: 완료)
 }
 
 // 채팅방 입장/생성 요청
@@ -100,4 +107,13 @@ export interface ChatErrorResponseDTO {
   success: false;
   message: string;
   errorCode: string;
+}
+
+// 🆕 모임 상태 변경 소켓 이벤트 DTO
+export interface ReservationStatusChangedEventDTO {
+  reservation_id: number;
+  new_status: number; // 0: 모집중, 1: 모집마감, 2: 진행중, 3: 완료
+  status_message: string; // "모집 마감", "진행 중" 등
+  changed_by: string; // 변경한 사용자 ID (방장)
+  timestamp: string; // 변경 시간
 } 

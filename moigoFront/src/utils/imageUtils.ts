@@ -111,3 +111,4 @@ export function getStoreThumbnail(
   // 3차: null 반환 (이미지 없음 처리)
   return null;
 }
+

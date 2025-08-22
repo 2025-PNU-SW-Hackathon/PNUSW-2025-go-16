@@ -60,6 +60,19 @@ export default function ChatScreen() {
 
   // API 데이터를 기존 ChatRoom 형식으로 변환
   const convertToChatRoom = (apiData: ChatRoomDTO): ChatRoom => {
+    // 🚨 디버깅: 서버에서 받은 원본 데이터 로깅
+    console.log('🔍 [ChatScreen] 서버에서 받은 원본 채팅방 데이터:', {
+      chatRoom: apiData.name,
+      fullApiData: apiData,
+      availableFields: Object.keys(apiData),
+      sender_id: apiData.sender_id,
+      host_id: (apiData as any).host_id,
+      is_host: (apiData as any).is_host,
+      current_user_is_host: (apiData as any).current_user_is_host,
+      user_role: (apiData as any).user_role,
+      currentUserId: user?.id
+    });
+
     const isMatching = apiData.name.includes('모임') || apiData.name.includes('매칭');
     const isStore = apiData.name.includes('펍') || apiData.name.includes('스포츠');
     
@@ -88,22 +101,28 @@ export default function ChatScreen() {
     const type: 'matching' | 'store' = isStore ? 'store' : 'matching';
     const icon = getIcon(apiData.name, type);
 
-    // ⚠️ 임시: sender_id가 모임 생성자가 아닐 수 있음 (서버 수정 대기중)
-    // TODO: 서버에서 host_id 필드를 별도로 제공하면 그것을 사용
-    const host_id = apiData.sender_id || '';
+    // 🆕 개선된 방장 판별 로직 - 서버 제공 필드 우선 사용
+    const apiDataAny = apiData as any;
     
-    // 🔒 임시 방장 판별 로직 (sender_id 기반, 부정확할 수 있음)
-    const isHost = user?.id === apiData.sender_id;
+    // 1️⃣ 서버에서 제공하는 방장 정보 확인
+    const serverHostId = apiDataAny.host_id || apiData.sender_id;
+    const serverIsHost = apiDataAny.is_host || apiDataAny.current_user_is_host;
     
-    // 🚨 임시 경고: 방장 정보가 부정확할 수 있음을 사용자에게 알림
-    if (isHost) {
-      console.warn('⚠️ [방장 권한] 임시 방장 감지 - 서버 API 수정 필요', {
-        chatRoom: apiData.name,
-        assumedHostId: apiData.sender_id,
-        currentUserId: user?.id,
-        note: 'sender_id가 실제 모임 생성자가 아닐 수 있음'
-      });
-    }
+    // 2️⃣ 클라이언트 측 검증
+    const clientIsHost = user?.id === serverHostId;
+    
+    // 3️⃣ 최종 방장 판별 (서버 정보 우선)
+    const finalIsHost = serverIsHost !== undefined ? serverIsHost : clientIsHost;
+    
+    console.log('🔍 [ChatScreen] 방장 판별 과정:', {
+      chatRoom: apiData.name,
+      '1️⃣ 서버 host_id': serverHostId,
+      '2️⃣ 서버 is_host': serverIsHost,
+      '3️⃣ 클라이언트 검증': clientIsHost,
+      '🎯 최종 결과': finalIsHost,
+      '현재 사용자 ID': user?.id,
+      '상태': finalIsHost ? '✅ 방장' : '👤 일반 참여자'
+    });
     
     console.log('🔍 [ChatScreen] 방장 판별 상세 분석:', {
       chatRoomId: apiData.chat_room_id,
@@ -118,38 +137,57 @@ export default function ChatScreen() {
 
     return {
       id: apiData.chat_room_id.toString(),
+      chat_room_id: apiData.chat_room_id,
+      name: apiData.name,
       type,
       title: apiData.name,
       subtitle: type === 'store' ? '강남역 2번 출구' : `참여자 ${Math.floor(Math.random() * 10) + 2}명`,
       lastMessage: apiData.last_message || '메시지가 없습니다.',
       timestamp: formatTimeAgo(apiData.last_message_time),
       unreadCount: Math.floor(Math.random() * 5), // 임시로 랜덤 값
-      isHost: isHost, // 실제 방장 여부 사용
-      host_id: host_id, // 방장 ID 추가
+      isHost: finalIsHost, // 🆕 개선된 방장 여부 사용
+      host_id: serverHostId, // 🆕 서버에서 제공하는 방장 ID 사용
       icon,
       location: type === 'store' ? '강남역 2번 출구' : undefined
     };
   };
 
   const handleChatRoomPress = (chatRoom: ChatRoom) => {
+    console.log('🚪 [ChatScreen] 채팅방 클릭:', {
+      chatRoomId: chatRoom.id,
+      chatRoomTitle: chatRoom.title,
+      isHost: chatRoom.isHost,
+      host_id: chatRoom.host_id
+    });
+
     // API 데이터에서 해당 채팅방 찾기
     const apiData = data as any;
     const apiChatRoom = apiData?.data?.find((room: ChatRoomDTO) => room.chat_room_id.toString() === chatRoom.id);
+    
     if (apiChatRoom) {
-      // 방장 여부를 다시 계산
-      const isHost = user?.id === apiChatRoom.sender_id;
-      
-      // 완전한 ChatRoom 객체로 전달
+      // 🆕 이미 convertToChatRoom에서 계산된 방장 정보 사용
       const convertedChatRoom = {
         chat_room_id: apiChatRoom.chat_room_id,
         name: apiChatRoom.name,
         last_message: apiChatRoom.last_message,
         last_message_time: apiChatRoom.last_message_time,
         sender_id: apiChatRoom.sender_id,
-        isHost: isHost, // 방장 여부 추가
-        host_id: apiChatRoom.sender_id // 방장 ID 추가
+        isHost: chatRoom.isHost, // 🆕 이미 계산된 방장 여부 사용
+        host_id: chatRoom.host_id, // 🆕 이미 계산된 방장 ID 사용
+        title: chatRoom.title,
+        type: chatRoom.type
       };
+      
+      console.log('🎯 [ChatScreen] 채팅방 이동 데이터:', {
+        convertedChatRoom,
+        '방장 여부': convertedChatRoom.isHost,
+        '방장 ID': convertedChatRoom.host_id,
+        '현재 사용자': user?.id
+      });
+      
       (navigation as any).navigate('ChatRoom', { chatRoom: convertedChatRoom });
+    } else {
+      console.error('❌ [ChatScreen] 채팅방 데이터를 찾을 수 없음:', chatRoom.id);
     }
   };
 

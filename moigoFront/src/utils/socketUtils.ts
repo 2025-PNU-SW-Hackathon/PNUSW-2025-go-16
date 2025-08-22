@@ -1,6 +1,6 @@
 import { useAuthStore } from '@/store/authStore';
 import Constants from 'expo-constants';
-import type { NewMessageDTO, SocketMessageDTO } from '@/types/DTO/chat';
+import type { NewMessageDTO, SocketMessageDTO, ReservationStatusChangedEventDTO } from '@/types/DTO/chat';
 
 // Socket.IO 클라이언트를 any로 import
 const io = require('socket.io-client');
@@ -22,6 +22,7 @@ class SocketManager {
   private connectionStatusCallbacks: ((isConnected: boolean) => void)[] = [];
   private messageAckCallbacks: ((data: any) => void)[] = [];
   private messageErrorCallbacks: ((error: any) => void)[] = [];
+  private reservationStatusCallbacks: ((data: ReservationStatusChangedEventDTO) => void)[] = []; // 🆕 추가
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectInterval: any = null;
@@ -133,6 +134,12 @@ class SocketManager {
     this.socket.on('messageError', (error: any) => {
       console.error('❌ 메시지 전송 실패:', error);
       this.messageErrorCallbacks.forEach(callback => callback(error));
+    });
+
+    // 🆕 모임 상태 변경 이벤트 추가
+    this.socket.on('reservationStatusChanged', (data: ReservationStatusChangedEventDTO) => {
+      console.log('🔔 모임 상태 변경 이벤트 수신:', data);
+      this.reservationStatusCallbacks.forEach(callback => callback(data));
     });
 
     this.socket.on('error', (error: any) => {
@@ -306,6 +313,11 @@ class SocketManager {
   // 메시지 전송 실패 콜백 등록
   onMessageError(callback: (error: any) => void) {
     this.messageErrorCallbacks.push(callback);
+  }
+
+  // 🆕 모임 상태 변경 이벤트 리스너 등록
+  onReservationStatusChanged(callback: (data: ReservationStatusChangedEventDTO) => void) {
+    this.reservationStatusCallbacks.push(callback);
   }
 
   // 메시지 콜백 제거
