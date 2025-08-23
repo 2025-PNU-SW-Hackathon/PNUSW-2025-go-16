@@ -5,8 +5,6 @@ import type {
   EnterChatRoomRequestDTO,
   EnterChatRoomResponseDTO,
   ChatMessagesResponseDTO,
-  UpdateChatRoomStatusRequestDTO,
-  UpdateChatRoomStatusResponseDTO,
   ChatResponseDTO,
   ChatParticipantsResponseDTO,
   KickParticipantRequestDTO,
@@ -104,6 +102,17 @@ export const getChatMessages = async (
   }
 };
 
+// 🆕 3-1. 채팅방 상세 정보 조회
+export const getChatRoomDetail = async (roomId: number): Promise<any> => {
+  try {
+    const response = await chatApiClient.get(`/chats/${roomId}`);
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ 채팅방 상세 정보 조회 실패:', error);
+    throw new Error(error.response?.data?.message || '채팅방 정보를 불러올 수 없습니다.');
+  }
+};
+
 // 4. 채팅방 나가기 (⚠️ 사용 중단 - src/apis/auth/index.ts의 함수 사용할 것)
 // export const leaveChatRoom = async (roomId: number): Promise<ChatResponseDTO> => {
 //   const response = await chatApiClient.delete<ChatResponseDTO>(
@@ -112,17 +121,7 @@ export const getChatMessages = async (
 //   return response.data;
 // };
 
-// 5. 채팅방 상태 변경
-export const updateChatRoomStatus = async (
-  roomId: number,
-  data: UpdateChatRoomStatusRequestDTO
-): Promise<UpdateChatRoomStatusResponseDTO> => {
-  const response = await chatApiClient.patch<UpdateChatRoomStatusResponseDTO>(
-    `/chats/${roomId}/status`,
-    data
-  );
-  return response.data;
-};
+// 5. 채팅방 상태 변경 → 제거됨 (fetch 직접 사용)
 
 // 6. 🆕 채팅방 참여자 목록 조회
 export const getChatParticipants = async (roomId: number): Promise<ChatParticipantsResponseDTO> => {
@@ -257,4 +256,7 @@ export const kickUserFromChatRoom = async (
   
   // 새로운 kickParticipant 함수 호출
   return await kickParticipant(roomId, userId, reason);
-}; 
+};
+
+// 9. 🆕 모집 상태 변경 API → 제거됨 (fetch 직접 사용)
+// 서버팀 권장: ChatRoomScreen에서 fetch 직접 사용 

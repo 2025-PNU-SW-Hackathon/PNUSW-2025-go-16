@@ -86,4 +86,33 @@ export interface ShareStoreResponseDTO {
   message?: string;
 }
 
+// 🆕 가게 선택 요청
+export interface SelectStoreRequestDTO {
+  store_id: string | null; // null이면 선택 해제, VARCHAR(50)
+}
+
+// 🆕 가게 선택 응답
+export interface SelectStoreResponseDTO {
+  success: boolean;
+  message: string;
+  data: {
+    chat_room_id: number;
+    selected_store_id: string | null; // VARCHAR(50)
+    selected_store_name: string | null;
+    selected_at: string | null;
+    selected_by: string | null;
+  };
+}
+
+// 🆕 선택된 가게 정보
+export interface SelectedStoreDTO {
+  store_id: string; // VARCHAR(50)
+  store_name: string;
+  store_address: string;
+  store_rating: number;
+  store_thumbnail: string;
+  selected_at: string;
+  selected_by: string;
+}
+
 

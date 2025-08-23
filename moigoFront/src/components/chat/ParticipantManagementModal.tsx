@@ -3,7 +3,8 @@ import { View, Text, Modal, TouchableOpacity, FlatList, Alert, ActivityIndicator
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { getChatParticipants, kickParticipant } from '@/apis/chat';
-import type { ParticipantDTO } from '@/types/DTO/chat';
+import type { ParticipantDTO, ChatRoomInfoDTO } from '@/types/DTO/chat';
+import MeetingStatusBadge from './MeetingStatusBadge';
 
 // ParticipantDTO를 사용하므로 기존 인터페이스 제거
 
@@ -23,6 +24,7 @@ export default function ParticipantManagementModal({
   const [participants, setParticipants] = useState<ParticipantDTO[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [roomInfo, setRoomInfo] = useState<ChatRoomInfoDTO | null>(null);
 
   // 🆕 참여자 목록 로드
   const loadParticipants = async () => {
@@ -35,6 +37,11 @@ export default function ParticipantManagementModal({
       if (response.success) {
         console.log('✅ 참여자 목록 로딩 성공:', response.data);
         setParticipants(response.data.participants);
+        // 🆕 서버에서 제공하는 room_info 저장
+        if (response.data.room_info) {
+          setRoomInfo(response.data.room_info);
+          console.log('📊 채팅방 정보 업데이트:', response.data.room_info);
+        }
       } else {
         console.error('❌ 참여자 목록 로딩 실패:', response.message);
         Alert.alert('오류', '참여자 목록을 불러올 수 없습니다.');
@@ -241,8 +248,41 @@ export default function ParticipantManagementModal({
           </TouchableOpacity>
         </View>
 
-        {/* 참여자 수 정보 */}
+        {/* 🆕 모임 정보 및 참여자 수 */}
         <View className="p-4 bg-white border-b border-gray-100">
+          {/* 모임 기본 정보 */}
+          {roomInfo && (
+            <View className="mb-3">
+              {/* 경기 제목 */}
+              {roomInfo.match_title && (
+                <Text className="text-base font-semibold text-gray-900 mb-2">
+                  ⚽ {roomInfo.match_title}
+                </Text>
+              )}
+              
+              {/* 모집 상태 및 참여자 정보 */}
+              <View className="flex-row items-center mb-2">
+                <MeetingStatusBadge status={roomInfo.reservation_status} size="small" />
+                <Text className="text-sm text-gray-600 ml-3">
+                  👥 {roomInfo.participant_info} ({roomInfo.participant_count}/{roomInfo.max_participant_count})
+                </Text>
+              </View>
+              
+              {/* 시작 시간 */}
+              {roomInfo.reservation_start_time && (
+                <Text className="text-sm text-gray-500">
+                  🕐 {new Date(roomInfo.reservation_start_time).toLocaleString('ko-KR', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </Text>
+              )}
+            </View>
+          )}
+          
+          {/* 참여자 수 정보 */}
           <Text className="text-sm text-gray-600">
             총 {participants.length}명 참여 중
             {isCurrentUserHost ? " • 방장은 참여자를 강퇴하거나 차단할 수 있습니다" : ""}

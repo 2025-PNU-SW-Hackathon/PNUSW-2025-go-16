@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getStoreList, getStoreDetail, getChatStoreList, shareStore } from '@/apis/stores';
+import { getStoreList, getStoreDetail, getChatStoreList, shareStore, selectStore } from '@/apis/stores';
 import type { StoreListRequestDTO, ChatStoreListRequestDTO } from '@/types/DTO/stores';
 
 // 가게 목록 조회 훅
@@ -53,6 +53,27 @@ export const useShareStore = () => {
     },
     onError: (error) => {
       console.error('가게 공유 실패:', error);
+    },
+  });
+};
+
+// 🆕 가게 선택 훅 (방장만 가능)
+export const useSelectStore = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ roomId, storeId }: { roomId: number; storeId: string | null }) => 
+      selectStore(roomId, storeId),
+    onSuccess: (data, variables) => {
+      console.log('✅ 가게 선택 성공:', data);
+      
+      // 관련 쿼리 무효화
+      queryClient.invalidateQueries({ queryKey: ['chatRooms'] });
+      queryClient.invalidateQueries({ queryKey: ['chatRoom', variables.roomId] });
+      queryClient.invalidateQueries({ queryKey: ['chat-participants', variables.roomId] });
+    },
+    onError: (error) => {
+      console.error('❌ 가게 선택 실패:', error);
     },
   });
 };

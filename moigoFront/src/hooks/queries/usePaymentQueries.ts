@@ -1,111 +1,61 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  requestPayment,
-  initiatePayment,
-  paymentCallback,
-  approveReservation,
-  getPaymentStatus,
-  kickParticipant,
-} from '../../apis/payments';
-import type {
-  RequestPaymentRequestDTO,
-  InitiatePaymentRequestDTO,
-  PaymentCallbackRequestDTO,
-  ReservationApprovalRequestDTO,
-} from '../../types/DTO/payments';
+import { startPayment, completePayment, getPaymentStatus } from '@/apis/payment';
+import type { StartPaymentRequestDTO, CompletePaymentRequestDTO } from '@/types/DTO/payment';
 
-// GET /chat/rooms/{roomId}/payments/status - 결제 현황 조회 훅
-export const useGetPaymentStatus = (roomId: number) => {
+// 정산 상태 조회 훅
+export const usePaymentStatus = (roomId: number) => {
   return useQuery({
     queryKey: ['payment-status', roomId],
     queryFn: () => getPaymentStatus(roomId),
-    enabled: !!roomId,
-    staleTime: 30 * 1000, // 30초 (결제 상태는 자주 변경될 수 있음)
-    gcTime: 2 * 60 * 1000, // 2분
-  });
-};
-
-// POST /chat/rooms/{roomId}/payments/request - 예약금 결제 요청 훅
-export const useRequestPayment = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ roomId, data }: { roomId: number; data: RequestPaymentRequestDTO }) =>
-      requestPayment(roomId, data),
-    onSuccess: () => {
-      // 결제 요청 성공 시 결제 현황 캐시 무효화
-      queryClient.invalidateQueries({ queryKey: ['payment-status'] });
-    },
-    onError: (error) => {
-      console.error('결제 요청 실패:', error);
+    staleTime: 30 * 1000, // 30초
+    gcTime: 5 * 60 * 1000, // 5분
+    retry: (failureCount, error) => {
+      // 404는 정산이 시작되지 않은 경우이므로 재시도하지 않음
+      if ((error as any)?.response?.status === 404) {
+        return false;
+      }
+      return failureCount < 3;
     },
   });
 };
 
-// POST /chat/rooms/{roomId}/payments/initiate - 결제 시작 훅
-export const useInitiatePayment = () => {
+// 정산 시작 훅 (방장만 가능)
+export const useStartPayment = () => {
   const queryClient = useQueryClient();
-
+  
   return useMutation({
-    mutationFn: ({ roomId, data }: { roomId: number; data: InitiatePaymentRequestDTO }) =>
-      initiatePayment(roomId, data),
-    onSuccess: () => {
-      // 결제 시작 성공 시 결제 현황 캐시 무효화
-      queryClient.invalidateQueries({ queryKey: ['payment-status'] });
+    mutationFn: ({ roomId, data }: { roomId: number; data: StartPaymentRequestDTO }) => 
+      startPayment(roomId, data),
+    onSuccess: (response, variables) => {
+      console.log('✅ 정산 시작 성공:', response);
+      
+      // 관련 쿼리 무효화
+      queryClient.invalidateQueries({ queryKey: ['payment-status', variables.roomId] });
+      queryClient.invalidateQueries({ queryKey: ['chatRooms'] });
+      queryClient.invalidateQueries({ queryKey: ['chat-participants', variables.roomId] });
     },
     onError: (error) => {
-      console.error('결제 시작 실패:', error);
+      console.error('❌ 정산 시작 실패:', error);
     },
   });
 };
 
-// POST /api/payments/callback - 결제 결과 콜백 훅
-export const usePaymentCallback = () => {
+// 개별 입금 완료 훅
+export const useCompletePayment = () => {
   const queryClient = useQueryClient();
-
+  
   return useMutation({
-    mutationFn: (data: PaymentCallbackRequestDTO) => paymentCallback(data),
-    onSuccess: () => {
-      // 결제 콜백 성공 시 결제 현황 캐시 무효화
-      queryClient.invalidateQueries({ queryKey: ['payment-status'] });
+    mutationFn: ({ roomId, data }: { roomId: number; data: CompletePaymentRequestDTO }) => 
+      completePayment(roomId, data),
+    onSuccess: (response, variables) => {
+      console.log('✅ 입금 완료 성공:', response);
+      
+      // 관련 쿼리 무효화
+      queryClient.invalidateQueries({ queryKey: ['payment-status', variables.roomId] });
+      queryClient.invalidateQueries({ queryKey: ['chatRooms'] });
     },
     onError: (error) => {
-      console.error('결제 콜백 실패:', error);
+      console.error('❌ 입금 완료 실패:', error);
     },
   });
 };
-
-// POST /api/reservations/{reservationId}/approval - 예약 승인/거절 훅
-export const useApproveReservation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ reservationId, data }: { reservationId: number; data: ReservationApprovalRequestDTO }) =>
-      approveReservation(reservationId, data),
-    onSuccess: () => {
-      // 예약 승인/거절 성공 시 관련 캐시 무효화
-      queryClient.invalidateQueries({ queryKey: ['reservations'] });
-      queryClient.invalidateQueries({ queryKey: ['payment-status'] });
-    },
-    onError: (error) => {
-      console.error('예약 승인/거절 실패:', error);
-    },
-  });
-};
-
-// DELETE /chat/rooms/{roomId}/participants/{userId} - 결제 미완료 참가자 강퇴 훅
-export const useKickParticipant = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ roomId, userId }: { roomId: number; userId: string }) =>
-      kickParticipant(roomId, userId),
-    onSuccess: () => {
-      // 강퇴 성공 시 결제 현황 캐시 무효화
-      queryClient.invalidateQueries({ queryKey: ['payment-status'] });
-    },
-    onError: (error) => {
-      console.error('참가자 강퇴 실패:', error);
-    },
-  });
-}; 

@@ -6,7 +6,9 @@ import type {
   ChatStoreListRequestDTO,
   ChatStoreListResponseDTO,
   ShareStoreRequestDTO,
-  ShareStoreResponseDTO
+  ShareStoreResponseDTO,
+  SelectStoreRequestDTO,
+  SelectStoreResponseDTO
 } from '@/types/DTO/stores';
 
 // 가게 목록 조회
@@ -21,16 +23,8 @@ export const getStoreList = async (params?: StoreListRequestDTO): Promise<StoreL
   const queryString = queryParams.toString();
   const url = queryString ? `/stores?${queryString}` : '/stores';
   
-  console.log('=== 가게 목록 조회 API 요청 ===');
-  console.log('URL:', url);
-  console.log('파라미터:', params);
-  
   try {
     const response = await apiClient.get<StoreListResponseDTO>(url);
-    
-    console.log('=== 가게 목록 조회 API 응답 ===');
-    console.log('상태 코드:', response.status);
-    console.log('응답 데이터:', response.data);
     
     // API 응답 형식 확인
     if (response.data.success === false) {
@@ -39,11 +33,7 @@ export const getStoreList = async (params?: StoreListRequestDTO): Promise<StoreL
     
     return response.data;
   } catch (error: any) {
-    console.log('=== 가게 목록 조회 API 에러 ===');
-    console.log('에러 타입:', error.constructor.name);
-    console.log('에러 메시지:', error.message);
-    console.log('응답 상태:', error.response?.status);
-    console.log('응답 데이터:', error.response?.data);
+    console.error('❌ 가게 목록 조회 API 에러:', error.message);
     
     if (error.response?.status === 404) {
       throw new Error('가게를 찾을 수 없습니다.');
@@ -114,16 +104,8 @@ export const getChatStoreList = async (params?: ChatStoreListRequestDTO): Promis
   const queryString = queryParams.toString();
   const url = queryString ? `/chats/stores?${queryString}` : '/chats/stores';
   
-  console.log('=== 채팅용 가게 목록 조회 API 요청 ===');
-  console.log('URL:', url);
-  console.log('파라미터:', params);
-  
   try {
     const response = await apiClient.get<ChatStoreListResponseDTO>(url);
-    
-    console.log('=== 채팅용 가게 목록 조회 API 응답 ===');
-    console.log('상태 코드:', response.status);
-    console.log('응답 데이터:', response.data);
     
     // API 응답 형식 확인
     if (response.data.success === false) {
@@ -132,11 +114,7 @@ export const getChatStoreList = async (params?: ChatStoreListRequestDTO): Promis
     
     return response.data;
   } catch (error: any) {
-    console.log('=== 채팅용 가게 목록 조회 API 에러 ===');
-    console.log('에러 타입:', error.constructor.name);
-    console.log('에러 메시지:', error.message);
-    console.log('응답 상태:', error.response?.status);
-    console.log('응답 데이터:', error.response?.data);
+    console.error('❌ 채팅용 가게 목록 조회 API 에러:', error.message);
     
     if (error.response?.status === 404) {
       throw new Error('가게를 찾을 수 없습니다.');
@@ -189,6 +167,58 @@ export const shareStore = async (roomId: number, storeId: number): Promise<Share
       throw new Error('잘못된 요청입니다.');
     } else {
       throw new Error(error.message || '가게 공유에 실패했습니다.');
+    }
+  }
+};
+
+// 🆕 가게 선택 기능 (방장만 가능)
+export const selectStore = async (roomId: number, storeId: string | null): Promise<SelectStoreResponseDTO> => {
+  const url = `/chats/${roomId}/store`;
+  
+  console.log('=== 가게 선택 API 요청 ===');
+  console.log('URL:', url);
+  console.log('roomId:', roomId);
+  console.log('storeId:', storeId);
+  
+  try {
+    const response = await apiClient.patch<SelectStoreResponseDTO>(url, {
+      store_id: storeId
+    });
+    
+    console.log('=== 가게 선택 API 응답 ===');
+    console.log('상태 코드:', response.status);
+    console.log('응답 데이터:', response.data);
+    
+    // API 응답 형식 확인
+    if (response.data.success === false) {
+      throw new Error(response.data.message || '가게 선택에 실패했습니다.');
+    }
+    
+    return response.data;
+  } catch (error: any) {
+    console.log('=== 가게 선택 API 에러 ===');
+    console.log('에러 타입:', error.constructor.name);
+    console.log('에러 메시지:', error.message);
+    console.log('응답 상태:', error.response?.status);
+    console.log('응답 데이터:', error.response?.data);
+    
+    if (error.response?.status === 403) {
+      throw new Error('방장만 가게를 선택할 수 있습니다.');
+    } else if (error.response?.status === 404) {
+      const errorData = error.response?.data;
+      if (errorData?.error_code === 'STORE_NOT_FOUND') {
+        throw new Error('존재하지 않는 가게입니다.');
+      } else if (errorData?.error_code === 'CHAT_ROOM_NOT_FOUND') {
+        throw new Error('존재하지 않는 채팅방입니다.');
+      } else {
+        throw new Error('요청한 정보를 찾을 수 없습니다.');
+      }
+    } else if (error.response?.status === 500) {
+      throw new Error('서버 내부 오류가 발생했습니다.');
+    } else if (error.response?.status === 400) {
+      throw new Error('잘못된 요청입니다.');
+    } else {
+      throw new Error(error.message || '가게 선택에 실패했습니다.');
     }
   }
 };

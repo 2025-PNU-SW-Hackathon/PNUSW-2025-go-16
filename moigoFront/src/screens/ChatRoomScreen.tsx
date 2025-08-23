@@ -3,11 +3,13 @@ import { View, Text, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types/RootStackParamList';
-import { ChatRoom, ChatMessage, MessageGroup } from '@/types/ChatTypes';
+import { ChatRoom, ChatMessage, MessageGroup, PaymentGuideData } from '@/types/ChatTypes';
 import ChatBubble from '@/components/chat/ChatBubble';
 import ChatStatusMessage from '@/components/chat/ChatStatusMessage';
+import SystemMessage from '@/components/chat/SystemMessage';
 import StoreShareMessage from '@/components/chat/StoreShareMessage';
 import ReservationDepositInfo from '@/components/chat/ReservationDepositInfo';
+import PaymentGuideUI from '@/components/chat/PaymentGuideUI';
 import PaymentModal from '@/components/common/PaymentModal';
 import DropdownMenu, { DropdownOption } from '@/components/common/DropdownMenu';
 import HostBadge from '@/components/chat/HostBadge';
@@ -18,6 +20,8 @@ import Toast from '@/components/common/Toast';
 import { useToast } from '@/hooks/useToast';
 import type { UserLeftRoomEventDTO, HostTransferredEventDTO } from '@/types/DTO/auth';
 import type { ParticipantKickedEventDTO } from '@/types/DTO/chat';
+import { usePaymentStatus, useStartPayment, useCompletePayment } from '@/hooks/queries/usePaymentQueries';
+import type { PaymentStartedEventDTO, PaymentCompletedEventDTO, PaymentFullyCompletedEventDTO } from '@/types/DTO/payment';
 import Feather from 'react-native-vector-icons/Feather';
 import { groupMessages } from '@/utils/chatUtils';
 import { useChatMessages } from '@/hooks/queries/useChatQueries';
@@ -26,7 +30,6 @@ import { socketManager } from '@/utils/socketUtils';
 import { useAuthStore } from '@/store/authStore';
 import type { ChatMessageDTO, NewMessageDTO, ReservationStatusChangedEventDTO } from '@/types/DTO/chat';
 import { signup, checkUserIdDuplicate, checkStoreIdDuplicate, signupWithDuplicateCheck, storeSignupWithDuplicateCheck, leaveChatRoom } from '@/apis/auth';
-// import { enterChatRoom } from '@/apis/chat'; // ⚠️ 제거: 모임 참여 방지
 
 type ChatRoomScreenRouteProp = RouteProp<RootStackParamList, 'ChatRoom'>;
 type ChatRoomScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ChatRoom'>;
@@ -50,14 +53,49 @@ export default function ChatRoomScreen() {
   // 새로고침 상태
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // 🆕 모임 상태 추가
-  const [reservationStatus, setReservationStatus] = useState<number | null>(null);
+  // 🆕 모임 상태 추가 (chatRoom에서 초기값 가져오기)
+  const [reservationStatus, setReservationStatus] = useState<number | null>(() => {
+    // chatRoom 객체에서 reservation_status 확인 (서버 새 필드 포함)
+    const initialStatus = (chatRoom as any)?.reservation_status ?? null;
+    const statusMessage = (chatRoom as any)?.status_message;
+    const isRecruitmentClosed = (chatRoom as any)?.is_recruitment_closed;
+    const participantInfo = (chatRoom as any)?.participant_info;
+    
+    console.log('🆕 [ChatRoomScreen] 서버 새 필드들 확인:', {
+      chatRoomId: chatRoom.chat_room_id,
+      chatRoomName: chatRoom.title || chatRoom.name,
+      reservation_status: initialStatus,
+      status_message: statusMessage,
+      is_recruitment_closed: isRecruitmentClosed,
+      participant_info: participantInfo,
+      match_title: (chatRoom as any)?.match_title,
+      reservation_start_time: (chatRoom as any)?.reservation_start_time
+    });
+    
+    return initialStatus;
+  });
   
   // 🆕 참여자 관리 모달 상태
   const [showParticipantModal, setShowParticipantModal] = useState(false);
   
   // 🆕 모임 정보 수정 모달 상태
   const [showEditMeetingModal, setShowEditMeetingModal] = useState(false);
+  
+  // 🆕 정산 관련 상태
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  
+  // 🆕 정산 관련 훅
+  const { data: paymentStatusData, refetch: refetchPaymentStatus } = usePaymentStatus(chatRoom.chat_room_id || 0);
+  const startPaymentMutation = useStartPayment();
+  const completePaymentMutation = useCompletePayment();
+  
+  // 🆕 선택된 가게 상태 추가
+  const [selectedStore, setSelectedStore] = useState<any>((chatRoom as any)?.selected_store || null);
+  
+  // 🆕 예약금 안내 데이터 상태
+  const [paymentGuideData, setPaymentGuideData] = useState<PaymentGuideData | null>(null);
+  const [showPaymentGuide, setShowPaymentGuide] = useState(false);
+
   
   // 새로고침 처리 함수 (아래로 당겨서 최신 메시지 불러오기)
   const onRefresh = async () => {
@@ -67,236 +105,22 @@ export default function ChatRoomScreen() {
       return;
     }
     
-    console.log('🔄 아래로 당겨서 새로고침 시작 - 최신 메시지 불러오기');
     setIsRefreshing(true);
+    console.log('🔄 [ChatRoomScreen] 새로고침 시작');
     
     try {
-      // API에서 최신 메시지 다시 가져오기
+      // 메시지 새로고침
       await refetch();
-      console.log('✅ 최신 메시지 새로고침 완료');
+      console.log('✅ [ChatRoomScreen] 새로고침 완료');
     } catch (error) {
-      console.error('❌ 새로고침 에러:', error);
+      console.error('❌ [ChatRoomScreen] 새로고침 실패:', error);
     } finally {
-      // 최소 1초는 보여주기 (너무 빠른 깜빡임 방지)
-      setTimeout(() => {
-        setIsRefreshing(false);
-      }, 1000);
+      setIsRefreshing(false);
     }
   };
 
-  // 🆕 모임 상태 변경 이벤트 핸들러
-  const handleReservationStatusChanged = (data: ReservationStatusChangedEventDTO) => {
-    console.log('🔔 [소켓] 모임 상태 변경 알림:', data);
-    
-    // 현재 채팅방과 관련된 모임인지 확인
-    const currentReservationId = chatRoom.chat_room_id; // 또는 별도 reservation_id 필드
-    if (data.reservation_id === currentReservationId) {
-      console.log('🎯 현재 채팅방 모임 상태 변경:', {
-        old_status: reservationStatus,
-        new_status: data.new_status,
-        status_message: data.status_message,
-        changed_by: data.changed_by
-      });
-      
-      // 상태 업데이트
-      setReservationStatus(data.new_status);
-      
-      // 사용자에게 토스트 알림 표시
-      showSuccess(
-        `모임 상태가 "${data.status_message}"로 변경되었습니다`,
-        '확인'
-      );
-      
-      // 채팅 메시지로도 시스템 알림 추가 (선택사항)
-      const systemMessage: ChatMessage = {
-        id: `system_${Date.now()}`,
-        senderId: 'system',
-        senderName: 'System',
-        senderAvatar: 'S',
-        message: `모임 상태가 "${data.status_message}"로 변경되었습니다.`,
-        timestamp: new Date(data.timestamp), // 문자열을 Date 객체로 변환
-        type: 'system',
-        message_type: 'system_join' // 적절한 시스템 메시지 타입
-      };
-      
-      setMessages(prev => [...prev, systemMessage]);
-    } else {
-      console.log('🚫 다른 모임의 상태 변경 이벤트, 무시함');
-    }
-  };
-
-  // 🆕 사용자 퇴장 이벤트 핸들러
-  const handleUserLeftRoom = (data: UserLeftRoomEventDTO) => {
-    console.log('🚪 [소켓] 사용자 퇴장 알림:', data);
-    
-    // 현재 채팅방의 퇴장인지 확인
-    if (data.room_id === chatRoom.chat_room_id) {
-      // 시스템 메시지 추가
-      const systemMessage: ChatMessage = {
-        id: `system_left_${Date.now()}`,
-        senderId: 'system',
-        senderName: 'System',
-        senderAvatar: 'S',
-        message: `${data.user_name}님이 모임을 나갔습니다. (남은 참여자: ${data.remaining_participants}명)`,
-        timestamp: new Date(data.left_at),
-        type: 'system',
-        message_type: 'system_leave'
-      };
-      
-      setMessages(prev => [...prev, systemMessage]);
-      
-      // 모임 상태 업데이트
-      setReservationStatus(data.meeting_status);
-      
-      // 채팅방 목록 갱신 (참여자 수 변경 반영)
-      queryClient.invalidateQueries({ queryKey: ['chatRooms'] });
-      
-      console.log(`✅ [UserLeft] ${data.user_name} 퇴장 처리 완료, 남은 참여자: ${data.remaining_participants}명`);
-    }
-  };
-
-  // 🆕 방장 권한 이양 이벤트 핸들러
-  const handleHostTransferred = (data: HostTransferredEventDTO) => {
-    console.log('👑 [소켓] 방장 권한 이양 알림:', data);
-    
-    // 현재 채팅방의 권한 이양인지 확인
-    if (data.room_id === chatRoom.chat_room_id) {
-      const currentUserId = user?.id;
-      
-      // 시스템 메시지 추가
-      const systemMessage: ChatMessage = {
-        id: `system_host_${Date.now()}`,
-        senderId: 'system',
-        senderName: 'System',
-        senderAvatar: 'S',
-        message: `방장이 ${data.previous_host}님에서 ${data.new_host}님으로 변경되었습니다.`,
-        timestamp: new Date(data.transferred_at),
-        type: 'system',
-        message_type: 'system_join' // 기존 타입 사용
-      };
-      
-      setMessages(prev => [...prev, systemMessage]);
-      
-      // 새 방장이 된 경우 토스트 알림
-      if (currentUserId === data.new_host) {
-        showSuccess('축하합니다! 방장 권한을 획득했습니다', '확인');
-      } else {
-        showInfo(`방장이 ${data.new_host}님으로 변경되었습니다`);
-      }
-      
-      // 채팅방 목록 갱신 (방장 정보 변경 반영)
-      queryClient.invalidateQueries({ queryKey: ['chatRooms'] });
-      
-      console.log(`✅ [HostTransfer] ${data.previous_host} → ${data.new_host} 권한 이양 처리 완료`);
-    }
-  };
-
-  // 🆕 참여자 강퇴 이벤트 핸들러
-  const handleParticipantKicked = (data: ParticipantKickedEventDTO) => {
-    console.log('🚫 [소켓] 참여자 강퇴 알림:', data);
-    
-    // 현재 채팅방의 강퇴인지 확인
-    if (data.room_id === chatRoom.chat_room_id) {
-      const currentUserId = user?.id;
-      
-      // 시스템 메시지 추가
-      const systemMessage: ChatMessage = {
-        id: `system_kick_${Date.now()}`,
-        senderId: 'system',
-        senderName: 'System',
-        senderAvatar: 'S',
-        message: `${data.kicked_user_name}님이 강퇴되었습니다. (남은 참여자: ${data.remaining_participants}명)`,
-        timestamp: new Date(data.timestamp),
-        type: 'system',
-        message_type: 'system_kick'
-      };
-      
-      setMessages(prev => [...prev, systemMessage]);
-      
-      // 자신이 강퇴당한 경우
-      if (currentUserId === data.kicked_user_id) {
-        showError('채팅방에서 강퇴되었습니다');
-        
-        // 3초 후 채팅방 목록으로 이동
-        setTimeout(() => {
-          navigation.goBack();
-        }, 3000);
-      } else {
-        // 다른 사람이 강퇴당한 경우
-        showInfo(`${data.kicked_user_name}님이 강퇴되었습니다`);
-      }
-      
-      // 채팅방 목록 갱신 (참여자 수 변경 반영)
-      queryClient.invalidateQueries({ queryKey: ['chatRooms'] });
-      
-      console.log(`✅ [ParticipantKicked] ${data.kicked_user_name} 강퇴 처리 완료, 남은 참여자: ${data.remaining_participants}명`);
-    }
-  };
-
-  // 🔄 실패한 메시지 재시도 함수
-  const retryFailedMessage = (failedMessage: ChatMessage) => {
-    console.log('🔄 메시지 재시도:', failedMessage);
-    
-    // 실패한 메시지를 다시 전송 중 상태로 변경
-    setMessages(prev => prev.map(msg => 
-      msg.id === failedMessage.id 
-        ? { ...msg, status: 'sending' }
-        : msg
-    ));
-
-    // 소켓으로 재전송
-    const messageData = {
-      room: chatRoom.chat_room_id || 1,
-      message: failedMessage.message,
-      sender_id: user?.id
-    };
-    
-    setTimeout(() => {
-      socketManager.sendMessage(messageData);
-      console.log('📡 재시도 메시지 전송 완료');
-    }, 200);
-    
-    // 5초 후에도 응답이 없으면 다시 실패 처리
-    setTimeout(() => {
-      setMessages(prev => prev.map(msg => 
-        msg.id === failedMessage.id && msg.status === 'sending'
-          ? { ...msg, status: 'failed' }
-          : msg
-      ));
-    }, 5000);
-  };
-  
-  // API에서 메시지 데이터 가져오기 (소켓 비연결 시에만 폴링 활성화)
-  const { data: apiData, isLoading, error, refetch } = useChatMessages(
-    chatRoom.chat_room_id || 1, 
-    !isSocketConnected // 소켓이 연결되지 않은 경우에만 폴링 활성화
-  );
-  
-  // 채팅방 진입 시 최신 메시지 강제 로드
-  useEffect(() => {
-    console.log('🚪 [ChatRoomScreen] 채팅방 진입 - 디버깅 정보:', {
-      chatRoomId: chatRoom.chat_room_id,
-      currentMessagesCount: messages.length,
-      messagesPreview: messages.slice(-3).map(m => ({
-        id: m.id,
-        message: m.message.substring(0, 15) + '...',
-        isTemporary: m.isTemporary,
-        senderId: m.senderId,
-        timestamp: m.timestamp.toISOString().substring(11, 19)
-      }))
-    });
-    
-    // React Query 캐시 무효화 후 강제 새로고침
-    queryClient.invalidateQueries({ 
-      queryKey: ['chatMessages', chatRoom.chat_room_id || 1] 
-    });
-    
-    // 추가로 refetch도 호출
-    setTimeout(() => {
-      refetch();
-    }, 200); // 무효화 후 잠깐 기다렸다가 refetch
-    
-  }, [chatRoom.chat_room_id, queryClient, refetch]);
+  // API에서 메시지 데이터 가져오기
+  const { data: apiData, isLoading, error, refetch } = useChatMessages(chatRoom.chat_room_id || 1);
   
   // 예약금 관련 상태 (실시간 업데이트 가능)
   const [depositInfo, setDepositInfo] = useState({
@@ -311,74 +135,13 @@ export default function ChatRoomScreen() {
   });
 
   // 현재 사용자 ID (실제로는 세션에서 가져와야 함)
-  const currentUserId = useMemo(() => {
-    const authState = useAuthStore.getState();
-    const userId = user?.id || authState.user?.id || '';
-    console.log('🔄 [ChatRoomScreen] currentUserId 재계산:', {
-      userFromHook: user?.id,
-      userFromStore: authState.user?.id,
-      finalUserId: userId
-    });
-    return userId;
-  }, [user?.id]); // user?.id가 변경될 때마다 재계산
+  const currentUserId = user?.id || ''; // user?.id가 있으면 사용, 없으면 빈 문자열 사용
   
   // 사용자 ID가 제대로 로드되었는지 확인
   const isUserLoaded = !!user?.id;
   
-  // 🔍 디버깅: 사용자 상태 변화 추적
-  useEffect(() => {
-    console.log('👤 [ChatRoomScreen] 사용자 상태 변화 감지:', {
-      user: user,
-      userId: user?.id,
-      currentUserId: currentUserId,
-      isUserLoaded: isUserLoaded,
-      isLoggedIn: useAuthStore.getState().isLoggedIn,
-      storeUser: useAuthStore.getState().user
-    });
-  }, [user, currentUserId, isUserLoaded]);
-  
-  // 🆕 개선된 방장 판별 로직 (서버 정보 우선 사용)
-  const isCurrentUserHost = useMemo(() => {
-    const currentUserId = user?.id;
-    
-    // 🎯 서버에서 제공하는 is_host 정보 우선 사용 (가장 정확)
-    const serverIsHost = chatRoom.isHost;
-    
-    // 🔍 추가 검증: host_id 기준 판별
-    const hostId = chatRoom.host_id;
-    const hostIdMatch = hostId && currentUserId && hostId === currentUserId;
-    
-    // 🎯 최종 판별: 서버 정보를 우선하되, host_id로 추가 검증
-    const finalIsHost = serverIsHost || hostIdMatch;
-    
-    console.log('🔍 [ChatRoomScreen] 개선된 방장 판별 로직:', {
-      'chatRoom.isHost (서버)': serverIsHost,
-      'chatRoom.host_id': hostId,
-      'user?.id': currentUserId,
-      'host_id 매칭': hostIdMatch,
-      '🎯 최종 결과': finalIsHost,
-      '✅ 상태': finalIsHost ? '방장 권한 활성' : '일반 참여자'
-    });
-    
-    return !!finalIsHost;
-  }, [chatRoom.isHost, chatRoom.host_id, user?.id]);
-  
-  // 🔍 방장 권한 상태 로그
-  React.useEffect(() => {
-    console.log('👑 [ChatRoomScreen] 방장 권한 최종 상태:', {
-      'chatRoom 정보': {
-        title: chatRoom.title,
-        host_id: chatRoom.host_id,
-        isHost: chatRoom.isHost
-      },
-      '현재 사용자': {
-        id: user?.id,
-        name: user?.email
-      },
-      '방장 여부': isCurrentUserHost,
-      '권한 상태': isCurrentUserHost ? '🔓 방장 권한 활성' : '🔒 일반 참여자'
-    });
-  }, [isCurrentUserHost, chatRoom, user]);
+  // 현재 사용자가 방장인지 확인 (chatRoom.isHost가 우선, 없으면 user?.id와 host_id 비교)
+  const isCurrentUserHost = chatRoom.isHost || (user?.id && chatRoom.host_id && user.id === chatRoom.host_id) || false;
   
   // 사용자 로그아웃 시 메시지 초기화
   useEffect(() => {
@@ -386,16 +149,18 @@ export default function ChatRoomScreen() {
     if (!user || !useAuthStore.getState().isLoggedIn) {
       setMessages([]);
       
-      // 로그아웃 시에만 소켓 연결 완전히 해제
+      // 소켓 연결도 해제
       socketManager.disconnect();
-      console.log('🔌 [ChatRoomScreen] 로그아웃으로 인한 소켓 해제');
     } else {
       // 새로운 사용자로 로그인된 경우 소켓 재연결
-      socketManager.connect();
+      // 🆕 이미 연결되어 있으면 재연결하지 않음
+      if (!socketManager.isConnected()) {
+        socketManager.connect();
+      }
     }
   }, [user, useAuthStore.getState().isLoggedIn]);
 
-  // API 데이터를 ChatMessage 형식으로 변환 (실시간 메시지 보존)
+  // API 데이터를 ChatMessage 형식으로 변환
   useEffect(() => {
     
     if (apiData?.data && currentUserId && user && useAuthStore.getState().isLoggedIn) {
@@ -419,468 +184,853 @@ export default function ChatRoomScreen() {
           };
         }
         
-        // 가게 공유 메시지인지 확인
-        if (msg.message_type === 'store_share' && msg.store_id) {
-          const isMyMessage = msg.sender_id === currentUserId;
-          
-          return {
-            id: msg.id.toString(),
-            senderId: msg.sender_id,
-            senderName: isMyMessage ? '나' : msg.sender_id,
-            senderAvatar: isMyMessage ? '나' : msg.sender_id.charAt(0),
-            message: msg.message,
-            timestamp: new Date(msg.created_at),
-            type: 'store' as const,
-            status: 'delivered',
-            // 가게 정보 추가
-            store_id: msg.store_id,
-            store_name: msg.store_name,
-            store_address: msg.store_address,
-            store_rating: msg.store_rating,
-            store_thumbnail: msg.store_thumbnail,
-            storeInfo: {
-              storeName: msg.store_name || '가게명 없음',
-              rating: msg.store_rating || 0,
-              reviewCount: 0, // API에서 제공되지 않는 경우 기본값
-              imageUrl: msg.store_thumbnail || ''
-            }
-          };
-        }
-        
         const isMyMessage = msg.sender_id === currentUserId;
         
         return {
           id: msg.id.toString(),
           senderId: msg.sender_id,
-          senderName: isMyMessage ? '나' : msg.sender_id,
-          senderAvatar: isMyMessage ? '나' : msg.sender_id.charAt(0),
+          senderName: isMyMessage ? '나' : (msg.user_name || msg.sender_id),
+          senderAvatar: isMyMessage ? '나' : (msg.user_name || msg.sender_id)[0],
           message: msg.message,
           timestamp: new Date(msg.created_at),
-          type: 'text' as const,
-          status: 'delivered' // API에서 온 메시지는 전달됨 상태
+          type: 'text',
+          store_id: msg.store_id
         };
       });
-
-      // 🔥 핵심 수정: 기존 실시간 메시지와 병합
-      setMessages(prevMessages => {
-        // API 메시지 ID들
-        const apiMessageIds = new Set(convertedMessages.map(msg => msg.id));
-        
-        // 기존 메시지들 중에서 API에 없는 메시지들 찾기 (소켓으로만 받은 메시지들)
-        const socketOnlyMessages = prevMessages.filter(msg => {
-          // API에 이미 포함된 메시지는 제외
-          if (apiMessageIds.has(msg.id)) {
-            return false;
-          }
-          
-          // 임시 메시지는 내용으로 매칭 확인
-          if (msg.isTemporary) {
-            const matchingApiMessage = convertedMessages.find(apiMsg => 
-              apiMsg.message === msg.message && 
-              apiMsg.senderId === msg.senderId &&
-              Math.abs(apiMsg.timestamp.getTime() - msg.timestamp.getTime()) < 5000 // 5초 이내
-            );
-            return !matchingApiMessage;
-          }
-          
-          // 소켓으로만 받은 일반 메시지들도 보존
-          return true;
-        });
-        
-        console.log('📊 메시지 병합 상세:', {
-          apiMessages: convertedMessages.length,
-          previousMessages: prevMessages.length,
-          socketOnlyMessages: socketOnlyMessages.length,
-          apiMessageIds: Array.from(apiMessageIds),
-          previousMessageIds: prevMessages.map(m => ({ id: m.id, isTemporary: m.isTemporary, senderId: m.senderId })),
-          preservedMessages: socketOnlyMessages.map(m => ({
-            id: m.id,
-            message: m.message.substring(0, 15) + '...',
-            isTemporary: m.isTemporary,
-            senderId: m.senderId,
-            status: m.status
-          }))
-        });
-        
-        // API 메시지 + 소켓으로만 받은 메시지들 결합
-        const combinedMessages = [...convertedMessages, ...socketOnlyMessages];
-        return combinedMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-      });
-    } else {
+      
+      setMessages(convertedMessages);
+      
+    } else if (!user || !useAuthStore.getState().isLoggedIn) {
       setMessages([]);
     }
-  }, [apiData, currentUserId, user, useAuthStore.getState().isLoggedIn]); // 의존성 추가
+  }, [apiData, currentUserId, user, useAuthStore.getState().isLoggedIn]);
 
-  // 소켓 연결 및 실시간 메시지 처리
+  // 채팅방 입장 시 소켓 연결 및 이벤트 등록
   useEffect(() => {
-    console.log('🔄 [ChatRoomScreen] useEffect 시작 - 소켓 설정');
-    
-    // 사용자가 로그인하지 않은 경우 소켓 연결하지 않음
-    if (!user || !useAuthStore.getState().isLoggedIn || !currentUserId) {
-      console.log('🚫 [ChatRoomScreen] 소켓 연결 조건 미충족');
+    if (!chatRoom.chat_room_id || !currentUserId || !user || !useAuthStore.getState().isLoggedIn) {
       return;
     }
-
-    // 🧹 이전 콜백들 정리 (중복 방지)
-    console.log('🧹 [ChatRoomScreen] 이전 콜백들 정리');
-    socketManager.clearRoomCallbacks();
     
-    // 소켓 연결
-    socketManager.connect();
+    // 🆕 이미 연결되어 있으면 재연결하지 않음
+    if (!socketManager.isConnected()) {
+      socketManager.connect();
+    }
     
-    // 새 메시지 수신 콜백 등록
-    const handleNewMessage = (newMessage: NewMessageDTO) => {
-      console.log('🔔 새 메시지 수신:', newMessage);
-      console.log('📊 현재 메시지 수:', messages.length);
+    // 🆕 채팅방 입장 시 정산 상태 즉시 확인
+    console.log('💰 [ChatRoomScreen] 채팅방 입장 시 정산 상태 확인');
+    refetchPaymentStatus();
+    
+    // 연결 상태 감지
+    const handleConnectionChange = (connected: boolean) => {
+      setIsSocketConnected(connected);
+    };
+    
+    // 새 메시지 수신 핸들러
+    const handleNewMessage = (data: NewMessageDTO) => {
       
-      // 시스템 메시지인지 확인
-      if (newMessage.sender_id === 'system') {
-        const convertedMessage: ChatMessage = {
-          id: newMessage.id.toString(),
-          senderId: 'system',
-          senderName: '시스템',
-          senderAvatar: '⚙️',
-          message: newMessage.message,
-          timestamp: new Date(newMessage.created_at),
-          type: 'system',
-          message_type: newMessage.message_type,
-          user_name: newMessage.user_name,
-          user_id: newMessage.user_id,
-          kicked_by: newMessage.kicked_by
-        };
-        setMessages(prev => [...prev, convertedMessage]);
-        return;
-      }
-      
-      const isMyMessage = newMessage.sender_id === currentUserId;
-      
-      // 가게 공유 메시지인지 확인
-      if (newMessage.message_type === 'store_share' && newMessage.store_id) {
-        const convertedMessage: ChatMessage = {
-          id: newMessage.id.toString(),
-          senderId: newMessage.sender_id,
-          senderName: isMyMessage ? '나' : newMessage.sender_id,
-          senderAvatar: isMyMessage ? '나' : newMessage.sender_id.charAt(0),
-          message: newMessage.message,
-          timestamp: new Date(newMessage.created_at),
-          type: 'store',
-          status: 'delivered',
-          isTemporary: false,
-          // 가게 정보 추가
-          store_id: newMessage.store_id,
-          store_name: newMessage.store_name,
-          store_address: newMessage.store_address,
-          store_rating: newMessage.store_rating,
-          store_thumbnail: newMessage.store_thumbnail,
-          storeInfo: {
-            storeName: newMessage.store_name || '가게명 없음',
-            rating: newMessage.store_rating || 0,
-            reviewCount: 0, // 실시간 메시지에는 리뷰 수 정보가 없음
-            imageUrl: newMessage.store_thumbnail || ''
-          }
-        };
-        
-        setMessages(prev => [...prev, convertedMessage]);
-        console.log('🏪 [ChatRoomScreen] 가게 공유 메시지 추가:', {
-          storeName: convertedMessage.storeInfo?.storeName,
-          rating: convertedMessage.storeInfo?.rating,
-          senderId: convertedMessage.senderId
-        });
-        return;
-      }
-      
-      // 일반 텍스트 메시지
-      const convertedMessage: ChatMessage = {
-        id: newMessage.id.toString(),
-        senderId: newMessage.sender_id,
-        senderName: isMyMessage ? '나' : newMessage.sender_id,
-        senderAvatar: isMyMessage ? '나' : newMessage.sender_id.charAt(0),
-        message: newMessage.message,
-        timestamp: new Date(newMessage.created_at),
-        type: 'text',
-        status: 'delivered', // 서버에서 받은 메시지는 전달됨 상태
-        isTemporary: false // 서버에서 받은 메시지는 확정된 메시지
+      const newMessage: ChatMessage = {
+        id: data.id.toString(),
+        senderId: data.sender_id,
+        senderName: data.sender_id === currentUserId ? '나' : (data.user_name || data.sender_id),
+        senderAvatar: data.sender_id === currentUserId ? '나' : (data.user_name || data.sender_id)[0],
+        message: data.message,
+        timestamp: new Date(data.created_at),
+        type: data.sender_id === 'system' ? 'system' : 'text',
+        store_id: data.store_id,
+        message_type: data.message_type,
+        payment_id: data.payment_id,
+        payment_guide_data: data.payment_guide_data
       };
       
+      // 🆕 시스템 메시지에서 예약금 안내 데이터 처리
+      if (data.message_type === 'system_payment_start' && data.payment_guide_data && !showPaymentGuide) {
+        console.log('✅ [NewMessage] system_payment_start 메시지에서 PaymentGuideData 설정');
+        console.log('📋 [NewMessage] payment_guide_data:', data.payment_guide_data);
+        setPaymentGuideData(data.payment_guide_data);
+        setShowPaymentGuide(true);
+      }
+      
+      // 임시 메시지를 성공적인 메시지로 교체하거나 새 메시지 추가
       setMessages(prev => {
-        // 🔄 내 메시지인 경우, 임시 메시지를 실제 메시지로 교체
-        if (isMyMessage) {
-          const updatedMessages = [...prev];
-          const tempMessageIndex = updatedMessages.findIndex(
-            msg => msg.isTemporary && 
-                   msg.message === convertedMessage.message && 
-                   msg.senderId === convertedMessage.senderId
-          );
-          
-          if (tempMessageIndex !== -1) {
-            // ✅ 최소 표시 시간 후 "전달됨" 상태로 교체
-            const tempMessage = updatedMessages[tempMessageIndex];
-            const timeSinceSent = Date.now() - new Date(tempMessage.timestamp).getTime();
-            
-            console.log('🔄 임시 메시지 교체:', {
-              tempMessageId: tempMessage.id,
-              newMessageId: convertedMessage.id,
-              timeSinceSent,
-              tempMessage: tempMessage.message.substring(0, 10) + '...',
-              isTemporary: tempMessage.isTemporary,
-              status: tempMessage.status
-            });
-            
-            if (timeSinceSent < 800) {
-              // 800ms 미만이면 지연 후 교체
-              setTimeout(() => {
-                setMessages(prevMessages => prevMessages.map(msg => 
-                  msg.id === tempMessage.id ? convertedMessage : msg
-                ));
-                console.log('⏰ 지연 후 메시지 교체 완료');
-              }, 800 - timeSinceSent);
-              return updatedMessages; // 일단 그대로 유지
-            } else {
-              // 충분한 시간이 지났으면 즉시 교체
-              updatedMessages[tempMessageIndex] = convertedMessage;
-              console.log('⚡ 즉시 메시지 교체 완료');
-              return updatedMessages;
-            }
-          }
-        }
+        const existingIndex = prev.findIndex(msg => 
+          msg.isTemporary && 
+          msg.senderId === data.sender_id && 
+          msg.message === data.message
+        );
         
-        // 새로운 메시지 추가 (다른 사용자의 메시지 또는 중복되지 않은 내 메시지)
-        console.log('➕ [ChatRoomScreen] 새 메시지 추가:', {
-          message: convertedMessage.message.substring(0, 20) + '...',
-          isMyMessage,
-          senderId: convertedMessage.senderId,
-          currentUserId,
-          shouldTriggerGlobalRefresh: true
-        });
-        const newMessages = [...prev, convertedMessage];
-        console.log('📊 [ChatRoomScreen] 업데이트된 메시지 수:', newMessages.length);
-        return newMessages;
+        if (existingIndex !== -1) {
+          // 임시 메시지를 실제 메시지로 교체
+          const updated = [...prev];
+          updated[existingIndex] = { ...newMessage, status: 'sent' };
+          return updated;
+        } else {
+          // 새 메시지 추가
+          return [...prev, newMessage];
+        }
       });
     };
 
-    // 📨 메시지 전송 성공 처리
-    const handleMessageAck = (data: any) => {
-      console.log('✅ 메시지 전송 성공:', data);
-      
-      // 📱 최소 표시 시간 보장 (카카오톡 스타일)
-      setTimeout(() => {
-        setMessages(prev => prev.map(msg => 
-          msg.isTemporary && msg.status === 'sending'
-            ? { 
-                ...msg, 
-                status: 'sent',
-                isTemporary: false // 🔥 핵심: 전송 성공 시 임시 상태 해제
-              }
-            : msg
-        ));
-        console.log('✅ 메시지 상태 업데이트: sending → sent, isTemporary → false');
-      }, 500); // 최소 500ms는 "전송 중" 상태 표시
+    // 메시지 상태 확인 (읽음, 전송 완료 등)
+    const handleMessageAck = (data: { messageId: string; status: 'sent' | 'delivered' | 'read' }) => {
+      setMessages(prev => prev.map(msg => 
+        msg.id === data.messageId 
+          ? { ...msg, status: data.status }
+          : msg
+      ));
     };
 
-    // ❌ 메시지 전송 실패 처리  
-    const handleMessageError = (error: any) => {
-      console.error('❌ 메시지 전송 실패:', error);
-      
-      // 전송 중인 메시지를 실패 상태로 변경 (재시도 가능)
+    // 메시지 전송 실패 핸들러
+    const handleMessageError = (data: { tempId: string; error: string }) => {
       setMessages(prev => prev.map(msg => 
-        msg.isTemporary && msg.status === 'sending'
+        msg.id === data.tempId 
           ? { ...msg, status: 'failed' }
           : msg
       ));
     };
 
-
-
-    // 소켓 연결 상태 추적
-    const handleConnectionStatus = (isConnected: boolean) => {
-      console.log('🔗 소켓 연결 상태 변경:', isConnected);
-      setIsSocketConnected(isConnected);
+    // 🆕 모집 상태 변경 이벤트 핸들러
+    const handleReservationStatusChanged = (data: ReservationStatusChangedEventDTO) => {
+      console.log('🔄 [소켓] 모집 상태 변경 이벤트 수신:', data);
+      
+      // 상태 업데이트
+      setReservationStatus(data.new_status);
+      
+      // 시스템 메시지 추가
+      const statusMessage = data.new_status === 1 ? '모집이 마감되었습니다' : '모집이 다시 열렸습니다';
+      const systemMessage: ChatMessage = {
+        id: `system-status-${Date.now()}`,
+        senderId: 'system',
+        senderName: '시스템',
+        senderAvatar: '⚙️',
+        message: `📢 ${statusMessage}`,
+        timestamp: new Date(),
+        type: 'system',
+        message_type: 'system_join'
+      };
+      
+      setMessages(prev => [systemMessage, ...prev]);
+      
+      // 토스트 알림
+      if (data.new_status === 1) {
+        showInfo('모집이 마감되었습니다 🔒');
+      } else {
+        showInfo('모집이 다시 열렸습니다 🔓');
+      }
     };
 
-    // 소켓 이벤트 리스너 등록
+    // 🆕 사용자 퇴장 이벤트 핸들러
+    const handleUserLeft = (data: UserLeftRoomEventDTO) => {
+      console.log('🚪 [소켓] 사용자 퇴장 이벤트 수신:', data);
+      
+      // 시스템 메시지 추가
+      const systemMessage: ChatMessage = {
+        id: `system-left-${Date.now()}`,
+        senderId: 'system',
+        senderName: '시스템',
+        senderAvatar: '⚙️',
+        message: `👋 ${data.user_name}님이 나갔습니다`,
+        timestamp: new Date(data.left_at),
+        type: 'system',
+        message_type: 'system_leave'
+      };
+      
+      setMessages(prev => [systemMessage, ...prev]);
+      
+      // 방장이 나간 경우 추가 처리
+      if (data.is_host_left) {
+        if (data.new_host_id) {
+          showWarning(`방장이 나가서 권한이 이양되었습니다\n(남은 참여자: ${data.remaining_participants}명)`);
+        } else {
+          showError('모임이 해산되었습니다');
+          // 모임 해산 시 채팅방 목록으로 이동
+          setTimeout(() => {
+            navigation.goBack();
+          }, 2000);
+        }
+      }
+    };
+
+    // 🆕 방장 권한 이양 이벤트 핸들러
+    const handleHostTransferred = (data: HostTransferredEventDTO) => {
+      console.log('👑 [소켓] 방장 권한 이양 이벤트 수신:', data);
+      
+      // 시스템 메시지 추가
+      const systemMessage: ChatMessage = {
+        id: `system-host-${Date.now()}`,
+        senderId: 'system',
+        senderName: '시스템',
+        senderAvatar: '⚙️',
+        message: `👑 방장 권한이 ${data.new_host}님에게 이양되었습니다`,
+        timestamp: new Date(data.transferred_at),
+        type: 'system',
+        message_type: 'system_join'
+      };
+      
+      setMessages(prev => [systemMessage, ...prev]);
+      
+      // 현재 사용자가 새 방장이 된 경우
+      if (data.new_host === user?.id) {
+        showSuccess('축하합니다! 방장 권한을 받았습니다 👑');
+      }
+    };
+
+    // 🆕 참여자 강퇴 이벤트 핸들러
+    const handleParticipantKicked = (data: ParticipantKickedEventDTO) => {
+      console.log('🚨 [소켓] 참여자 강퇴 이벤트 수신:', data);
+      
+      // 자신이 강퇴당한 경우
+      if (data.kicked_user_id === user?.id) {
+        Alert.alert(
+          '모임에서 강퇴되었습니다',
+          `방장님에 의해 모임에서 강퇴되었습니다.`,
+          [
+            {
+              text: '확인',
+              onPress: () => {
+                socketManager.leaveRoom(chatRoom.chat_room_id || 1);
+                navigation.goBack();
+              }
+            }
+          ],
+          { cancelable: false }
+        );
+        return;
+      }
+      
+      // 다른 참여자가 강퇴된 경우 시스템 메시지 추가
+      const systemMessage: ChatMessage = {
+        id: `system-kicked-${Date.now()}`,
+        senderId: 'system',
+        senderName: '시스템',
+        senderAvatar: '⚙️',
+        message: `🚨 ${data.kicked_user_name}님이 강퇴되었습니다`,
+        timestamp: new Date(),
+        type: 'system',
+        message_type: 'system_kick'
+      };
+      
+      setMessages(prev => [systemMessage, ...prev]);
+    };
+
+    // 🆕 가게 선택 이벤트 핸들러
+    const handleStoreSelected = (data: any) => {
+      console.log('🏪 [소켓] 가게 선택 이벤트 수신:', data);
+      
+      if (data.action === 'selected') {
+        // 가게 선택됨
+        const newSelectedStore = {
+          store_id: data.store_id,
+          store_name: data.store_name,
+          payment_per_person: data.payment_per_person || 25000
+        };
+        
+        // 상태 업데이트
+        setSelectedStore(newSelectedStore);
+        
+        // chatRoom 객체도 업데이트
+        (chatRoom as any).selected_store = newSelectedStore;
+        
+        // 시스템 메시지 추가
+        const systemMessage: ChatMessage = {
+          id: `system-store-selected-${Date.now()}`,
+          senderId: 'system',
+          senderName: '시스템',
+          senderAvatar: '🏪',
+          message: `🏪 ${data.store_name}이(가) 선택되었습니다\n💰 1인당 예상 금액: ${(data.payment_per_person || 25000).toLocaleString()}원`,
+          timestamp: new Date(),
+          type: 'system',
+          message_type: 'system_join'
+        };
+        
+        setMessages(prev => [systemMessage, ...prev]);
+        
+        // 토스트 알림
+        showSuccess(`가게가 선택되었습니다!\n🏪 ${data.store_name}`);
+        
+      } else if (data.action === 'deselected') {
+        // 가게 선택 해제됨
+        setSelectedStore(null);
+        (chatRoom as any).selected_store = null;
+        
+        // 시스템 메시지 추가
+        const systemMessage: ChatMessage = {
+          id: `system-store-deselected-${Date.now()}`,
+          senderId: 'system',
+          senderName: '시스템',
+          senderAvatar: '🏪',
+          message: '🔄 가게 선택이 해제되었습니다',
+          timestamp: new Date(),
+          type: 'system',
+          message_type: 'system_join'
+        };
+        
+        setMessages(prev => [systemMessage, ...prev]);
+        
+        // 토스트 알림
+        showInfo('가게 선택이 해제되었습니다');
+      }
+    };
+
+    // 🆕 정산 시작 이벤트 핸들러
+    const handlePaymentStarted = (data: any) => {
+      console.log('💰 [소켓] 정산 시작 이벤트 수신:', data);
+      console.log('💰 [디버깅] payment_guide_data 확인:', data.payment_guide_data);
+      
+      // 🆕 구조화된 예약금 안내 데이터 처리
+      if (data.payment_guide_data) {
+        console.log('✅ [정산 시작] PaymentGuideData 설정');
+        setPaymentGuideData(data.payment_guide_data);
+        setShowPaymentGuide(true);
+        console.log('✅ [정산 시작] showPaymentGuide = true 설정 완료');
+      } else {
+        console.log('❌ [정산 시작] payment_guide_data가 없음');
+      }
+      
+      // 간단한 시스템 메시지 추가
+      const systemMessage: ChatMessage = {
+        id: `system-payment-started-${Date.now()}`,
+        senderId: 'system',
+        senderName: '시스템',
+        senderAvatar: '💰',
+        message: `💰 정산이 시작되었습니다 (${data.payment_guide_data?.payment?.per_person?.toLocaleString() || ''}원)`,
+        timestamp: new Date(),
+        type: 'system',
+        message_type: 'system_payment_start',
+        payment_id: data.payment_id,
+        payment_guide_data: data.payment_guide_data
+      };
+      
+      setMessages(prev => [systemMessage, ...prev]);
+      
+      // 토스트 알림
+      showSuccess(`${data.started_by_name || '방장'}님이 정산을 시작했습니다! 💰`);
+    };
+
+    // 🆕 개별 입금 완료 이벤트 핸들러
+    const handlePaymentCompleted = (data: PaymentCompletedEventDTO) => {
+      console.log('💳 [소켓] 개별 입금 완료 이벤트 수신:', data);
+      
+      // 간단한 시스템 메시지 추가 (진행률 포함)
+      const systemMessage: ChatMessage = {
+        id: `system-payment-completed-${Date.now()}`,
+        senderId: 'system',
+        senderName: '시스템',
+        senderAvatar: '💳',
+        message: `📊 입금 현황이 업데이트되었습니다 (${data.completed_payments}/${data.total_participants}명 완료)`,
+        timestamp: new Date(),
+        type: 'system',
+        message_type: 'system_payment_update',
+        payment_id: data.payment_id,
+        payment_progress: {
+          completed: data.completed_payments,
+          total: data.total_participants,
+          is_fully_completed: data.completed_payments === data.total_participants
+        }
+      };
+      
+      setMessages(prev => [systemMessage, ...prev]);
+      
+      // 정산 상태 새로고침
+      refetchPaymentStatus();
+      
+      // 토스트 알림
+      if (data.user_id === user?.id) {
+        showSuccess('입금이 완료되었습니다! 💳');
+      } else {
+        showInfo(`${data.user_name}님이 입금을 완료했습니다`);
+      }
+    };
+
+    // 🆕 전체 정산 완료 이벤트 핸들러
+    const handlePaymentFullyCompleted = (data: PaymentFullyCompletedEventDTO) => {
+      console.log('🎉 [소켓] 전체 정산 완료 이벤트 수신:', data);
+      
+      // 간단한 완료 시스템 메시지
+      const systemMessage: ChatMessage = {
+        id: `system-payment-fully-completed-${Date.now()}`,
+        senderId: 'system',
+        senderName: '시스템',
+        senderAvatar: '🎉',
+        message: '✅ 모든 참여자의 입금이 완료되었습니다!',
+        timestamp: new Date(),
+        type: 'system',
+        message_type: 'system_payment_completed',
+        payment_id: data.payment_id
+      };
+      
+      setMessages(prev => [systemMessage, ...prev]);
+      
+      // 정산 상태 새로고침
+      refetchPaymentStatus();
+      
+      // 토스트 알림
+      showSuccess('모든 참여자의 입금이 완료되었습니다! 🎉');
+    };
+
+    // 🆕 메시지 업데이트 이벤트 핸들러 (필요시 ReservationDepositInfo 컴포넌트가 자동으로 업데이트됨)
+    const handleMessageUpdated = (data: any) => {
+      console.log('📝 [소켓] 메시지 업데이트 이벤트 수신:', data);
+      
+      // 정산 상태 새로고침으로 ReservationDepositInfo 컴포넌트 자동 업데이트
+      refetchPaymentStatus();
+    };
+
+    // 🆕 예약금 안내 업데이트 이벤트 핸들러
+    const handlePaymentGuideUpdated = (data: any) => {
+      console.log('🔄 [소켓] 예약금 안내 업데이트 이벤트 수신:', data);
+      
+      // 예약금 안내 데이터 업데이트
+      if (data.payment_guide_data) {
+        setPaymentGuideData(data.payment_guide_data);
+      }
+      
+      // 진행률 업데이트 알림
+      if (data.update_type === 'progress_update') {
+        showInfo(`입금 현황: ${data.completed_payments}/${data.total_participants}명 완료`);
+      }
+      
+      // 전체 완료 시 특별 처리
+      if (data.is_fully_completed) {
+        setTimeout(() => {
+          setShowPaymentGuide(false);
+          showSuccess('모든 입금이 완료되었습니다! 🎉');
+        }, 2000);
+      }
+    };
+
+    // 소켓 이벤트 등록
+    socketManager.onConnectionStatusChange(handleConnectionChange);
     socketManager.onNewMessage(handleNewMessage);
-    socketManager.onConnectionStatusChange(handleConnectionStatus);
+    socketManager.onMessageUpdated(handleMessageUpdated);
     socketManager.onMessageAck(handleMessageAck);
     socketManager.onMessageError(handleMessageError);
-    
-    // 🆕 모임 상태 변경 이벤트 리스너 등록
     socketManager.onReservationStatusChanged(handleReservationStatusChanged);
-    
-    // 🆕 사용자 퇴장 이벤트 리스너 등록
-    socketManager.onUserLeftRoom(handleUserLeftRoom);
-    
-    // 🆕 방장 권한 이양 이벤트 리스너 등록
+    socketManager.onUserLeftRoom(handleUserLeft);
     socketManager.onHostTransferred(handleHostTransferred);
-    
-    // 🆕 참여자 강퇴 이벤트 리스너 등록
     socketManager.onParticipantKicked(handleParticipantKicked);
+    socketManager.onStoreSelected(handleStoreSelected);
+    socketManager.onPaymentStarted(handlePaymentStarted);
+    socketManager.onPaymentCompleted(handlePaymentCompleted);
+    socketManager.onPaymentFullyCompleted(handlePaymentFullyCompleted);
+    socketManager.onPaymentGuideUpdated(handlePaymentGuideUpdated);
     
-    // 🚪 채팅방 접속 (모임 참여 없이 단순 채팅방 입장)
-    const joinChatRoom = () => {
-      const roomId = chatRoom.chat_room_id || 1;
-      
-      console.log('🚪 === 채팅방 접속 시작 (조회 전용) ===');
-      console.log('채팅방 ID:', roomId);
-      console.log('사용자 ID:', user?.id);
-      console.log('⚠️ 주의: enterChatRoom API 호출하지 않음 (모임 참여 방지)');
-      
-      // 🔌 소켓 룸 조인 (모임 참여 없이)
-      console.log('🔌 소켓 룸 조인 시작');
-      socketManager.joinRoom(roomId);
-      console.log('✅ 소켓 룸 조인 완료');
-      
-      // 🔄 최신 메시지 동기화는 기존 React Query가 담당
-      console.log('🔄 메시지 동기화는 React Query가 담당');
-    };
+    // 채팅방 입장
+    socketManager.joinRoom(chatRoom.chat_room_id);
     
-    // 채팅방 접속 시작
-    joinChatRoom();
-    setTimeout(() => {
-      queryClient.invalidateQueries({ 
-        queryKey: ['chatMessages', chatRoom.chat_room_id || 1] 
-      });
-    }, 500); // 소켓 연결 후 잠시 기다렸다가 API 새로고침
-
+    // 초기 연결 상태 설정
+    setIsSocketConnected(socketManager.isConnected());
+    
+    // 컴포넌트 언마운트 시 정리
     return () => {
-      console.log('🧹 [ChatRoomScreen] useEffect cleanup 시작');
-      
-      // 특정 콜백들 개별 제거
-      socketManager.removeCallback(handleNewMessage);
-      socketManager.removeConnectionStatusCallback(handleConnectionStatus);
-      socketManager.removeMessageAckCallback(handleMessageAck);
-      socketManager.removeMessageErrorCallback(handleMessageError);
-      
-      // 채팅방 나가기
-      const roomId = chatRoom.chat_room_id || 1;
-      console.log('🚪 [ChatRoomScreen] 채팅방 나가기:', roomId);
-      socketManager.leaveRoom(roomId);
-      
-      console.log('✅ [ChatRoomScreen] useEffect cleanup 완료');
+      // 이벤트 리스너 제거는 socketManager에서 자동으로 처리됨
+      console.log('🧹 [ChatRoomScreen] 컴포넌트 언마운트 - 소켓 이벤트 정리');
     };
-  }, [chatRoom.chat_room_id, currentUserId, user, useAuthStore.getState().isLoggedIn]); // 의존성 추가
+  }, [chatRoom.chat_room_id, currentUserId, user, useAuthStore.getState().isLoggedIn]);
 
-
-
-  const handleManageParticipants = () => {
-    console.log('👑 [방장 권한] 참여자 관리 모달 열기');
-    setShowParticipantModal(true);
-  };
-
-  const handleEditMeetingInfo = () => {
-    console.log('👑 [방장 권한] 모임 정보 수정 모달 열기');
-    setShowEditMeetingModal(true);
-  };
-
-  // 🆕 모집 상태 토글 (마감 ↔ 허용)
-  const handleToggleRecruitment = () => {
-    const isCurrentlyClosed = reservationStatus === 1;
-    const actionText = isCurrentlyClosed ? '허용' : '마감';
-    const statusText = isCurrentlyClosed ? '모집 허용' : '모집 마감';
+  // 🆕 정산 메뉴 핸들러 (조건 검증 포함)
+  const handlePaymentMenu = async () => {
+    console.log('💰 [방장 권한] 정산하기 메뉴 클릭');
     
-    console.log('👑 [방장 권한] 모집 상태 토글:', { 
-      current: isCurrentlyClosed ? '마감' : '허용',
-      changeTo: actionText 
+    // 🆕 정산 조건 확인: 모집 마감 + 가게 선택 완료
+    const isRecruitmentClosed = reservationStatus === 1;
+    const hasSelectedStore = selectedStore !== null || (chatRoom as any)?.selected_store !== null;
+    const currentPaymentStatus = paymentStatusData?.data?.payment_status;
+    const isPaymentAlreadyStarted = currentPaymentStatus === 'in_progress' || currentPaymentStatus === 'completed';
+    
+    // 🆕 실제 선택된 가게 정보 (상태 또는 chatRoom에서)
+    const actualSelectedStore = selectedStore || (chatRoom as any)?.selected_store;
+    
+    console.log('💰 [정산 조건 확인]', {
+      isRecruitmentClosed,
+      hasSelectedStore,
+      selectedStore,
+      actualSelectedStore,
+      currentPaymentStatus,
+      isPaymentAlreadyStarted,
+      reservationStatus,
+      chatRoomSelectedStore: (chatRoom as any)?.selected_store
     });
-
+    
+    // 이미 정산이 시작된 경우
+    if (isPaymentAlreadyStarted) {
+      Alert.alert(
+        '정산 진행 중 🔄',
+        `현재 정산이 진행 중입니다!\n\n📊 상태: ${currentPaymentStatus === 'in_progress' ? '입금 대기 중' : '완료'}\n💡 채팅방 상단의 예약금 안내에서 진행 상황을 확인할 수 있습니다.`,
+        [{ text: '확인' }]
+      );
+      return;
+    }
+    
+    // 🆕 정확한 정산 조건 체크: 모집 마감 + 가게 선택 완료
+    if (!isRecruitmentClosed) {
+      Alert.alert(
+        '모집 마감 필요',
+        '정산을 시작하려면 먼저 매칭 모집을 마감해야 합니다.\n\n드롭다운 메뉴에서 "매칭 모집 마감하기"를 선택해주세요.',
+        [{ text: '확인' }]
+      );
+      return;
+    }
+    
+    if (!hasSelectedStore) {
+      Alert.alert(
+        '가게 선택 필요',
+        '정산을 시작하려면 먼저 가게를 선택해야 합니다.\n\n드롭다운 메뉴에서 "가게 선택/변경"을 통해 가게를 선택해주세요.',
+        [{ text: '확인' }]
+      );
+      return;
+    }
+    
+    // 🆕 모든 조건 충족 시 정산 시작 확인
+    const storeName = actualSelectedStore?.store_name || '선택된 가게';
+    const paymentPerPerson = actualSelectedStore?.payment_per_person || 25000;
+    
     Alert.alert(
-      `매칭 ${statusText}`,
-      isCurrentlyClosed 
-        ? '매칭 모집을 다시 허용하시겠습니까?\n새로운 참여자가 들어올 수 있고, 기존 참여자도 나갈 수 있습니다.'
-        : '매칭 모집을 마감하시겠습니까?\n마감 후에는 새로운 참여자가 들어올 수 없고, 기존 참여자도 나갈 수 없습니다.',
+      '정산 시작',
+      `${storeName}에서의 정산을 시작하시겠습니까?\n\n• 1인당 금액: ${paymentPerPerson.toLocaleString()}원\n• 정산 시작 후에는 취소할 수 없습니다.\n• 모든 참여자에게 알림이 전송됩니다.`,
       [
         { text: '취소', style: 'cancel' },
-        { 
-          text: `${actionText}하기`, 
-          style: isCurrentlyClosed ? 'default' : 'destructive',
-          onPress: () => performToggleRecruitment(isCurrentlyClosed)
-        }
+        { text: '정산 시작', style: 'default', onPress: handleStartPayment }
       ]
     );
   };
 
-  // 🆕 실제 모집 상태 변경 수행
-  const performToggleRecruitment = async (isCurrentlyClosed: boolean) => {
+  // 🆕 정산 시작 핸들러 (조건 검증은 handlePaymentMenu에서 완료)
+  const handleStartPayment = async () => {
+    if (!chatRoom.chat_room_id) {
+      showError('채팅방 정보를 찾을 수 없습니다');
+      return;
+    }
+
     try {
-      const newStatus = isCurrentlyClosed ? 0 : 1; // 0: 모집중, 1: 모집마감
-      const actionText = isCurrentlyClosed ? '허용' : '마감';
+      setPaymentLoading(true);
       
-      console.log('👑 [방장 권한] 모집 상태 변경 시작:', {
-        chatRoomId: chatRoom.chat_room_id,
-        fromStatus: reservationStatus,
-        toStatus: newStatus,
-        action: actionText
+      // 🆕 기존 채팅방 정보에서 가게 정보 가져오기
+      const actualSelectedStore = selectedStore || (chatRoom as any)?.selected_store;
+      const paymentPerPerson = actualSelectedStore?.payment_per_person || 25000; // 기본값 25,000원
+      
+      console.log('💰 [정산 시작] 기존 데이터 기반:', {
+        selectedStore,
+        actualSelectedStore,
+        paymentPerPerson
+      });
+      
+      // 🧪 테스트용: 서버 API 대신 임시로 가짜 이벤트 발생
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🧪 [개발 모드] 테스트용 정산 시작 이벤트 생성');
+        
+        const testPaymentStartedData = {
+          room_id: chatRoom.chat_room_id,
+          payment_id: `test_payment_${Date.now()}`,
+          started_by: user?.id,
+          started_by_name: user?.name || '테스트 방장',
+          payment_guide_data: {
+            type: 'payment_guide',
+            title: '예약금 안내',
+            store: {
+              name: actualSelectedStore?.store_name || '테스트 스포츠바'
+            },
+            payment: {
+              per_person: paymentPerPerson,
+              total_amount: paymentPerPerson * 4,
+              participants_count: 4
+            },
+            account: {
+              bank_name: '국민은행',
+              account_number: '123-456-789012',
+              account_holder: '테스트사장'
+            },
+            deadline: {
+              date: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+              display: '30분 후 마감'
+            },
+            progress: {
+              completed: 0,
+              total: 4,
+              percentage: 0
+            },
+            participants: [
+              {
+                user_id: user?.id || 'test1',
+                user_name: '나',
+                status: 'pending'
+              },
+              {
+                user_id: 'test2',
+                user_name: '김철수',
+                status: 'pending'
+              },
+              {
+                user_id: 'test3',
+                user_name: '이영희',
+                status: 'pending'
+              },
+              {
+                user_id: 'test4',
+                user_name: '박민수',
+                status: 'pending'
+              }
+            ],
+            payment_id: `test_payment_${Date.now()}`,
+            started_by: user?.id,
+            started_at: new Date().toISOString(),
+            is_completed: false
+          }
+        };
+        
+        // 테스트용 이벤트 핸들러 직접 호출
+        handlePaymentStarted(testPaymentStartedData);
+        showSuccess('정산이 시작되었습니다! 💰 (테스트 모드)');
+        return;
+      }
+      
+      const result = await startPaymentMutation.mutateAsync({
+        roomId: chatRoom.chat_room_id,
+        data: { payment_per_person: paymentPerPerson }
+      });
+      
+      showSuccess('정산이 시작되었습니다! 💰');
+      
+    } catch (error: any) {
+      console.error('❌ 정산 시작 실패:', error);
+      showError(error.message || '정산 시작에 실패했습니다');
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  // 🆕 입금 완료 핸들러
+  const handleCompletePayment = async () => {
+    if (!chatRoom.chat_room_id) {
+      showError('채팅방 정보를 찾을 수 없습니다');
+      return;
+    }
+
+    try {
+      setPaymentLoading(true);
+      
+      const result = await completePaymentMutation.mutateAsync({
+        roomId: chatRoom.chat_room_id,
+        data: { payment_method: 'bank_transfer' }
+      });
+      
+      showSuccess('입금이 완료되었습니다! 💳');
+      
+    } catch (error: any) {
+      console.error('❌ 입금 완료 실패:', error);
+      showError(error.message || '입금 완료에 실패했습니다');
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  // 실패한 메시지 재전송 함수
+  const retryFailedMessage = (failedMessage: ChatMessage) => {
+    if (!currentUserId || !chatRoom.chat_room_id) {
+      return;
+    }
+
+    // 실패한 메시지 제거
+    setMessages(prev => prev.filter(msg => msg.id !== failedMessage.id));
+
+    // 새로운 임시 메시지로 재전송
+    const newTempId = `temp-${Date.now()}`;
+    const tempMessage: ChatMessage = {
+      ...failedMessage,
+      id: newTempId,
+      status: 'sending'
+    };
+
+    setMessages(prev => [...prev, tempMessage]);
+
+    // 소켓을 통해 재전송
+    const messageData = {
+      room: chatRoom.chat_room_id || 1,
+      message: failedMessage.message,
+      sender_id: currentUserId
+    };
+
+    socketManager.sendMessage(messageData);
+
+    // 5초 후에도 응답이 없으면 실패 처리
+    setTimeout(() => {
+      setMessages(prev => prev.map(msg => 
+        msg.id === newTempId && msg.status === 'sending'
+          ? { ...msg, status: 'failed' }
+          : msg
+      ));
+    }, 5000);
+  };
+
+  // 🆕 모집 상태 변경 핸들러
+  const handleReservationStatusChange = async () => {
+    if (!chatRoom.chat_room_id) {
+      showError('채팅방 정보를 찾을 수 없습니다');
+      return;
+    }
+
+    try {
+      const newStatus = reservationStatus === 1 ? 0 : 1; // 토글
+      const statusText = newStatus === 1 ? '마감' : '허용';
+      
+      console.log(`🔄 [방장 권한] 매칭 모집 ${statusText}하기 시작`);
+      console.log('현재 상태:', reservationStatus, '→ 새 상태:', newStatus);
+      
+      // 서버에 상태 변경 요청 (직접 fetch 사용)
+      const token = useAuthStore.getState().token;
+      if (!token) {
+        throw new Error('인증 토큰이 없습니다');
+      }
+
+      const response = await fetch(`/api/v1/chats/${chatRoom.chat_room_id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
       });
 
-      // TODO: 실제 API 호출 구현
-      // await updateReservationStatus(chatRoom.chat_room_id, newStatus);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `서버 오류 (${response.status})`);
+      }
+
+      const result = await response.json();
+      console.log(`✅ 매칭 모집 ${statusText} 완료:`, result);
       
-      console.log('✅ 모집 상태 변경 완료');
-      
-      // 상태 업데이트
+      // 상태 즉시 업데이트 (소켓 이벤트가 오기 전에)
       setReservationStatus(newStatus);
       
       // 성공 토스트
-      showSuccess(`매칭 모집이 ${actionText}되었습니다`);
+      showSuccess(`매칭 모집이 ${statusText}되었습니다!`);
       
     } catch (error: any) {
-      console.error('❌ 모집 상태 변경 실패:', error);
+      console.error(`❌ 매칭 모집 상태 변경 실패:`, error);
+      showError(error.message || '상태 변경에 실패했습니다');
+    }
+  };
+
+  // 🚪 실제 나가기 수행
+  const performLeave = async () => {
+    try {
+      console.log('🚪 === 모임 탈퇴 시작 ===');
+      console.log('채팅방 ID:', chatRoom.chat_room_id);
+      console.log('현재 사용자:', user?.id);
       
-      if (error?.response?.status === 403) {
-        showError('방장만 이 기능을 사용할 수 있습니다');
+      // 채팅방 ID가 없으면 에러 처리
+      if (!chatRoom.chat_room_id) {
+        console.error('❌ 채팅방 ID가 없어서 나가기를 할 수 없습니다.');
+        showError('채팅방 정보를 찾을 수 없습니다');
+        return;
+      }
+      
+      console.log('🚪 서버에 모임 탈퇴 요청 전송...');
+      
+      // 서버에 채팅방 나가기 요청 (= 모임 탈퇴)
+      const response = await leaveChatRoom(chatRoom.chat_room_id);
+      
+      if (response.success) {
+        console.log('✅ 모임 탈퇴 성공:', response);
+        
+        // 🆕 서버 응답 데이터 활용
+        const { data } = response;
+        console.log('📊 탈퇴 결과:', {
+          remaining_participants: data.remaining_participants,
+          is_host_left: data.is_host_left,
+          new_host_id: data.new_host_id,
+          meeting_status: data.meeting_status
+        });
+        
+        // 소켓 룸에서 나가기
+        socketManager.leaveRoom(chatRoom.chat_room_id);
+        
+        // 채팅방 목록 무효화하여 자동 새로고침
+        queryClient.invalidateQueries({ queryKey: ['chatRooms'] });
+        console.log('✅ 채팅방 목록 무효화 완료');
+        
+        // 🆕 상황별 토스트 메시지
+        if (data.is_host_left && data.new_host_id) {
+          showSuccess(`방장 권한이 이양되고 모임을 나갔습니다\n(남은 참여자: ${data.remaining_participants}명)`);
+        } else if (data.is_host_left && !data.new_host_id) {
+          showSuccess('모임이 해산되었습니다');
+        } else {
+          showSuccess(`모임을 나갔습니다\n(남은 참여자: ${data.remaining_participants}명)`);
+        }
+        
+        // 채팅방 목록으로 이동
+        setTimeout(() => {
+          navigation.goBack();
+        }, 1500); // 토스트 메시지를 보여주고 이동
+        
       } else {
-        showError('모집 상태 변경에 실패했습니다. 다시 시도해주세요');
+        console.error('❌ 모임 탈퇴 실패:', response.message);
+        showError(response.message || '모임 나가기에 실패했습니다');
+      }
+    } catch (error: any) {
+      console.error('❌ 모임 탈퇴 API 에러:', error);
+      console.error('에러 상세:', {
+        status: error?.response?.status,
+        message: error?.response?.data?.message,
+        url: error?.config?.url,
+        method: error?.config?.method
+      });
+      
+      if (error?.response?.status === 404) {
+        showError('서버에서 해당 채팅방을 찾을 수 없습니다\n서버팀에 문의해주세요');
+      } else if (error?.response?.status === 403) {
+        showError('채팅방을 나갈 권한이 없습니다');
+      } else {
+        showError(`모임 나가기 중 오류가 발생했습니다\n(${error?.response?.status || 'Unknown'})`);
       }
     }
   };
 
-  // 방장용 메뉴 옵션
+  // 🆕 방장용 드롭다운 메뉴 옵션들
   const hostMenuOptions: DropdownOption[] = [
     { 
       id: 'host_1', 
-      label: '👑 매칭 정보 보기', 
+      label: '🏪 가게 선택/변경', 
       onPress: () => {
-        console.log('👑 [방장 권한] 매칭 정보 보기');
-        Alert.alert('매칭 정보', `모임 ID: ${chatRoom.chat_room_id}\n상태: ${reservationStatus === 1 ? '모집마감' : '모집중'}`);
+        console.log('🏪 [방장 권한] 가게 선택/변경');
+        navigation.navigate('StoreList', { 
+          chatRoom: chatRoom,
+          isHost: true 
+        });
       }
     },
     { 
       id: 'host_2', 
-      label: '✏️ 매칭 정보 수정하기', 
-      onPress: handleEditMeetingInfo
+      label: reservationStatus === 1 ? '🔓 매칭 모집 허용하기' : '🔒 매칭 모집 마감하기', 
+      onPress: handleReservationStatusChange 
     },
     { 
       id: 'host_3', 
-      label: reservationStatus === 1 ? '🔓 매칭 모집 허용하기' : '🚫 매칭 모집 마감하기',
-      onPress: handleToggleRecruitment
+      label: '💰 정산하기', 
+      onPress: handlePaymentMenu 
     },
     { 
       id: 'host_4', 
       label: '👥 참여자 관리', 
-      onPress: handleManageParticipants
+      onPress: () => {
+        console.log('👥 [방장 권한] 참여자 관리');
+        setShowParticipantModal(true);
+      }
     },
     { 
       id: 'host_5', 
-      label: '🏪 가게 선택/변경', 
+      label: '✏️ 모임 정보 수정', 
       onPress: () => {
-        console.log('👑 [방장 권한] 가게 선택/변경');
-        // StoreList로 이동
-        navigation.navigate('StoreList', { 
-          chatRoom: chatRoom,
-          isHost: true
-        });
+        console.log('✏️ [방장 권한] 모임 정보 수정');
+        setShowEditMeetingModal(true);
       }
     },
     { 
       id: 'host_6', 
       label: '🚪 채팅방 나가기', 
       onPress: () => {
-        const warningMessage = reservationStatus === 1 
-          ? '⚠️ 방장이 나가면 모임이 해체됩니다.\n현재 모집이 마감된 상태이므로 참여자들이 갇혀있는 상황입니다.\n정말로 나가시겠습니까?'
-          : '⚠️ 방장이 나가면 모임이 해체됩니다.\n정말로 나가시겠습니까?';
-          
         Alert.alert(
-          '채팅방 나가기',
-          warningMessage,
+          '방장 권한 이양',
+          '방장이 나가면 다른 참여자에게 방장 권한이 이양됩니다.\n마지막 참여자인 경우 모임이 해산됩니다.\n\n정말 나가시겠습니까?',
           [
             { text: '취소', style: 'cancel' },
             { text: '나가기', style: 'destructive', onPress: performLeave }
@@ -889,47 +1039,23 @@ export default function ChatRoomScreen() {
       }
     },
     { 
-      id: 'host_7', 
+      id: 'host_8', 
       label: '🚨 신고하기', 
       isDanger: true, 
       onPress: () => {
-        console.log('👑 [방장 권한] 신고하기');
-        Alert.alert('신고하기', '부적절한 사용자를 신고할 수 있습니다.');
+        console.log('📖 [방장] 신고하기');
+        Alert.alert('신고하기', '부적절한 사용자나 내용을 신고할 수 있습니다.');
       }
     },
   ];
 
-  // 일반 참여자용 메뉴 옵션
+  // 🆕 일반 참여자용 드롭다운 메뉴 옵션들
   const participantMenuOptions: DropdownOption[] = [
     { 
       id: 'participant_1', 
-      label: 'ℹ️ 모임 정보 보기', 
+      label: '🏪 가게 둘러보기', 
       onPress: () => {
-        console.log('📖 [참여자] 모임 정보 보기');
-        Alert.alert('모임 정보', '모임의 세부 정보를 확인할 수 있습니다.');
-      }
-    },
-    { 
-      id: 'participant_2', 
-      label: '👥 참여자 목록', 
-      onPress: () => {
-        console.log('📖 [참여자] 참여자 목록');
-        Alert.alert('참여자 목록', '함께하는 멤버들을 확인할 수 있습니다.');
-      }
-    },
-    { 
-      id: 'participant_3', 
-      label: '🔔 알림 설정', 
-      onPress: () => {
-        console.log('📖 [참여자] 알림 설정');
-        Alert.alert('알림 설정', '채팅방 알림을 관리할 수 있습니다.');
-      }
-    },
-    { 
-      id: 'participant_4', 
-      label: '🏪 가게 정보 보기', 
-      onPress: () => {
-        console.log('📖 [참여자] 가게 정보 보기');
+        console.log('🏪 [참여자 권한] 가게 둘러보기');
         // StoreList로 이동 (보기 전용)
         navigation.navigate('StoreList', { 
           chatRoom: chatRoom,
@@ -1104,92 +1230,33 @@ export default function ChatRoomScreen() {
     setSelectedParticipantId(null);
   };
 
-
-
-  // 🚪 실제 나가기 수행
-  const performLeave = async () => {
-    try {
-      console.log('🚪 === 모임 탈퇴 시작 ===');
-      console.log('채팅방 ID:', chatRoom.chat_room_id);
-      console.log('현재 사용자:', user?.id);
-      
-      // 채팅방 ID가 없으면 에러 처리
-      if (!chatRoom.chat_room_id) {
-        console.error('❌ 채팅방 ID가 없어서 나가기를 할 수 없습니다.');
-        showError('채팅방 정보를 찾을 수 없습니다');
-        return;
-      }
-      
-      console.log('🚪 서버에 모임 탈퇴 요청 전송...');
-      
-      // 서버에 채팅방 나가기 요청 (= 모임 탈퇴)
-      const response = await leaveChatRoom(chatRoom.chat_room_id);
-      
-      if (response.success) {
-        console.log('✅ 모임 탈퇴 성공:', response);
-        
-        // 🆕 서버 응답 데이터 활용
-        const { data } = response;
-        console.log('📊 탈퇴 결과:', {
-          remaining_participants: data.remaining_participants,
-          is_host_left: data.is_host_left,
-          new_host_id: data.new_host_id,
-          meeting_status: data.meeting_status
-        });
-        
-        // 소켓 룸에서 나가기
-        socketManager.leaveRoom(chatRoom.chat_room_id);
-        
-        // 채팅방 목록 무효화하여 자동 새로고침
-        queryClient.invalidateQueries({ queryKey: ['chatRooms'] });
-        console.log('✅ 채팅방 목록 무효화 완료');
-        
-        // 🆕 상황별 토스트 메시지
-        if (data.is_host_left && data.new_host_id) {
-          showSuccess(`방장 권한이 이양되고 모임을 나갔습니다\n(남은 참여자: ${data.remaining_participants}명)`);
-        } else if (data.is_host_left && !data.new_host_id) {
-          showSuccess('모임이 해산되었습니다');
-        } else {
-          showSuccess(`모임을 나갔습니다\n(남은 참여자: ${data.remaining_participants}명)`);
-        }
-        
-        // 채팅방 목록으로 이동
-        setTimeout(() => {
-          navigation.goBack();
-        }, 1500); // 토스트 메시지를 보여주고 이동
-        
-      } else {
-        console.error('❌ 모임 탈퇴 실패:', response.message);
-        showError(response.message || '모임 나가기에 실패했습니다');
-      }
-    } catch (error: any) {
-      console.error('❌ 모임 탈퇴 API 에러:', error);
-      console.error('에러 상세:', {
-        status: error?.response?.status,
-        message: error?.response?.data?.message,
-        url: error?.config?.url,
-        method: error?.config?.method
-      });
-      
-      if (error?.response?.status === 404) {
-        showError('서버에서 해당 채팅방을 찾을 수 없습니다\n서버팀에 문의해주세요');
-      } else if (error?.response?.status === 403) {
-        showError('채팅방을 나갈 권한이 없습니다');
-      } else {
-        showError(`모임 나가기 중 오류가 발생했습니다\n(${error?.response?.status || 'Unknown'})`);
-      }
-    }
-  };
-
   const renderMessageGroup = (group: MessageGroup, index: number) => {
     // 시스템 메시지 그룹
     if (group.type === 'system') {
-      return group.messages.map((msg: ChatMessage) => (
-        <ChatStatusMessage 
-          key={msg.id}
-          message={msg.message} 
-        />
-      ));
+      return group.messages.map((msg: ChatMessage) => {
+        // 정산 관련 메시지는 SystemMessage 컴포넌트 사용
+        if (msg.message_type === 'system_payment_start' || 
+            msg.message_type === 'system_payment_update' || 
+            msg.message_type === 'system_payment_completed') {
+          return (
+            <SystemMessage
+              key={msg.id}
+              message={msg.message}
+              messageType={msg.message_type}
+              paymentId={msg.payment_id}
+              paymentProgress={msg.payment_progress}
+            />
+          );
+        }
+        
+        // 기존 시스템 메시지는 ChatStatusMessage 사용
+        return (
+          <ChatStatusMessage 
+            key={msg.id}
+            message={msg.message} 
+          />
+        );
+      });
     }
 
     // 사용자 메시지 그룹 - 시간 순서대로 정렬된 메시지 배열 생성
@@ -1286,9 +1353,24 @@ export default function ChatRoomScreen() {
               )}
             </View>
             <View className="flex-row items-center">
+              {/* 🆕 경기 정보 또는 기본 부제목 */}
               <Text className="text-sm text-gray-600 mr-2">
-                {chatRoom.subtitle || '채팅방'}
+                {(chatRoom as any)?.match_title ? `⚽ ${(chatRoom as any).match_title}` : (chatRoom.subtitle || '채팅방')}
               </Text>
+              
+              {/* 🆕 참여자 정보 */}
+              {(chatRoom as any)?.participant_info && (
+                <Text className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full mr-2">
+                  👥 {(chatRoom as any).participant_info}
+                </Text>
+              )}
+              
+              {/* 🆕 선택된 가게 정보 */}
+              {(selectedStore || (chatRoom as any)?.selected_store) && (
+                <Text className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full mr-2">
+                  🏪 {(selectedStore || (chatRoom as any)?.selected_store)?.store_name}
+                </Text>
+              )}
                         {/* 연결 상태 표시 */}
           <TouchableOpacity 
             className="flex-row items-center"
@@ -1296,7 +1378,12 @@ export default function ChatRoomScreen() {
               if (!isSocketConnected) {
                 console.log('🔄 수동 소켓 재연결 시도');
                 console.log('소켓 디버그 정보:', socketManager.getDebugInfo());
-                socketManager.connect();
+                // 🆕 이미 연결 중이거나 연결된 경우 재연결하지 않음
+                if (!socketManager.isConnected() && !socketManager.isConnecting()) {
+                  socketManager.connect();
+                } else {
+                  console.log('⚠️ 소켓이 이미 연결 중이거나 연결되어 있음');
+                }
               }
             }}
           >
@@ -1350,14 +1437,138 @@ export default function ChatRoomScreen() {
          renderItem={({ item, index }) => {
            return <View key={`group-${index}`}>{renderMessageGroup(item, groupedMessages.length - 1 - index)}</View>;
          }}
-         ListFooterComponent={() => (
-           <ReservationDepositInfo
-             participants={depositInfo.participants}
-             depositAmount={depositInfo.depositAmount}
-             timeLimit={depositInfo.timeLimit}
-             onDeposit={handleDeposit}
-           />
-         )}
+                 ListFooterComponent={() => {
+          // 🔍 디버깅: 현재 상태 확인
+          console.log('🔍 [ListFooterComponent 렌더링 조건 확인]', {
+            showPaymentGuide,
+            paymentGuideData: !!paymentGuideData,
+            paymentGuideDataContent: paymentGuideData,
+            paymentStatusData: paymentStatusData?.data,
+            user: user?.id
+          });
+          
+          // 🧪 테스트용: 임시 PaymentGuideData 생성 (테스트 후 제거 예정)
+          const testPaymentGuideData = {
+            type: 'payment_guide' as const,
+            title: '예약금 안내',
+            store: {
+              name: '테스트 스포츠바',
+              address: '강남구 어딘가'
+            },
+            payment: {
+              per_person: 5000,
+              total_amount: 20000,
+              participants_count: 4
+            },
+            account: {
+              bank_name: '국민은행',
+              account_number: '123-456-789012',
+              account_holder: '테스트사장'
+            },
+            deadline: {
+              date: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+              display: '30분 후 마감'
+            },
+            progress: {
+              completed: 1,
+              total: 4,
+              percentage: 25
+            },
+            participants: [
+              {
+                user_id: user?.id || 'test1',
+                user_name: '나',
+                status: 'pending' as const
+              },
+              {
+                user_id: 'test2',
+                user_name: '김철수',
+                status: 'completed' as const,
+                completed_at: new Date().toISOString()
+              },
+              {
+                user_id: 'test3',
+                user_name: '이영희',
+                status: 'pending' as const
+              },
+              {
+                user_id: 'test4',
+                user_name: '박민수',
+                status: 'pending' as const
+              }
+            ],
+            payment_id: 'test_payment_123',
+            started_by: 'test2',
+            started_at: new Date().toISOString(),
+            is_completed: false
+          };
+
+          // 🧪 테스트용: 항상 PaymentGuideUI 표시 (실제 데이터가 없을 때)
+          if (!showPaymentGuide && !paymentGuideData) {
+            console.log('🧪 테스트용 PaymentGuideUI 표시');
+            return (
+              <PaymentGuideUI
+                data={testPaymentGuideData}
+                currentUserId={user?.id}
+                onPaymentComplete={handleCompletePayment}
+                isLoading={paymentLoading}
+              />
+            );
+          }
+          
+          // 🆕 구조화된 예약금 안내 데이터가 있으면 PaymentGuideUI 사용
+          if (showPaymentGuide && paymentGuideData) {
+            console.log('✅ PaymentGuideUI 렌더링 중');
+            return (
+              <PaymentGuideUI
+                data={paymentGuideData}
+                currentUserId={user?.id}
+                onPaymentComplete={handleCompletePayment}
+                isLoading={paymentLoading}
+              />
+            );
+          }
+          
+          // 🆕 기존 정산 상태 API로 표시 (구조화된 데이터가 없는 경우)
+          const shouldShowPaymentUI = paymentStatusData?.data.payment_status && 
+                                    paymentStatusData.data.payment_status !== 'not_started';
+          
+          console.log('🔍 기존 PaymentUI 조건:', {
+            shouldShowPaymentUI,
+            paymentStatus: paymentStatusData?.data.payment_status
+          });
+          
+          if (shouldShowPaymentUI) {
+            console.log('✅ ReservationDepositInfo 렌더링 중');
+            return (
+              <ReservationDepositInfo
+                participants={depositInfo.participants}
+                depositAmount={depositInfo.depositAmount}
+                timeLimit={depositInfo.timeLimit}
+                onDeposit={handleDeposit}
+                // 🆕 정산 관련 props
+                paymentMode={true}
+                paymentId={paymentStatusData?.data.payment_id}
+                storeName={paymentStatusData?.data.store_info?.store_name}
+                storeAccount={paymentStatusData?.data.store_info ? {
+                  bank_name: paymentStatusData.data.store_info.bank_name,
+                  account_number: paymentStatusData.data.store_info.account_number,
+                  account_holder: paymentStatusData.data.store_info.account_holder
+                } : undefined}
+                paymentParticipants={paymentStatusData?.data.participants}
+                currentUserId={user?.id}
+                isHost={isCurrentUserHost}
+                deadline={paymentStatusData?.data.payment_deadline}
+                onPaymentComplete={handleCompletePayment}
+                onPaymentStart={undefined}
+                isLoading={paymentLoading}
+              />
+            );
+          }
+          
+          console.log('❌ 예약금 UI 표시 안함 - 조건 미충족');
+          return null; // 정산이 시작되지 않았으면 UI 숨김
+        }}
          refreshControl={
            <RefreshControl
              refreshing={isRefreshing}
@@ -1454,4 +1665,4 @@ export default function ChatRoomScreen() {
       />
     </KeyboardAvoidingView>
   );
-} 
+}

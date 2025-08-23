@@ -1,3 +1,5 @@
+import type { SelectedStoreDTO } from './stores';
+
 // 채팅방 목록 조회 응답
 export interface ChatRoomListResponseDTO {
   success: boolean;
@@ -17,11 +19,36 @@ export interface ChatRoomDTO {
   user_role?: string; // 사용자 역할 ("방장" 또는 "참가자")
   reservation_id?: number; // 연결된 모임 ID
   reservation_status?: number; // 모임 상태 (0: 모집중, 1: 마감, 2: 진행중, 3: 완료)
+  // 🆕 서버에서 새로 추가된 모집 상태 정보들
+  status_message?: string; // "모집 중", "모집 마감" 등
+  is_recruitment_closed?: boolean; // 모집 마감 여부
+  participant_info?: string; // "5/8" 형태의 참여자 정보
+  reservation_participant_cnt?: number; // 현재 참여자 수
+  reservation_max_participant_cnt?: number; // 최대 참여자 수
+  match_title?: string; // 경기 제목
+  reservation_start_time?: string; // 모임 시작 시간
+  last_message_sender_id?: string; // 마지막 메시지 발신자 ID
 }
 
 // 채팅방 입장/생성 요청
 export interface EnterChatRoomRequestDTO {
   group_id: number;
+}
+
+// 🆕 채팅방 정보 (서버에서 추가)
+export interface ChatRoomInfoDTO {
+  reservation_status: number; // 0: 모집중, 1: 마감, 2: 진행중, 3: 완료
+  status_message: string; // "모집 중", "모집 마감" 등
+  is_recruitment_closed: boolean; // 모집 마감 여부
+  participant_count: number; // 현재 참여자 수
+  max_participant_count: number; // 최대 참여자 수
+  participant_info: string; // "3/8" 형태
+  match_title: string; // 경기 제목
+  reservation_start_time: string; // 모임 시작 시간
+  host_id: string; // 방장 ID
+  is_host: boolean; // 현재 사용자가 방장인지
+  // 🆕 선택된 가게 정보
+  selected_store?: SelectedStoreDTO | null; // 선택된 가게 정보
 }
 
 // 채팅방 입장/생성 응답
@@ -30,6 +57,8 @@ export interface EnterChatRoomResponseDTO {
   data: {
     reservation_id: number;
     message: string;
+    // 🆕 서버에서 추가된 채팅방 정보
+    room_info?: ChatRoomInfoDTO;
   };
 }
 
@@ -90,7 +119,7 @@ export interface NewMessageDTO {
   room_id: number;
   read_count?: number; // 선택적 필드로 추가
   // 시스템 메시지 관련 필드
-  message_type?: 'system_join' | 'system_leave' | 'system_kick' | 'store_share';
+  message_type?: 'system_join' | 'system_leave' | 'system_kick' | 'store_share' | 'system_payment_start' | 'system_payment_update' | 'system_payment_completed';
   user_name?: string;
   user_id?: string;
   kicked_by?: string;
@@ -100,6 +129,9 @@ export interface NewMessageDTO {
   store_address?: string;
   store_rating?: number;
   store_thumbnail?: string;
+  // 🆕 정산 관련 필드
+  payment_id?: string;
+  payment_guide_data?: any; // PaymentGuideData 타입을 사용하면 순환 참조 문제가 발생할 수 있으므로 any 사용
 }
 
 // 에러 응답
@@ -139,6 +171,8 @@ export interface ChatParticipantsResponseDTO {
     room_id: number;
     total_participants: number;
     participants: ParticipantDTO[];
+    // 🆕 서버에서 추가된 채팅방 정보
+    room_info?: ChatRoomInfoDTO;
   };
 }
 

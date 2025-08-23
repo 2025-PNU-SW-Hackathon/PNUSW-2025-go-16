@@ -8,16 +8,7 @@ interface StoreCardProps {
 }
 
 export default function StoreCard({ store, onPress }: StoreCardProps) {
-  // 썸네일 없음 로그
-  React.useEffect(() => {
-    if (!store.store_thumbnail) {
-      console.log('⚠️ [StoreCard] 썸네일 없음:', {
-        storeId: store.store_id,
-        storeName: store.store_name,
-        thumbnail: store.store_thumbnail
-      });
-    }
-  }, [store.store_thumbnail, store.store_id, store.store_name]);
+  // 썸네일 로그 제거
 
   // 평점을 별점으로 변환
   const renderStars = (rating: number) => {
@@ -69,11 +60,7 @@ export default function StoreCard({ store, onPress }: StoreCardProps) {
 
   return (
     <TouchableOpacity
-      onPress={() => {
-        console.log('=== StoreCard TouchableOpacity 클릭됨 ===');
-        console.log('store:', store);
-        onPress(store);
-      }}
+      onPress={() => onPress(store)}
       className="mb-4 bg-white rounded-lg shadow-sm overflow-hidden"
       activeOpacity={0.8}
     >
@@ -84,21 +71,8 @@ export default function StoreCard({ store, onPress }: StoreCardProps) {
             source={{ uri: store.store_thumbnail }}
             className="w-full h-full"
             resizeMode="cover"
-            onLoad={() => {
-              console.log('✅ [StoreCard] 이미지 로드 성공:', {
-                storeId: store.store_id,
-                storeName: store.store_name,
-                thumbnailUrl: store.store_thumbnail
-              });
-            }}
-            onError={(error) => {
-              console.log('❌ [StoreCard] 이미지 로드 실패:', {
-                storeId: store.store_id,
-                storeName: store.store_name,
-                thumbnailUrl: store.store_thumbnail,
-                error: error.nativeEvent
-              });
-            }}
+            onLoad={() => {}}
+            onError={() => {}}
           />
         ) : (
           <View className="w-full h-full bg-gray-300 justify-center items-center">

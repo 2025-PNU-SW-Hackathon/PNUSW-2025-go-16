@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { ChatRoom } from '@/types/ChatTypes';
 import HostBadge from './HostBadge';
+import MeetingStatusBadge from './MeetingStatusBadge';
 
 interface ChatRoomItemProps {
   chatRoom: ChatRoom;
@@ -45,6 +46,35 @@ export default function ChatRoomItem({ chatRoom, onPress }: ChatRoomItemProps) {
             <Text className="text-xs text-gray-500 ml-2">
               {chatRoom.timestamp}
             </Text>
+          </View>
+          
+          {/* 🆕 모집 상태 및 참여자 정보 */}
+          <View className="flex-row items-center mb-2">
+            {/* 모집 상태 뱃지 */}
+            {(chatRoom as any).reservation_status !== undefined && (
+              <MeetingStatusBadge 
+                status={(chatRoom as any).reservation_status} 
+                size="small" 
+              />
+            )}
+            
+            {/* 참여자 정보 */}
+            {(chatRoom as any).participant_info && (
+              <View className="ml-2 px-2 py-1 bg-gray-100 rounded-full">
+                <Text className="text-xs font-medium text-gray-600">
+                  👥 {(chatRoom as any).participant_info}
+                </Text>
+              </View>
+            )}
+            
+            {/* 경기 제목 */}
+            {(chatRoom as any).match_title && (
+              <View className="ml-2 px-2 py-1 bg-blue-50 rounded-full">
+                <Text className="text-xs font-medium text-blue-600">
+                  ⚽ {(chatRoom as any).match_title}
+                </Text>
+              </View>
+            )}
           </View>
           
           <Text className="text-sm text-gray-600 mb-1">

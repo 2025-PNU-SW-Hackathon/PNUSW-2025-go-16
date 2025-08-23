@@ -19,6 +19,7 @@ console.log('Socket Manager 초기화 - SOCKET_URL:', SOCKET_URL);
 class SocketManager {
   private socket: any = null;
   private messageCallbacks: ((message: NewMessageDTO) => void)[] = [];
+  private messageUpdatedCallbacks: ((data: any) => void)[] = [];
   private errorCallbacks: ((error: any) => void)[] = [];
   private connectionStatusCallbacks: ((isConnected: boolean) => void)[] = [];
   private messageAckCallbacks: ((data: any) => void)[] = [];
@@ -30,6 +31,13 @@ class SocketManager {
   private hostTransferredCallbacks: ((data: HostTransferredEventDTO) => void)[] = [];
   // 🆕 참여자 강퇴 이벤트 콜백
   private participantKickedCallbacks: ((data: ParticipantKickedEventDTO) => void)[] = [];
+  // 🆕 가게 선택 이벤트 콜백
+  private storeSelectedCallbacks: ((data: any) => void)[] = [];
+  // 🆕 정산 관련 이벤트 콜백
+  private paymentStartedCallbacks: ((data: any) => void)[] = [];
+  private paymentCompletedCallbacks: ((data: any) => void)[] = [];
+  private paymentFullyCompletedCallbacks: ((data: any) => void)[] = [];
+  private paymentGuideUpdatedCallbacks: ((data: any) => void)[] = [];
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectInterval: any = null;
@@ -39,11 +47,11 @@ class SocketManager {
   connect() {
     const { token, user } = useAuthStore.getState();
     
-    console.log('=== 소켓 연결 시도 ===');
-    console.log('토큰 존재 여부:', !!token);
-    console.log('사용자 정보:', user);
-    console.log('사용자 ID:', user?.id);
-    console.log('로그인 상태:', useAuthStore.getState().isLoggedIn);
+    // console.log('=== 소켓 연결 시도 ===');
+    // console.log('토큰 존재 여부:', !!token);
+    // console.log('사용자 정보:', user);
+    // console.log('사용자 ID:', user?.id);
+    // console.log('로그인 상태:', useAuthStore.getState().isLoggedIn);
     
     if (!token) {
       console.error('토큰이 없어서 소켓 연결을 할 수 없습니다.');
@@ -60,15 +68,15 @@ class SocketManager {
       return;
     }
 
-    // 🚀 이미 연결된 경우 재연결하지 않고 기존 연결 사용
-    if (this.socket?.connected) {
-      console.log('✅ 이미 소켓이 연결되어 있습니다. 기존 연결을 재사용합니다.');
-      return;
-    }
-
     // 연결 중인 경우 기다리기
     if (this.socket && this.socket.connecting) {
       console.log('⏳ 소켓 연결 중입니다. 잠시 기다려주세요.');
+      return;
+    }
+
+    // 🆕 이미 연결된 경우 재연결하지 않고 기존 연결 사용
+    if (this.socket?.connected) {
+      console.log('✅ 이미 소켓이 연결되어 있습니다. 기존 연결을 재사용합니다.');
       return;
     }
 
@@ -113,9 +121,12 @@ class SocketManager {
       // 🔄 연결 상태 콜백 호출
       this.connectionStatusCallbacks.forEach(callback => callback(false));
       
-      // 수동 해제가 아닌 경우에만 재연결 시도
-      if (reason !== 'io client disconnect') {
+      // 🆕 수동 해제가 아닌 경우에만 재연결 시도
+      if (reason !== 'io client disconnect' && reason !== 'io server disconnect') {
+        console.log('🔄 자동 재연결 시도 시작');
         this.attemptReconnect();
+      } else {
+        console.log('🛑 수동 해제로 인한 연결 해제 - 재연결하지 않음');
       }
     });
 
@@ -125,15 +136,21 @@ class SocketManager {
     });
 
     this.socket.on('newMessage', (message: NewMessageDTO) => {
-      console.log('📨 === 새 메시지 수신 ===');
-      console.log('메시지 데이터:', message);
-      console.log('콜백 개수:', this.messageCallbacks.length);
+      // console.log('📨 === 새 메시지 수신 ===');
+      // console.log('메시지 데이터:', message);
+      // console.log('콜백 개수:', this.messageCallbacks.length);
       this.messageCallbacks.forEach(callback => callback(message));
+    });
+
+    // 🆕 메시지 업데이트 이벤트
+    this.socket.on('messageUpdated', (data: any) => {
+      console.log('📝 [소켓] 메시지 업데이트 이벤트 수신:', data);
+      this.messageUpdatedCallbacks.forEach(callback => callback(data));
     });
 
     // 메시지 전송 확인 이벤트 추가
     this.socket.on('messageAck', (data: any) => {
-      console.log('✅ 메시지 전송 확인:', data);
+      // console.log('✅ 메시지 전송 확인:', data);
       this.messageAckCallbacks.forEach(callback => callback(data));
     });
 
@@ -167,6 +184,48 @@ class SocketManager {
       this.participantKickedCallbacks.forEach(callback => callback(data));
     });
 
+    // 🆕 가게 선택 이벤트
+    this.socket.on('storeSelected', (data: any) => {
+      console.log('🏪 [소켓] 가게 선택 알림 수신 시작');
+      console.log('🏪 [소켓] 이벤트 데이터:', data);
+      console.log('🏪 [소켓] 등록된 콜백 수:', this.storeSelectedCallbacks.length);
+      console.log('🏪 [소켓] 콜백 실행 시작');
+      this.storeSelectedCallbacks.forEach((callback, index) => {
+        console.log(`🏪 [소켓] 콜백 ${index + 1} 실행`);
+        try {
+          callback(data);
+          console.log(`🏪 [소켓] 콜백 ${index + 1} 실행 완료`);
+        } catch (error) {
+          console.error(`🏪 [소켓] 콜백 ${index + 1} 실행 실패:`, error);
+        }
+      });
+      console.log('🏪 [소켓] 가게 선택 알림 처리 완료');
+    });
+
+    // 🆕 정산 시작 이벤트
+    this.socket.on('paymentStarted', (data: any) => {
+      console.log('💰 [소켓] 정산 시작 알림 수신:', data);
+      this.paymentStartedCallbacks.forEach(callback => callback(data));
+    });
+
+    // 🆕 개별 입금 완료 이벤트
+    this.socket.on('paymentCompleted', (data: any) => {
+      console.log('💳 [소켓] 입금 완료 알림 수신:', data);
+      this.paymentCompletedCallbacks.forEach(callback => callback(data));
+    });
+
+    // 🆕 전체 정산 완료 이벤트
+    this.socket.on('paymentFullyCompleted', (data: any) => {
+      console.log('🎉 [소켓] 전체 정산 완료 알림 수신:', data);
+      this.paymentFullyCompletedCallbacks.forEach(callback => callback(data));
+    });
+
+    // 🆕 예약금 안내 업데이트 이벤트
+    this.socket.on('paymentGuideUpdated', (data: any) => {
+      console.log('🔄 [소켓] 예약금 안내 업데이트 수신:', data);
+      this.paymentGuideUpdatedCallbacks.forEach(callback => callback(data));
+    });
+
     this.socket.on('error', (error: any) => {
       console.error('⚠️ === 소켓 에러 ===');
       console.error('에러 내용:', error);
@@ -183,14 +242,30 @@ class SocketManager {
       return;
     }
 
-    if (this.reconnectInterval) return; // 이미 재연결 시도 중
+    if (this.reconnectInterval) {
+      console.log('⏳ 이미 재연결 시도 중입니다.');
+      return; // 이미 재연결 시도 중
+    }
+
+    // 🆕 이미 연결된 경우 재연결하지 않음
+    if (this.socket?.connected) {
+      console.log('✅ 이미 연결되어 있어서 재연결하지 않습니다.');
+      this.reconnectAttempts = 0; // 카운터 리셋
+      return;
+    }
 
     this.reconnectAttempts++;
     console.log(`🔄 소켓 재연결 시도 ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
 
     this.reconnectInterval = setTimeout(() => {
       this.reconnectInterval = null;
-      this.connect();
+      // 🆕 재연결 시도 전에 다시 한번 연결 상태 확인
+      if (!this.socket?.connected) {
+        this.connect();
+      } else {
+        console.log('✅ 재연결 시도 중 이미 연결됨');
+        this.reconnectAttempts = 0; // 카운터 리셋
+      }
     }, 2000 * this.reconnectAttempts); // 지수적 백오프
   }
 
@@ -271,10 +346,10 @@ class SocketManager {
 
   // 메시지 전송
   sendMessage(data: SocketMessageDTO) {
-    console.log('🚀 === 메시지 전송 시도 ===');
-    console.log('소켓 존재 여부:', !!this.socket);
-    console.log('소켓 연결 상태:', this.socket?.connected);
-    console.log('소켓 ID:', this.socket?.id);
+    // console.log('🚀 === 메시지 전송 시도 ===');
+    // console.log('소켓 존재 여부:', !!this.socket);
+    // console.log('소켓 연결 상태:', this.socket?.connected);
+    // console.log('소켓 ID:', this.socket?.id);
     
     if (!this.socket?.connected) {
       console.error('❌ 소켓이 연결되지 않았습니다.');
@@ -289,7 +364,7 @@ class SocketManager {
       userType: user?.userType
     });
 
-    console.log('📤 전송할 메시지 데이터:', data);
+    // console.log('📤 전송할 메시지 데이터:', data);
 
     // 사용자 ID가 없으면 추가
     if (!data.sender_id && user?.id) {
@@ -307,7 +382,7 @@ class SocketManager {
 
     try {
       this.socket.emit('sendMessage', data);
-      console.log('✅ 메시지 전송 emit 완료');
+      // console.log('✅ 메시지 전송 emit 완료');
     } catch (error) {
       console.error('❌ 메시지 전송 중 에러:', error);
     }
@@ -316,6 +391,11 @@ class SocketManager {
   // 새 메시지 콜백 등록
   onNewMessage(callback: (message: NewMessageDTO) => void) {
     this.messageCallbacks.push(callback);
+  }
+
+  // 🆕 메시지 업데이트 콜백 등록
+  onMessageUpdated(callback: (data: any) => void) {
+    this.messageUpdatedCallbacks.push(callback);
   }
 
   // 에러 콜백 등록
@@ -360,6 +440,33 @@ class SocketManager {
     this.participantKickedCallbacks.push(callback);
   }
 
+  // 🆕 가게 선택 이벤트 콜백 등록
+  onStoreSelected(callback: (data: any) => void) {
+    console.log('🏪 [SocketManager] 가게 선택 콜백 등록');
+    this.storeSelectedCallbacks.push(callback);
+    console.log('🏪 [SocketManager] 가게 선택 콜백 등록 완료, 총 콜백 수:', this.storeSelectedCallbacks.length);
+  }
+
+  // 🆕 정산 시작 이벤트 콜백 등록
+  onPaymentStarted(callback: (data: any) => void) {
+    this.paymentStartedCallbacks.push(callback);
+  }
+
+  // 🆕 개별 입금 완료 이벤트 콜백 등록
+  onPaymentCompleted(callback: (data: any) => void) {
+    this.paymentCompletedCallbacks.push(callback);
+  }
+
+  // 🆕 전체 정산 완료 이벤트 콜백 등록
+  onPaymentFullyCompleted(callback: (data: any) => void) {
+    this.paymentFullyCompletedCallbacks.push(callback);
+  }
+
+  // 🆕 예약금 안내 업데이트 이벤트 콜백 등록
+  onPaymentGuideUpdated(callback: (data: any) => void) {
+    this.paymentGuideUpdatedCallbacks.push(callback);
+  }
+
   // 메시지 콜백 제거
   removeCallback(callback: (message: NewMessageDTO) => void) {
     const index = this.messageCallbacks.indexOf(callback);
@@ -397,6 +504,7 @@ class SocketManager {
     console.log('🧹 [SocketManager] 모든 룸 관련 콜백 정리');
     console.log('정리 전 콜백 수:', {
       messageCallbacks: this.messageCallbacks.length,
+      messageUpdatedCallbacks: this.messageUpdatedCallbacks.length,
       connectionStatusCallbacks: this.connectionStatusCallbacks.length,
       messageAckCallbacks: this.messageAckCallbacks.length,
       messageErrorCallbacks: this.messageErrorCallbacks.length
@@ -404,12 +512,14 @@ class SocketManager {
     
     // 모든 콜백 배열 초기화 (전역 리스너는 유지)
     this.messageCallbacks = [];
+    this.messageUpdatedCallbacks = [];
     this.messageAckCallbacks = [];
     this.messageErrorCallbacks = [];
     // connectionStatusCallbacks는 전역 상태이므로 유지
     
     console.log('정리 후 콜백 수:', {
       messageCallbacks: this.messageCallbacks.length,
+      messageUpdatedCallbacks: this.messageUpdatedCallbacks.length,
       messageAckCallbacks: this.messageAckCallbacks.length,
       messageErrorCallbacks: this.messageErrorCallbacks.length
     });
@@ -437,10 +547,14 @@ class SocketManager {
     console.log('🔗 소켓 연결 상태 체크:', {
       hasSocket: !!this.socket,
       connected,
-      socketId: this.socket?.id,
-      readyState: this.socket?.readyState
+      currentRoomId: this.currentRoomId
     });
     return connected;
+  }
+
+  // 🆕 연결 중인지 확인
+  isConnecting(): boolean {
+    return this.socket?.connecting || false;
   }
 
   // 소켓 상태 디버그 정보
