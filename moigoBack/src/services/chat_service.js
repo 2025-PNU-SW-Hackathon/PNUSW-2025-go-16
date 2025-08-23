@@ -1946,7 +1946,7 @@ exports.getChatRoomDetail = async (user_id, room_id) => {
     const [reservationInfo] = await conn.query(
       `SELECT 
         rt.reservation_id,
-        rt.name,
+        rt.reservation_match as name,
         rt.user_id as host_id,
         rt.reservation_status,
         rt.reservation_participant_cnt,
