@@ -1353,24 +1353,46 @@ exports.startPayment = async (user_id, room_id, payment_per_person) => {
       );
       const userName = userInfo.length > 0 ? userInfo[0].user_name : '방장';
       
-      // 예약금 안내 시스템 메시지 생성
-      const paymentSystemMessage = `💰 정산이 시작되었습니다!
+      // 🆕 구조화된 예약금 안내 데이터 생성 (클라이언트 UI용)
+      const paymentGuideData = {
+        type: 'payment_guide',
+        title: '예약금 안내',
+        store: {
+          name: store.store_name,
+          address: null // 필요시 추가
+        },
+        payment: {
+          per_person: finalPaymentAmount,
+          total_amount: totalAmount,
+          participants_count: totalParticipants
+        },
+        account: {
+          bank_name: store.bank_name,
+          account_number: store.account_number,
+          account_holder: store.account_holder
+        },
+        deadline: {
+          date: paymentDeadline.toISOString(),
+          display: paymentDeadline.toLocaleDateString('ko-KR') + ' ' + paymentDeadline.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+        },
+        progress: {
+          completed: 0,
+          total: totalParticipants,
+          percentage: 0
+        },
+        participants: participants.map(p => ({
+          user_id: p.user_id,
+          user_name: p.user_name,
+          status: 'pending' // 'pending' | 'completed'
+        })),
+        payment_id: paymentId,
+        started_by: user_id,
+        started_at: new Date().toISOString()
+      };
 
-📍 ${store.store_name}
-💳 1인당 예약금: ${finalPaymentAmount.toLocaleString()}원
-💰 총 금액: ${totalAmount.toLocaleString()}원
-👥 참여자: ${totalParticipants}명
-
-🏦 입금 계좌
-은행: ${store.bank_name}
-계좌번호: ${store.account_number}
-예금주: ${store.account_holder}
-
-⏰ 마감일: ${paymentDeadline.toLocaleDateString('ko-KR')} ${paymentDeadline.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
-
-📊 입금 현황: 0/${totalParticipants}명 완료`;
-
-      // 시스템 메시지 저장
+      // 시스템 메시지로 저장 (간단한 텍스트 + 구조화된 데이터)
+      const simpleMessage = `💰 정산이 시작되었습니다 (${finalPaymentAmount.toLocaleString()}원)`;
+      
       const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages WHERE chat_room_id = ?', [room_id]);
       const nextMessageId = (maxIdResult[0]?.maxId || 0) + 1;
       
@@ -1378,7 +1400,7 @@ exports.startPayment = async (user_id, room_id, payment_per_person) => {
         `INSERT INTO chat_messages 
          (message_id, chat_room_id, sender_id, message, created_at)
          VALUES (?, ?, ?, ?, NOW())`,
-        [nextMessageId, room_id, 'system', paymentSystemMessage]
+        [nextMessageId, room_id, 'system', simpleMessage]
       );
 
       console.log('💰 [PAYMENT START] 예약금 안내 시스템 메시지 저장 완료:', {
@@ -1387,37 +1409,31 @@ exports.startPayment = async (user_id, room_id, payment_per_person) => {
         payment_id: paymentId
       });
 
-      // 시스템 메시지 데이터 구성
+      // 🆕 시스템 메시지 데이터 구성 (간단한 메시지 + 구조화된 데이터)
       const savedPaymentMessage = {
         message_id: nextMessageId,
         chat_room_id: room_id,
         sender_id: 'system',
-        message: paymentSystemMessage,
+        message: simpleMessage,
         created_at: new Date(),
         message_type: 'system_payment_start',
         payment_id: paymentId,
         user_name: userName,
-        user_id: user_id
+        user_id: user_id,
+        payment_guide_data: paymentGuideData // 🆕 구조화된 데이터 추가
       };
 
       // 8. 실시간 소켓 알림 전송
-      // 정산 시작 이벤트
+      // 🆕 정산 시작 이벤트 (구조화된 데이터 포함)
       io.to(room_id.toString()).emit('paymentStarted', {
         room_id: room_id,
         payment_id: paymentId,
         started_by: user_id,
         started_by_name: userName,
-        payment_per_person: finalPaymentAmount,
-        total_amount: totalAmount,
-        payment_deadline: paymentDeadline.toISOString(),
-        store_account: {
-          bank_name: store.bank_name,
-          account_number: store.account_number,
-          account_holder: store.account_holder
-        }
+        payment_guide_data: paymentGuideData // 🆕 클라이언트 UI용 구조화된 데이터
       });
 
-      // 시스템 메시지 브로드캐스트 (채팅방에 표시)
+      // 🆕 시스템 메시지 브로드캐스트 (구조화된 데이터 포함)
       io.to(room_id.toString()).emit('newMessage', savedPaymentMessage);
 
       console.log('✅ [PAYMENT START] 소켓 이벤트 발송 완료:', {
@@ -1555,8 +1571,8 @@ exports.completePayment = async (user_id, room_id, payment_method) => {
       const { getIO } = require('../config/socket_hub');
       const io = getIO();
       
-      // 기존 예약금 안내 시스템 메시지 조회 및 업데이트
-      await updatePaymentSystemMessage(conn, room_id, paymentId, completedPayments, totalParticipants, isFullyCompleted);
+      // 🆕 예약금 안내 데이터 업데이트 (구조화된 데이터)
+      await updatePaymentGuideData(conn, room_id, paymentId, completedPayments, totalParticipants, isFullyCompleted);
       
       // 개별 입금 완료 알림
       io.to(room_id.toString()).emit('paymentCompleted', {
@@ -2226,74 +2242,105 @@ exports.shareStore = async (user_id, room_id, store_id) => {
   }
 };
 
-// 💰 예약금 안내 시스템 메시지 업데이트 헬퍼 함수
-const updatePaymentSystemMessage = async (conn, room_id, payment_id, completed_payments, total_participants, is_fully_completed) => {
+// 🆕 예약금 안내 데이터 업데이트 헬퍼 함수 (구조화된 데이터 업데이트)
+const updatePaymentGuideData = async (conn, room_id, payment_id, completed_payments, total_participants, is_fully_completed) => {
   try {
-    console.log('🔄 [PAYMENT MESSAGE UPDATE] 예약금 안내 메시지 업데이트 시작:', {
+    console.log('🔄 [PAYMENT GUIDE UPDATE] 예약금 안내 데이터 업데이트 시작:', {
       room_id: room_id,
       payment_id: payment_id,
       completed_payments: completed_payments,
       total_participants: total_participants
     });
 
-    // 정산 시작 시스템 메시지 찾기 (payment_id와 연관된 메시지)
-    const [existingMessage] = await conn.query(
-      `SELECT message_id, message FROM chat_messages 
-       WHERE chat_room_id = ? AND sender_id = 'system' AND message LIKE '%정산이 시작되었습니다!%'
-       ORDER BY message_id DESC LIMIT 1`,
-      [room_id]
+    // 현재 정산 세션 및 참여자 정보 조회
+    const [sessionInfo] = await conn.query(
+      `SELECT ps.*, s.store_name, s.bank_name, s.account_number, s.account_holder
+       FROM payment_sessions ps
+       JOIN store_table s ON ps.store_id = s.store_id
+       WHERE ps.payment_id = ?`,
+      [payment_id]
     );
 
-    if (existingMessage.length > 0) {
-      const messageId = existingMessage[0].message_id;
-      const originalMessage = existingMessage[0].message;
-      
-      // 입금 현황 부분만 업데이트 (정규식으로 교체)
-      const updatedMessage = originalMessage.replace(
-        /📊 입금 현황: \d+\/\d+명 완료/,
-        `📊 입금 현황: ${completed_payments}/${total_participants}명 완료`
-      );
-
-      // 메시지 업데이트
-      await conn.query(
-        'UPDATE chat_messages SET message = ?, created_at = NOW() WHERE message_id = ?',
-        [updatedMessage, messageId]
-      );
-
-      // 실시간으로 메시지 업데이트 알림
-      const { getIO } = require('../config/socket_hub');
-      const io = getIO();
-      
-      const updatedSystemMessage = {
-        message_id: messageId,
-        chat_room_id: room_id,
-        sender_id: 'system',
-        message: updatedMessage,
-        created_at: new Date(),
-        message_type: 'system_payment_update',
-        payment_id: payment_id,
-        updated: true, // 업데이트된 메시지임을 표시
-        payment_progress: {
-          completed: completed_payments,
-          total: total_participants,
-          is_fully_completed: is_fully_completed
-        }
-      };
-
-      // 메시지 업데이트 이벤트 발송
-      io.to(room_id.toString()).emit('messageUpdated', updatedSystemMessage);
-
-      console.log('✅ [PAYMENT MESSAGE UPDATE] 예약금 안내 메시지 업데이트 완료:', {
-        message_id: messageId,
-        room_id: room_id,
-        progress: `${completed_payments}/${total_participants}`
-      });
-    } else {
-      console.log('⚠️ [PAYMENT MESSAGE UPDATE] 기존 예약금 안내 메시지를 찾을 수 없음');
+    if (sessionInfo.length === 0) {
+      console.log('⚠️ [PAYMENT GUIDE UPDATE] 정산 세션 정보를 찾을 수 없음');
+      return;
     }
 
+    const session = sessionInfo[0];
+
+    // 참여자별 입금 상태 조회
+    const [participants] = await conn.query(
+      `SELECT user_id, user_name, payment_status, paid_at
+       FROM payment_records
+       WHERE payment_id = ?
+       ORDER BY user_name ASC`,
+      [payment_id]
+    );
+
+    // 🆕 업데이트된 구조화된 데이터 생성
+    const updatedPaymentGuideData = {
+      type: 'payment_guide',
+      title: '예약금 안내',
+      store: {
+        name: session.store_name,
+        address: null
+      },
+      payment: {
+        per_person: session.payment_per_person,
+        total_amount: session.total_amount,
+        participants_count: session.total_participants
+      },
+      account: {
+        bank_name: session.bank_name,
+        account_number: session.account_number,
+        account_holder: session.account_holder
+      },
+      deadline: {
+        date: session.payment_deadline ? new Date(session.payment_deadline).toISOString() : null,
+        display: session.payment_deadline ? new Date(session.payment_deadline).toLocaleDateString('ko-KR') + ' ' + new Date(session.payment_deadline).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : null
+      },
+      progress: {
+        completed: completed_payments,
+        total: total_participants,
+        percentage: Math.round((completed_payments / total_participants) * 100)
+      },
+      participants: participants.map(p => ({
+        user_id: p.user_id,
+        user_name: p.user_name,
+        status: p.payment_status, // 'pending' | 'completed'
+        completed_at: p.paid_at ? new Date(p.paid_at).toISOString() : null
+      })),
+      payment_id: payment_id,
+      started_by: session.started_by,
+      started_at: session.started_at ? new Date(session.started_at).toISOString() : null,
+      is_completed: is_fully_completed,
+      updated_at: new Date().toISOString()
+    };
+
+    // 🆕 실시간 예약금 안내 업데이트 이벤트 발송
+    const { getIO } = require('../config/socket_hub');
+    const io = getIO();
+    
+    // 예약금 안내 업데이트 이벤트 (클라이언트 UI 업데이트용)
+    io.to(room_id.toString()).emit('paymentGuideUpdated', {
+      room_id: room_id,
+      payment_id: payment_id,
+      payment_guide_data: updatedPaymentGuideData,
+      update_type: 'progress_update',
+      completed_payments: completed_payments,
+      total_participants: total_participants,
+      is_fully_completed: is_fully_completed
+    });
+
+    console.log('✅ [PAYMENT GUIDE UPDATE] 예약금 안내 데이터 업데이트 완료:', {
+      room_id: room_id,
+      payment_id: payment_id,
+      progress: `${completed_payments}/${total_participants}`,
+      percentage: Math.round((completed_payments / total_participants) * 100)
+    });
+
   } catch (error) {
-    console.error('❌ [PAYMENT MESSAGE UPDATE] 메시지 업데이트 실패:', error);
+    console.error('❌ [PAYMENT GUIDE UPDATE] 데이터 업데이트 실패:', error);
     console.error('에러 상세:', error.stack);
   }
 };
