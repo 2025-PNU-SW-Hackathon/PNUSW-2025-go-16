@@ -321,3 +321,78 @@ exports.selectStore = async (req, res, next) => {
     next(err);
   }
 };
+
+// 💰 채팅방 정산 시작 (방장 전용)
+exports.startPayment = async (req, res, next) => {
+  try {
+    const user_id = req.user.user_id;
+    const { roomId } = req.params;
+    const { payment_per_person } = req.body;
+
+    console.log('💰 [API] 정산 시작 요청:', {
+      user_id,
+      roomId,
+      payment_per_person
+    });
+
+    const result = await chatService.startPayment(user_id, roomId, payment_per_person);
+
+    res.status(200).json({
+      success: true,
+      message: '정산이 시작되었습니다.',
+      data: result
+    });
+  } catch (err) {
+    console.error('❌ [API] 정산 시작 중 오류:', err);
+    next(err);
+  }
+};
+
+// 💰 개별 입금 완료 처리
+exports.completePayment = async (req, res, next) => {
+  try {
+    const user_id = req.user.user_id;
+    const { roomId } = req.params;
+    const { payment_method } = req.body;
+
+    console.log('💰 [API] 입금 완료 요청:', {
+      user_id,
+      roomId,
+      payment_method
+    });
+
+    const result = await chatService.completePayment(user_id, roomId, payment_method);
+
+    res.status(200).json({
+      success: true,
+      message: '입금이 완료되었습니다.',
+      data: result
+    });
+  } catch (err) {
+    console.error('❌ [API] 입금 완료 중 오류:', err);
+    next(err);
+  }
+};
+
+// 💰 정산 상태 조회
+exports.getPaymentStatus = async (req, res, next) => {
+  try {
+    const user_id = req.user.user_id;
+    const { roomId } = req.params;
+
+    console.log('💰 [API] 정산 상태 조회 요청:', {
+      user_id,
+      roomId
+    });
+
+    const result = await chatService.getPaymentStatus(user_id, roomId);
+
+    res.status(200).json({
+      success: true,
+      data: result
+    });
+  } catch (err) {
+    console.error('❌ [API] 정산 상태 조회 중 오류:', err);
+    next(err);
+  }
+};

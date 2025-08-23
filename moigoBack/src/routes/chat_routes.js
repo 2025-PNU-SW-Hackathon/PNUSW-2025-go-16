@@ -42,6 +42,15 @@ router.post('/cleanup', authMiddleware, chatController.cleanupDuplicateData);
 // 🏪 채팅방 가게 선택 (PATCH /chats/:roomId/store)
 router.patch('/:roomId/store', authMiddleware, chatController.selectStore);
 
+// 💰 채팅방 정산 시작 (POST /chats/:roomId/payment/start)
+router.post('/:roomId/payment/start', authMiddleware, chatController.startPayment);
+
+// 💰 개별 입금 완료 (POST /chats/:roomId/payment/complete)
+router.post('/:roomId/payment/complete', authMiddleware, chatController.completePayment);
+
+// 💰 정산 상태 조회 (GET /chats/:roomId/payment)
+router.get('/:roomId/payment', authMiddleware, chatController.getPaymentStatus);
+
 /*
 // 💰 결제 관련 라우터
 // 방장의 예약금 결제 요청 (POST /chats/:roomId/payments/request)
