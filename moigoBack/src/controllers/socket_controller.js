@@ -33,11 +33,20 @@ module.exports = async function handleSocket(io) {
         
         // 클라이언트가 연결되면 socket이 필수
         // 채팅방에 참여
-        socket.on('joinRoom', async (room_id) => {
+        socket.on('joinRoom', async (data) => {
             try {
+                // 🐛 데이터 형태 확인 및 파싱
+                let room_id;
+                if (typeof data === 'object' && data !== null) {
+                    room_id = data.room_id || data.roomId || data.reservation_id;
+                } else {
+                    room_id = data;
+                }
+
                 console.log('🚪 채팅방 입장 요청:', {
                     user_id: socket.user.user_id,
-                    room_id: room_id
+                    received_data: data,
+                    parsed_room_id: room_id
                 });
 
                 // 입력 검증

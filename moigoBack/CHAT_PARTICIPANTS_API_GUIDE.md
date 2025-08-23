@@ -488,3 +488,4 @@ async function getChatParticipantsWithErrorHandling(roomId: number) {
 6. ✅ **호환성**: 기존 API 유지하며 새 기능 추가
 
 **이제 완전한 참여자 관리 시스템을 사용하실 수 있습니다!** 🚀
+

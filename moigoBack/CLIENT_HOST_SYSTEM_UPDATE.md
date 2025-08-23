@@ -420,3 +420,4 @@ async function handleReservationAction(action: () => Promise<void>) {
 - [ ] 방장 표시 UI 구현
 - [ ] 방장 전용 메뉴 구현
 - [ ] 권한 없는 사용자에게 버튼 숨김 처리
+

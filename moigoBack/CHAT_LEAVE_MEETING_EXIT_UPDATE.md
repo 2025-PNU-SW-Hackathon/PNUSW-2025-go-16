@@ -454,3 +454,4 @@ async function leaveChatRoomWithErrorHandling(roomId: number) {
 **업데이트 완료일**: 2024년 1월 15일  
 **담당자**: 백엔드 개발팀  
 **버전**: v3.0 (완전 탈퇴 시스템)
+

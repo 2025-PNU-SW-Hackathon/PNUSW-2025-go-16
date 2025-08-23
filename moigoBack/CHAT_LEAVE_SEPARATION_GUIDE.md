@@ -295,3 +295,4 @@ function setupSocketListeners() {
 - ✅ 영구 나가기: HTTP API `DELETE /chats/:roomId/leave`
 
 클라이언트에서는 이 두 기능을 UI와 사용 시나리오에 맞게 적절히 구분해서 사용하시면 됩니다.
+
