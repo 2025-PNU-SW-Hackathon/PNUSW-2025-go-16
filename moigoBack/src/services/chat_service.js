@@ -23,6 +23,10 @@ exports.getChatRooms = async (user_id) => {
       rt.reservation_max_participant_cnt,                        -- 🆕 최대 참여자 수 추가
       rt.reservation_start_time,                                 -- 🆕 모임 시작 시간 추가
       rt.reservation_match,                                      -- 🆕 모임명 추가
+      rt.selected_store_id,                                      -- 🆕 선택된 가게 ID 추가
+      rt.selected_store_name,                                    -- 🆕 선택된 가게 이름 추가
+      rt.selected_at,                                            -- 🆕 가게 선택 시간 추가
+      rt.selected_by,                                            -- 🆕 가게 선택한 사용자 추가
       (
         SELECT cm.message
         FROM chat_messages cm
@@ -86,6 +90,14 @@ exports.getChatRooms = async (user_id) => {
       last_message_sender: row.last_message_sender_id
     });
 
+    // 🆕 선택된 가게 정보 처리
+    const selectedStore = row.selected_store_id ? {
+      store_id: row.selected_store_id,
+      store_name: row.selected_store_name,
+      selected_at: row.selected_at ? new Date(row.selected_at).toISOString() : null,
+      selected_by: row.selected_by
+    } : null;
+
     return {
       ...row,
       is_host: isHost,                                            // 🆕 방장 여부 플래그
@@ -94,7 +106,8 @@ exports.getChatRooms = async (user_id) => {
       is_recruitment_closed: row.reservation_status === 1,        // 🆕 모집 마감 여부
       participant_info: `${row.reservation_participant_cnt}/${row.reservation_max_participant_cnt}`, // 🆕 참여자 정보
       reservation_start_time: row.reservation_start_time ? new Date(row.reservation_start_time).toISOString() : null,  // 🆕 시작 시간 ISO 형식
-      match_title: row.reservation_match                          // 🆕 모임명
+      match_title: row.reservation_match,                         // 🆕 모임명
+      selected_store: selectedStore                               // 🆕 선택된 가게 정보
     };
   });
 
@@ -753,10 +766,11 @@ exports.enterChatRoom = async (user_id, reservation_id) => {
     console.log('소켓 전송 실패 (서버 시작 중일 수 있음):', error.message);
   }
 
-  // 🆕 모집 상태 정보 조회 후 반환
+  // 🆕 모집 상태 및 선택된 가게 정보 조회 후 반환
   const [reservationDetails] = await conn.query(
     `SELECT reservation_status, reservation_participant_cnt, reservation_max_participant_cnt, 
-            reservation_match, reservation_start_time, user_id as host_id
+            reservation_match, reservation_start_time, user_id as host_id,
+            selected_store_id, selected_store_name, selected_at, selected_by
      FROM reservation_table WHERE reservation_id = ?`,
     [reservation_id]
   );
@@ -768,6 +782,14 @@ exports.enterChatRoom = async (user_id, reservation_id) => {
     2: '진행 중',
     3: '완료'
   };
+
+  // 🆕 선택된 가게 정보 처리
+  const selectedStore = reservation.selected_store_id ? {
+    store_id: reservation.selected_store_id,
+    store_name: reservation.selected_store_name,
+    selected_at: reservation.selected_at ? new Date(reservation.selected_at).toISOString() : null,
+    selected_by: reservation.selected_by
+  } : null;
 
   return {
     reservation_id,
@@ -782,7 +804,8 @@ exports.enterChatRoom = async (user_id, reservation_id) => {
       match_title: reservation.reservation_match,
       reservation_start_time: reservation.reservation_start_time ? new Date(reservation.reservation_start_time).toISOString() : null,
       host_id: reservation.host_id,
-      is_host: reservation.host_id === user_id
+      is_host: reservation.host_id === user_id,
+      selected_store: selectedStore                                   // 🆕 선택된 가게 정보
     }
   };
 };
@@ -811,7 +834,8 @@ exports.getChatParticipants = async (user_id, room_id) => {
     // 2. 모임 정보 조회 (방장 확인용)
     const [reservationInfo] = await conn.query(
       `SELECT user_id as host_id, reservation_participant_cnt, reservation_max_participant_cnt,
-              reservation_status, reservation_match, reservation_start_time
+              reservation_status, reservation_match, reservation_start_time,
+              selected_store_id, selected_store_name, selected_at, selected_by
        FROM reservation_table WHERE reservation_id = ?`,
       [room_id]
     );
@@ -870,6 +894,14 @@ exports.getChatParticipants = async (user_id, room_id) => {
       3: '완료'
     };
 
+    // 🆕 선택된 가게 정보 처리
+    const selectedStore = reservationInfo[0].selected_store_id ? {
+      store_id: reservationInfo[0].selected_store_id,
+      store_name: reservationInfo[0].selected_store_name,
+      selected_at: reservationInfo[0].selected_at ? new Date(reservationInfo[0].selected_at).toISOString() : null,
+      selected_by: reservationInfo[0].selected_by
+    } : null;
+
     return {
       room_id: parseInt(room_id),
       total_participants: totalParticipants,
@@ -884,7 +916,8 @@ exports.getChatParticipants = async (user_id, room_id) => {
         match_title: reservationInfo[0].reservation_match,
         reservation_start_time: reservationInfo[0].reservation_start_time ? new Date(reservationInfo[0].reservation_start_time).toISOString() : null,
         host_id: reservationInfo[0].host_id,
-        is_host: reservationInfo[0].host_id === user_id
+        is_host: reservationInfo[0].host_id === user_id,
+        selected_store: selectedStore                                     // 🆕 선택된 가게 정보
       }
     };
     
@@ -892,6 +925,124 @@ exports.getChatParticipants = async (user_id, room_id) => {
     if (!error.statusCode) {
       error.statusCode = 500;
       error.message = '참여자 목록 조회 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
+
+// 🏪 가게 선택 관련 서비스
+
+// 방장이 채팅방의 최종 가게 선택
+exports.selectStore = async (user_id, room_id, store_id) => {
+  const conn = getConnection();
+  
+  try {
+    // 1. 방장 권한 확인
+    const [hostCheck] = await conn.query(
+      'SELECT user_id FROM reservation_table WHERE reservation_id = ?',
+      [room_id]
+    );
+    
+    if (!hostCheck.length || hostCheck[0].user_id !== user_id) {
+      const err = new Error("방장만 가게를 선택할 수 있습니다.");
+      err.statusCode = 403;
+      err.errorCode = "PERMISSION_DENIED";
+      throw err;
+    }
+    
+    let selectedStoreInfo = null;
+    
+    // 2. 가게 선택 해제인 경우 (store_id가 null)
+    if (!store_id) {
+      await conn.query(
+        `UPDATE reservation_table 
+         SET selected_store_id = NULL, selected_store_name = NULL, 
+             selected_at = NULL, selected_by = NULL
+         WHERE reservation_id = ?`,
+        [room_id]
+      );
+      
+      selectedStoreInfo = {
+        store_id: null,
+        store_name: null,
+        selected_at: null,
+        selected_by: null
+      };
+    } else {
+      // 3. 가게 정보 조회 (선택할 가게가 존재하는지 확인)
+      const [storeInfo] = await conn.query(
+        'SELECT store_id, store_name, store_address, store_rating, store_thumbnail FROM store_table WHERE store_id = ?',
+        [store_id]
+      );
+      
+      if (!storeInfo.length) {
+        const err = new Error("존재하지 않는 가게입니다.");
+        err.statusCode = 404;
+        err.errorCode = "STORE_NOT_FOUND";
+        throw err;
+      }
+      
+      const store = storeInfo[0];
+      const selectedAt = new Date();
+      
+      // 4. 가게 선택 정보 업데이트
+      await conn.query(
+        `UPDATE reservation_table 
+         SET selected_store_id = ?, selected_store_name = ?, 
+             selected_at = ?, selected_by = ?
+         WHERE reservation_id = ?`,
+        [store_id, store.store_name, selectedAt, user_id, room_id]
+      );
+      
+      selectedStoreInfo = {
+        store_id: store.store_id,
+        store_name: store.store_name,
+        store_address: store.store_address,
+        store_rating: store.store_rating,
+        store_thumbnail: store.store_thumbnail,
+        selected_at: selectedAt.toISOString(),
+        selected_by: user_id
+      };
+    }
+    
+    // 5. 실시간 소켓 알림 전송
+    try {
+      const { getIO } = require('../config/socket_hub');
+      const io = getIO();
+      
+      // 방장 이름 조회
+      const [userInfo] = await conn.query(
+        'SELECT user_name FROM user_table WHERE user_id = ?',
+        [user_id]
+      );
+      const userName = userInfo.length > 0 ? userInfo[0].user_name : '알 수 없는 사용자';
+      
+      io.to(room_id.toString()).emit('storeSelected', {
+        room_id: room_id,
+        store_id: selectedStoreInfo.store_id,
+        store_name: selectedStoreInfo.store_name,
+        store_address: selectedStoreInfo.store_address,
+        store_rating: selectedStoreInfo.store_rating,
+        store_thumbnail: selectedStoreInfo.store_thumbnail,
+        selected_by: user_id,
+        selected_by_name: userName,
+        selected_at: selectedStoreInfo.selected_at,
+        action: store_id ? 'selected' : 'deselected'
+      });
+    } catch (error) {
+      console.log('소켓 가게 선택 알림 실패:', error.message);
+    }
+    
+    return {
+      chat_room_id: parseInt(room_id),
+      selected_store: selectedStoreInfo,
+      message: store_id ? '가게가 선택되었습니다.' : '가게 선택이 해제되었습니다.'
+    };
+    
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '가게 선택 중 오류가 발생했습니다.';
     }
     throw error;
   }
