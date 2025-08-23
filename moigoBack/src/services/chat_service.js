@@ -1919,3 +1919,166 @@ exports.shareStore = async (user_id, room_id, store_id) => {
     throw error;
   }
 };
+
+// 🆕 채팅방 상세 정보 조회
+exports.getChatRoomDetail = async (user_id, room_id) => {
+  const conn = getConnection();
+  
+  try {
+    console.log('🔍 [CHAT DETAIL] 채팅방 상세 정보 조회 시작:', { user_id, room_id });
+
+    // 1. 채팅방 존재 여부 및 참여자 권한 확인
+    const [authCheck] = await conn.query(
+      `SELECT cru.reservation_id, cru.user_id, cru.is_kicked
+       FROM chat_room_users cru
+       JOIN reservation_table rt ON cru.reservation_id = rt.reservation_id
+       WHERE cru.reservation_id = ? AND cru.user_id = ? AND cru.is_kicked = 0`,
+      [room_id, user_id]
+    );
+
+    if (authCheck.length === 0) {
+      const err = new Error('채팅방을 찾을 수 없거나 접근 권한이 없습니다.');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    // 2. 채팅방 기본 정보 조회
+    const [reservationInfo] = await conn.query(
+      `SELECT 
+        rt.reservation_id,
+        rt.name,
+        rt.user_id as host_id,
+        rt.reservation_status,
+        rt.reservation_participant_cnt,
+        rt.reservation_max_participant_cnt,
+        rt.reservation_match,
+        rt.reservation_start_time,
+        rt.selected_store_id,
+        rt.selected_store_name,
+        rt.selected_at,
+        rt.selected_by,
+        rt.reservation_created_time
+       FROM reservation_table rt
+       WHERE rt.reservation_id = ?`,
+      [room_id]
+    );
+
+    if (reservationInfo.length === 0) {
+      const err = new Error('채팅방 정보를 찾을 수 없습니다.');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const reservation = reservationInfo[0];
+
+    // 3. 선택된 가게 상세 정보 조회 (가게가 선택된 경우)
+    let selectedStore = null;
+    if (reservation.selected_store_id) {
+      const [storeInfo] = await conn.query(
+        `SELECT 
+          store_id, store_name, store_address, store_rating, store_thumbnail,
+          payment_per_person, bank_name, account_number, account_holder
+         FROM store_table 
+         WHERE store_id = ?`,
+        [reservation.selected_store_id]
+      );
+
+      if (storeInfo.length > 0) {
+        const store = storeInfo[0];
+        selectedStore = {
+          store_id: store.store_id,
+          store_name: store.store_name,
+          store_address: store.store_address,
+          store_rating: store.store_rating,
+          store_thumbnail: store.store_thumbnail,
+          payment_per_person: store.payment_per_person,
+          selected_at: reservation.selected_at ? new Date(reservation.selected_at).toISOString() : null,
+          selected_by: reservation.selected_by
+        };
+
+        // 선택한 사용자 이름 조회
+        if (reservation.selected_by) {
+          const [selectedByUser] = await conn.query(
+            `SELECT user_name FROM user_table WHERE user_id = ?`,
+            [reservation.selected_by]
+          );
+          if (selectedByUser.length > 0) {
+            selectedStore.selected_by_name = selectedByUser[0].user_name;
+          }
+        }
+      }
+    }
+
+    // 4. 마지막 메시지 정보 조회
+    const [lastMessageInfo] = await conn.query(
+      `SELECT 
+        message_id, sender_id, message, created_at
+       FROM chat_messages 
+       WHERE chat_room_id = ?
+       ORDER BY message_id DESC 
+       LIMIT 1`,
+      [room_id]
+    );
+
+    // 5. 현재 사용자 정보 조회
+    const [currentUserInfo] = await conn.query(
+      `SELECT user_name FROM user_table WHERE user_id = ?`,
+      [user_id]
+    );
+
+    const currentUserName = currentUserInfo.length > 0 ? currentUserInfo[0].user_name : '알 수 없는 사용자';
+
+    // 6. 응답 데이터 구성
+    const isHost = reservation.host_id === user_id;
+    const statusMessages = {
+      0: '모집 중',
+      1: '모집 마감',
+      2: '진행 중',
+      3: '완료'
+    };
+
+    const responseData = {
+      chat_room_id: parseInt(room_id),
+      name: reservation.name,
+      host_id: reservation.host_id,
+      is_host: isHost,
+      user_role: isHost ? '방장' : '참가자',
+      
+      // 모집 상태 정보
+      reservation_status: reservation.reservation_status,
+      status_message: statusMessages[reservation.reservation_status],
+      is_recruitment_closed: reservation.reservation_status === 1,
+      participant_info: `${reservation.reservation_participant_cnt}/${reservation.reservation_max_participant_cnt}`,
+      reservation_participant_cnt: reservation.reservation_participant_cnt,
+      reservation_max_participant_cnt: reservation.reservation_max_participant_cnt,
+      match_title: reservation.reservation_match,
+      reservation_start_time: reservation.reservation_start_time ? new Date(reservation.reservation_start_time).toISOString() : null,
+      
+      // 선택된 가게 정보
+      selected_store: selectedStore,
+      
+      // 마지막 메시지 정보
+      last_message: lastMessageInfo.length > 0 ? lastMessageInfo[0].message : null,
+      last_message_time: lastMessageInfo.length > 0 ? new Date(lastMessageInfo[0].created_at).toISOString() : null,
+      last_message_sender_id: lastMessageInfo.length > 0 ? lastMessageInfo[0].sender_id : null
+    };
+
+    console.log('✅ [CHAT DETAIL] 채팅방 상세 정보 조회 완료:', {
+      chat_room_id: room_id,
+      user_id: user_id,
+      is_host: isHost,
+      reservation_status: reservation.reservation_status,
+      has_selected_store: !!selectedStore
+    });
+
+    return responseData;
+
+  } catch (error) {
+    console.error('❌ [CHAT DETAIL] 채팅방 상세 정보 조회 에러:', error);
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '채팅방 정보 조회 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};

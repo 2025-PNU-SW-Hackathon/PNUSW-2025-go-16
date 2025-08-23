@@ -15,6 +15,27 @@ exports.getChatRooms = async (req, res, next) => {
   }
 };
 
+// 🆕 채팅방 상세 정보 조회
+exports.getChatRoomDetail = async (req, res, next) => {
+  try {
+    const user_id = req.user.user_id;
+    const { roomId } = req.params;
+
+    console.log('🔍 [API] 채팅방 상세 정보 조회 요청:', { user_id, roomId, timestamp: new Date().toISOString() });
+
+    const data = await chatService.getChatRoomDetail(user_id, roomId);
+
+    res.status(200).json({ 
+      success: true, 
+      message: '채팅방 정보 조회 성공',
+      data 
+    });
+  } catch (err) {
+    console.error('❌ [API] 채팅방 상세 정보 조회 에러:', err);
+    next(err);
+  }
+};
+
 // 👋 채팅방 나가기 = 모임 완전 탈퇴
 exports.leaveChatRoom = async (req, res, next) => {
   try {

@@ -9,6 +9,9 @@ const authMiddleware = require('../middlewares/authMiddleware');
 // 채팅방 목록 조회 (GET /chats)
 router.get('/', authMiddleware, chatController.getChatRooms);
 
+// 🆕 채팅방 상세 정보 조회 (GET /chats/:roomId)
+router.get('/:roomId', authMiddleware, chatController.getChatRoomDetail);
+
 // 채팅방 나가기 (DELETE /chats/:roomId/leave)
 router.delete('/:roomId/leave', authMiddleware, chatController.leaveChatRoom);
 
