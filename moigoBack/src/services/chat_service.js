@@ -18,6 +18,11 @@ exports.getChatRooms = async (user_id) => {
       cr.reservation_id AS chat_room_id,                         
       cr.name AS name,
       rt.user_id AS host_id,
+      rt.reservation_status,                                     -- 🆕 모집 상태 추가
+      rt.reservation_participant_cnt,                            -- 🆕 현재 참여자 수 추가
+      rt.reservation_max_participant_cnt,                        -- 🆕 최대 참여자 수 추가
+      rt.reservation_start_time,                                 -- 🆕 모임 시작 시간 추가
+      rt.reservation_match,                                      -- 🆕 모임명 추가
       (
         SELECT cm.message
         FROM chat_messages cm
@@ -56,10 +61,18 @@ exports.getChatRooms = async (user_id) => {
 
   console.log('🔍 [DEBUG] 중복 제거 후 채팅방 수:', rows.length);
   
-  // 방장 여부 판별 로그 추가
+  // 방장 여부 판별 및 상태 정보 추가
   const processedRows = rows.map(row => {
     const isHost = row.host_id === user_id;
     const role = isHost ? '방장' : '참가자';
+    
+    // 🆕 모집 상태 메시지 생성
+    const statusMessages = {
+      0: '모집 중',
+      1: '모집 마감',
+      2: '진행 중',
+      3: '완료'
+    };
     
     console.log('📋 [DEBUG] 채팅방 정보:', {
       chat_room_id: row.chat_room_id,
@@ -67,13 +80,21 @@ exports.getChatRooms = async (user_id) => {
       host_id: row.host_id,
       current_user: user_id,
       role: role,
+      reservation_status: row.reservation_status,
+      status_message: statusMessages[row.reservation_status],
+      participant_count: `${row.reservation_participant_cnt}/${row.reservation_max_participant_cnt}`,
       last_message_sender: row.last_message_sender_id
     });
 
     return {
       ...row,
-      is_host: isHost,                    // 🆕 방장 여부 플래그
-      user_role: role                     // 🆕 사용자 역할
+      is_host: isHost,                                            // 🆕 방장 여부 플래그
+      user_role: role,                                            // 🆕 사용자 역할
+      status_message: statusMessages[row.reservation_status],     // 🆕 상태 메시지
+      is_recruitment_closed: row.reservation_status === 1,        // 🆕 모집 마감 여부
+      participant_info: `${row.reservation_participant_cnt}/${row.reservation_max_participant_cnt}`, // 🆕 참여자 정보
+      reservation_start_time: row.reservation_start_time ? new Date(row.reservation_start_time).toISOString() : null,  // 🆕 시작 시간 ISO 형식
+      match_title: row.reservation_match                          // 🆕 모임명
     };
   });
 
@@ -732,9 +753,37 @@ exports.enterChatRoom = async (user_id, reservation_id) => {
     console.log('소켓 전송 실패 (서버 시작 중일 수 있음):', error.message);
   }
 
+  // 🆕 모집 상태 정보 조회 후 반환
+  const [reservationDetails] = await conn.query(
+    `SELECT reservation_status, reservation_participant_cnt, reservation_max_participant_cnt, 
+            reservation_match, reservation_start_time, user_id as host_id
+     FROM reservation_table WHERE reservation_id = ?`,
+    [reservation_id]
+  );
+  
+  const reservation = reservationDetails[0];
+  const statusMessages = {
+    0: '모집 중',
+    1: '모집 마감',
+    2: '진행 중',
+    3: '완료'
+  };
+
   return {
     reservation_id,
     message: '입장 완료',
+    room_info: {                                                      // 🆕 채팅방 정보 추가
+      reservation_status: reservation.reservation_status,
+      status_message: statusMessages[reservation.reservation_status],
+      is_recruitment_closed: reservation.reservation_status === 1,
+      participant_count: reservation.reservation_participant_cnt,
+      max_participant_count: reservation.reservation_max_participant_cnt,
+      participant_info: `${reservation.reservation_participant_cnt}/${reservation.reservation_max_participant_cnt}`,
+      match_title: reservation.reservation_match,
+      reservation_start_time: reservation.reservation_start_time ? new Date(reservation.reservation_start_time).toISOString() : null,
+      host_id: reservation.host_id,
+      is_host: reservation.host_id === user_id
+    }
   };
 };
 
@@ -761,7 +810,8 @@ exports.getChatParticipants = async (user_id, room_id) => {
     
     // 2. 모임 정보 조회 (방장 확인용)
     const [reservationInfo] = await conn.query(
-      `SELECT user_id as host_id, reservation_participant_cnt 
+      `SELECT user_id as host_id, reservation_participant_cnt, reservation_max_participant_cnt,
+              reservation_status, reservation_match, reservation_start_time
        FROM reservation_table WHERE reservation_id = ?`,
       [room_id]
     );
@@ -812,10 +862,30 @@ exports.getChatParticipants = async (user_id, room_id) => {
     
     console.log(`🔍 [DEBUG] 참여자 목록 조회 완료 - 총 ${processedParticipants.length}명`);
     
+    // 🆕 모집 상태 정보 추가
+    const statusMessages = {
+      0: '모집 중',
+      1: '모집 마감',
+      2: '진행 중',
+      3: '완료'
+    };
+
     return {
       room_id: parseInt(room_id),
       total_participants: totalParticipants,
-      participants: processedParticipants
+      participants: processedParticipants,
+      room_info: {                                                       // 🆕 채팅방 정보 추가
+        reservation_status: reservationInfo[0].reservation_status,
+        status_message: statusMessages[reservationInfo[0].reservation_status],
+        is_recruitment_closed: reservationInfo[0].reservation_status === 1,
+        participant_count: reservationInfo[0].reservation_participant_cnt,
+        max_participant_count: reservationInfo[0].reservation_max_participant_cnt,
+        participant_info: `${reservationInfo[0].reservation_participant_cnt}/${reservationInfo[0].reservation_max_participant_cnt}`,
+        match_title: reservationInfo[0].reservation_match,
+        reservation_start_time: reservationInfo[0].reservation_start_time ? new Date(reservationInfo[0].reservation_start_time).toISOString() : null,
+        host_id: reservationInfo[0].host_id,
+        is_host: reservationInfo[0].host_id === user_id
+      }
     };
     
   } catch (error) {
