@@ -1017,8 +1017,20 @@ exports.selectStore = async (user_id, room_id, store_id) => {
       );
       const userName = userInfo.length > 0 ? userInfo[0].user_name : '알 수 없는 사용자';
       
-      io.to(room_id.toString()).emit('storeSelected', {
+      // 현재 방에 있는 소켓들 확인
+      const currentSockets = await io.in(room_id.toString()).fetchSockets();
+      console.log('🏪 [STORE SELECT] 소켓 이벤트 발송 준비:', {
         room_id: room_id,
+        total_sockets: currentSockets.length,
+        users: currentSockets.map(s => ({
+          socket_id: s.id,
+          user_id: s.user?.user_id,
+          user_name: s.user?.user_name
+        }))
+      });
+      
+      const eventData = {
+        room_id: parseInt(room_id),
         store_id: selectedStoreInfo.store_id,
         store_name: selectedStoreInfo.store_name,
         store_address: selectedStoreInfo.store_address,
@@ -1028,9 +1040,22 @@ exports.selectStore = async (user_id, room_id, store_id) => {
         selected_by_name: userName,
         selected_at: selectedStoreInfo.selected_at,
         action: store_id ? 'selected' : 'deselected'
+      };
+      
+      console.log('🏪 [STORE SELECT] 이벤트 데이터:', eventData);
+      
+      // 채팅방의 모든 참여자에게 이벤트 발송
+      io.to(room_id.toString()).emit('storeSelected', eventData);
+      
+      console.log('✅ [STORE SELECT] 소켓 이벤트 발송 완료:', {
+        room_id: room_id,
+        event: 'storeSelected',
+        recipients_count: currentSockets.length
       });
+      
     } catch (error) {
-      console.log('소켓 가게 선택 알림 실패:', error.message);
+      console.error('❌ [STORE SELECT] 소켓 가게 선택 알림 실패:', error);
+      console.error('에러 상세:', error.stack);
     }
     
     return {

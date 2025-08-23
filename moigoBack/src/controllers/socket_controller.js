@@ -339,6 +339,16 @@ module.exports = async function handleSocket(io) {
             });
         });
 
+        // 🏪 가게 선택 이벤트 디버깅 (클라이언트에서 받은 이벤트 확인용)
+        socket.on('storeSelected', (data) => {
+            console.log('🏪 [SOCKET DEBUG] 클라이언트에서 storeSelected 이벤트 수신:', {
+                socket_id: socket.id,
+                user_id: socket.user?.user_id,
+                received_data: data,
+                timestamp: new Date().toISOString()
+            });
+        });
+
         // 클라이언트가 연결 종료 시
         socket.on('disconnect', (reason) => {
             console.log('🔌 [DISCONNECT] 소켓 연결 해제:', {

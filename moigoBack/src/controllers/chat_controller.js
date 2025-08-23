@@ -294,13 +294,25 @@ exports.selectStore = async (req, res, next) => {
     const { roomId } = req.params;
     const { store_id } = req.body;
 
-    console.log('🏪 [API] 가게 선택 요청:', {
+    console.log('🏪 [API] 가게 선택 요청 시작:', {
       user_id,
       roomId,
-      store_id: store_id || 'null (선택 해제)'
+      store_id: store_id || 'null (선택 해제)',
+      timestamp: new Date().toISOString()
     });
 
     const result = await chatService.selectStore(user_id, roomId, store_id);
+
+    console.log('✅ [API] 가게 선택 성공:', {
+      user_id,
+      roomId,
+      result: {
+        chat_room_id: result.chat_room_id,
+        selected_store_id: result.selected_store?.store_id || null,
+        selected_store_name: result.selected_store?.store_name || null,
+        message: result.message
+      }
+    });
 
     res.status(200).json({
       success: true,
@@ -318,6 +330,7 @@ exports.selectStore = async (req, res, next) => {
     });
   } catch (err) {
     console.error('❌ [API] 가게 선택 중 오류:', err);
+    console.error('에러 상세:', err.stack);
     next(err);
   }
 };
