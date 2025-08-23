@@ -89,6 +89,17 @@ export default function ChatRoomScreen() {
   const startPaymentMutation = useStartPayment();
   const completePaymentMutation = useCompletePayment();
   
+  // 🔍 정산 상태 디버깅
+  useEffect(() => {
+    console.log('🔍 [정산 상태] usePaymentStatus 결과:', {
+      hasData: !!paymentStatusData,
+      paymentStatus: paymentStatusData?.data?.payment_status,
+      paymentId: paymentStatusData?.data?.payment_id,
+      participants: paymentStatusData?.data?.participants?.length,
+      rawData: paymentStatusData
+    });
+  }, [paymentStatusData]);
+  
   // 🆕 선택된 가게 상태 추가
   const [selectedStore, setSelectedStore] = useState<any>((chatRoom as any)?.selected_store || null);
   
@@ -475,15 +486,69 @@ export default function ChatRoomScreen() {
     const handlePaymentStarted = (data: any) => {
       console.log('💰 [소켓] 정산 시작 이벤트 수신:', data);
       console.log('💰 [디버깅] payment_guide_data 확인:', data.payment_guide_data);
+      console.log('💰 [디버깅] 이벤트 상세 정보:', {
+        room_id: data.room_id,
+        payment_id: data.payment_id,
+        started_by: data.started_by,
+        payment_per_person: data.payment_per_person,
+        hasGuideData: !!data.payment_guide_data,
+        hasStoreAccount: !!data.store_account
+      });
       
       // 🆕 구조화된 예약금 안내 데이터 처리
       if (data.payment_guide_data) {
-        console.log('✅ [정산 시작] PaymentGuideData 설정');
+        console.log('✅ [정산 시작] 서버에서 제공된 PaymentGuideData 설정');
         setPaymentGuideData(data.payment_guide_data);
         setShowPaymentGuide(true);
         console.log('✅ [정산 시작] showPaymentGuide = true 설정 완료');
+      } else if (data.payment_per_person && data.store_account) {
+        // 서버에서 구조화된 데이터가 없는 경우 PaymentStartedEventDTO로부터 생성
+        console.log('🔄 [정산 시작] PaymentStartedEventDTO로부터 PaymentGuideData 생성');
+        
+        const paymentGuideData: PaymentGuideData = {
+          type: 'payment_guide',
+          title: '예약금 안내',
+          store: {
+            name: (selectedStore || (chatRoom as any)?.selected_store)?.store_name || '선택된 가게'
+          },
+          payment: {
+            per_person: data.payment_per_person,
+            total_amount: data.total_amount,
+            participants_count: 4 // 기본값, 실제로는 참여자 수를 계산해야 함
+          },
+          account: {
+            bank_name: data.store_account.bank_name,
+            account_number: data.store_account.account_number,
+            account_holder: data.store_account.account_holder
+          },
+          deadline: {
+            date: data.payment_deadline,
+            display: '30분 내 입금 필수'
+          },
+          progress: {
+            completed: 0,
+            total: 4, // 기본값
+            percentage: 0
+          },
+          participants: [
+            // 기본 참여자 데이터, 실제로는 채팅방 참여자 정보를 사용해야 함
+            {
+              user_id: user?.id || '',
+              user_name: user?.id || '나',
+              status: 'pending'
+            }
+          ],
+          payment_id: data.payment_id,
+          started_by: data.started_by,
+          started_at: new Date().toISOString(),
+          is_completed: false
+        };
+
+        setPaymentGuideData(paymentGuideData);
+        setShowPaymentGuide(true);
+        console.log('✅ [정산 시작] 생성된 PaymentGuideData 설정 완료');
       } else {
-        console.log('❌ [정산 시작] payment_guide_data가 없음');
+        console.log('❌ [정산 시작] payment_guide_data와 필수 데이터가 모두 없음');
       }
       
       // 간단한 시스템 메시지 추가
@@ -509,6 +574,36 @@ export default function ChatRoomScreen() {
     // 🆕 개별 입금 완료 이벤트 핸들러
     const handlePaymentCompleted = (data: PaymentCompletedEventDTO) => {
       console.log('💳 [소켓] 개별 입금 완료 이벤트 수신:', data);
+      
+      // 🆕 PaymentGuideData 업데이트
+      if (paymentGuideData && data.payment_id === paymentGuideData.payment_id) {
+        const updatedPaymentGuideData = {
+          ...paymentGuideData,
+          progress: {
+            completed: data.completed_payments,
+            total: data.total_participants,
+            percentage: Math.round((data.completed_payments / data.total_participants) * 100)
+          },
+          participants: paymentGuideData.participants.map(p => 
+            p.user_id === data.user_id 
+              ? { ...p, status: 'completed' as const, completed_at: data.paid_at }
+              : p
+          ),
+          updated_at: new Date().toISOString(),
+          is_completed: data.completed_payments === data.total_participants
+        };
+        
+        setPaymentGuideData(updatedPaymentGuideData);
+        console.log('✅ [입금 완료] PaymentGuideData 업데이트 완료');
+        
+        // 전체 완료 시 UI 숨기기
+        if (data.completed_payments === data.total_participants) {
+          setTimeout(() => {
+            setShowPaymentGuide(false);
+            console.log('🎉 [전체 완료] PaymentGuideUI 숨김 처리');
+          }, 3000); // 3초 후 숨김
+        }
+      }
       
       // 간단한 시스템 메시지 추가 (진행률 포함)
       const systemMessage: ChatMessage = {
@@ -545,6 +640,15 @@ export default function ChatRoomScreen() {
     const handlePaymentFullyCompleted = (data: PaymentFullyCompletedEventDTO) => {
       console.log('🎉 [소켓] 전체 정산 완료 이벤트 수신:', data);
       
+      // 🆕 PaymentGuideUI 숨김 처리
+      if (paymentGuideData && data.payment_id === paymentGuideData.payment_id) {
+        setTimeout(() => {
+          setShowPaymentGuide(false);
+          setPaymentGuideData(null);
+          console.log('🎉 [전체 완료] PaymentGuideUI 완전 제거');
+        }, 3000); // 3초 후 완전 제거
+      }
+      
       // 간단한 완료 시스템 메시지
       const systemMessage: ChatMessage = {
         id: `system-payment-fully-completed-${Date.now()}`,
@@ -575,26 +679,43 @@ export default function ChatRoomScreen() {
       refetchPaymentStatus();
     };
 
-    // 🆕 예약금 안내 업데이트 이벤트 핸들러
+    // 🆕 예약금 안내 업데이트 이벤트 핸들러 (API 명세서 기준)
     const handlePaymentGuideUpdated = (data: any) => {
       console.log('🔄 [소켓] 예약금 안내 업데이트 이벤트 수신:', data);
+      console.log('🔍 [업데이트] 데이터 상세:', {
+        room_id: data.room_id,
+        payment_id: data.payment_id,
+        update_type: data.update_type,
+        completed_payments: data.completed_payments,
+        total_participants: data.total_participants,
+        is_fully_completed: data.is_fully_completed,
+        hasGuideData: !!data.payment_guide_data
+      });
       
-      // 예약금 안내 데이터 업데이트
-      if (data.payment_guide_data) {
+      // 💰 payment_id 일치 확인 후 업데이트
+      if (data.payment_guide_data && data.payment_id === paymentGuideData?.payment_id) {
+        console.log('✅ [업데이트] payment_id 일치, PaymentGuideData 업데이트');
         setPaymentGuideData(data.payment_guide_data);
+        
+        // 진행률 업데이트 토스트
+        const progressText = `${data.completed_payments}/${data.total_participants}명 입금완료`;
+        showInfo(`📊 ${progressText} (${data.payment_guide_data.progress.percentage}%)`);
+      } else if (data.payment_id !== paymentGuideData?.payment_id) {
+        console.log('⚠️ [업데이트] payment_id 불일치:', {
+          event: data.payment_id,
+          current: paymentGuideData?.payment_id
+        });
       }
       
-      // 진행률 업데이트 알림
-      if (data.update_type === 'progress_update') {
-        showInfo(`입금 현황: ${data.completed_payments}/${data.total_participants}명 완료`);
-      }
-      
-      // 전체 완료 시 특별 처리
+      // 🎉 전체 완료 시 특별 처리
       if (data.is_fully_completed) {
+        console.log('🎉 [업데이트] 전체 정산 완료 감지');
         setTimeout(() => {
           setShowPaymentGuide(false);
-          showSuccess('모든 입금이 완료되었습니다! 🎉');
-        }, 2000);
+          setPaymentGuideData(null);
+          showSuccess('🎉 모든 참여자의 입금이 완료되었습니다!');
+          console.log('✅ [완료] PaymentGuideUI 제거 완료');
+        }, 3000);
       }
     };
 
@@ -714,15 +835,15 @@ export default function ChatRoomScreen() {
         paymentPerPerson
       });
       
-      // 🧪 테스트용: 서버 API 대신 임시로 가짜 이벤트 발생
-      if (process.env.NODE_ENV === 'development') {
+      // 🧪 테스트용: 서버 API 대신 임시로 가짜 이벤트 발생 (임시 비활성화)
+      if (false && process.env.NODE_ENV === 'development') {
         console.log('🧪 [개발 모드] 테스트용 정산 시작 이벤트 생성');
         
         const testPaymentStartedData = {
           room_id: chatRoom.chat_room_id,
           payment_id: `test_payment_${Date.now()}`,
           started_by: user?.id,
-          started_by_name: user?.name || '테스트 방장',
+          started_by_name: user?.id || '테스트 방장',
           payment_guide_data: {
             type: 'payment_guide',
             title: '예약금 안내',
@@ -777,16 +898,71 @@ export default function ChatRoomScreen() {
           }
         };
         
-        // 테스트용 이벤트 핸들러 직접 호출
-        handlePaymentStarted(testPaymentStartedData);
+        // 테스트용 PaymentGuideData 직접 설정
+        if (testPaymentStartedData.payment_guide_data) {
+          setPaymentGuideData(testPaymentStartedData.payment_guide_data as PaymentGuideData);
+          setShowPaymentGuide(true);
+          console.log('🧪 [테스트 모드] PaymentGuideData 직접 설정 완료');
+        }
         showSuccess('정산이 시작되었습니다! 💰 (테스트 모드)');
         return;
       }
       
+      console.log('🚀 [API 호출] 정산 시작 요청 시작');
       const result = await startPaymentMutation.mutateAsync({
         roomId: chatRoom.chat_room_id,
         data: { payment_per_person: paymentPerPerson }
       });
+      
+      console.log('🎯 [API 응답] 정산 시작 응답 수신:', result);
+      
+      // 🆕 API 응답을 PaymentGuideData로 변환
+      if (result.success && result.data) {
+        console.log('✅ [API 성공] 정산 시작 성공, PaymentGuideData 생성 시작');
+        const paymentGuideData: PaymentGuideData = {
+          type: 'payment_guide',
+          title: '예약금 안내',
+          store: {
+            name: actualSelectedStore?.store_name || '선택된 가게',
+            address: actualSelectedStore?.address
+          },
+          payment: {
+            per_person: result.data.payment_per_person,
+            total_amount: result.data.total_amount,
+            participants_count: result.data.total_participants
+          },
+          account: {
+            bank_name: result.data.store_account.bank_name,
+            account_number: result.data.store_account.account_number,
+            account_holder: result.data.store_account.account_holder
+          },
+          deadline: {
+            date: result.data.payment_deadline,
+            display: '30분 내 입금 필수'
+          },
+          progress: {
+            completed: 0,
+            total: result.data.total_participants,
+            percentage: 0
+          },
+          participants: result.data.participants.map(p => ({
+            user_id: p.user_id,
+            user_name: p.user_name,
+            status: p.payment_status,
+            completed_at: p.paid_at || undefined
+          })),
+          payment_id: result.data.payment_id,
+          started_by: user?.id || '',
+          started_at: new Date().toISOString(),
+          is_completed: false
+        };
+
+        // PaymentGuideUI 표시
+        setPaymentGuideData(paymentGuideData);
+        setShowPaymentGuide(true);
+        
+        console.log('✅ [API 성공] PaymentGuideData 설정 완료:', paymentGuideData);
+      }
       
       showSuccess('정산이 시작되었습니다! 💰');
       
@@ -1230,14 +1406,123 @@ export default function ChatRoomScreen() {
     setSelectedParticipantId(null);
   };
 
+  // 원본 메시지 그룹 렌더링 함수 (백업용)
+  const renderOriginalMessageGroup = (group: MessageGroup) => {
+    if (group.type === 'system') {
+      return group.messages.map((msg: ChatMessage) => (
+        <ChatStatusMessage 
+          key={msg.id}
+          message={msg.message} 
+        />
+      ));
+    }
+    
+    // 사용자 메시지 처리는 기본 로직 사용
+    const sortedMessages = group.messages
+      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+      .map(msg => ({
+        ...msg,
+        avatar: msg.senderAvatar || (msg.senderId === user?.id ? '👤' : '🧑‍💼')
+      }));
+
+    return (
+      <View key={`original-${group.senderId}-${group.timestamp.getTime()}`} className="mb-4">
+        <ChatBubble 
+          messages={sortedMessages}
+          isOwnMessage={group.senderId === user?.id}
+          senderName={group.senderName}
+          timestamp={group.timestamp}
+          avatar={group.avatar}
+        />
+      </View>
+    );
+  };
+
   const renderMessageGroup = (group: MessageGroup, index: number) => {
     // 시스템 메시지 그룹
     if (group.type === 'system') {
       return group.messages.map((msg: ChatMessage) => {
+        // 🔍 모든 시스템 메시지 디버깅
+        if (msg.message_type?.includes('payment')) {
+          console.log('🔍 [시스템 메시지] 정산 관련 메시지 발견:', {
+            messageType: msg.message_type,
+            messageId: msg.id,
+            paymentId: msg.payment_id,
+            message: msg.message,
+            currentPaymentGuideId: paymentGuideData?.payment_id
+          });
+        } else {
+          // 모든 시스템 메시지 확인
+          console.log('🔍 [시스템 메시지] 일반 메시지:', {
+            messageType: msg.message_type,
+            messageId: msg.id,
+            message: msg.message
+          });
+        }
         // 정산 관련 메시지는 SystemMessage 컴포넌트 사용
         if (msg.message_type === 'system_payment_start' || 
             msg.message_type === 'system_payment_update' || 
             msg.message_type === 'system_payment_completed') {
+          
+          // 정산 시작 메시지의 경우 PaymentGuideUI도 함께 렌더링
+          if (msg.message_type === 'system_payment_start') {
+            // ✅ payment_id 정확한 매칭 (서버에서 동일한 값 보장)
+            const shouldShowPaymentGuideHere = showPaymentGuide && 
+                                             paymentGuideData && 
+                                             (paymentGuideData.payment_id === msg.payment_id || 
+                                              !msg.payment_id); // payment_id가 없는 경우도 허용
+            
+            const isPaymentCompleted = paymentGuideData?.is_completed || 
+                                     (paymentGuideData?.progress.completed === paymentGuideData?.progress.total) ||
+                                     paymentStatusData?.data?.payment_status === 'completed';
+            
+            // 🔍 디버깅 로그 추가
+            console.log('🔍 [정산 시작 메시지] PaymentGuideUI 표시 조건 확인:', {
+              messageId: msg.id,
+              messageType: msg.message_type,
+              messagePaymentId: msg.payment_id,
+              showPaymentGuide,
+              hasPaymentGuideData: !!paymentGuideData,
+              paymentGuideDataId: paymentGuideData?.payment_id,
+              paymentIdMatch: paymentGuideData?.payment_id === msg.payment_id,
+              noPaymentId: !msg.payment_id,
+              shouldShowPaymentGuideHere,
+              isPaymentCompleted,
+              willShowUI: shouldShowPaymentGuideHere && !isPaymentCompleted
+            });
+            
+            // 🔧 강제 디버깅: PaymentGuideUI가 렌더링되는지 확인
+            if (shouldShowPaymentGuideHere && !isPaymentCompleted) {
+              console.log('✅ [디버깅] PaymentGuideUI 렌더링 시도!');
+            } else {
+              console.log('❌ [디버깅] PaymentGuideUI 렌더링 실패:', {
+                shouldShow: shouldShowPaymentGuideHere,
+                notCompleted: !isPaymentCompleted
+              });
+            }
+            
+            return (
+              <View key={msg.id}>
+                <SystemMessage
+                  message={msg.message}
+                  messageType={msg.message_type}
+                  paymentId={msg.payment_id}
+                  paymentProgress={msg.payment_progress}
+                />
+                {/* 정산 시작 메시지 바로 아래에 PaymentGuideUI 표시 */}
+                {shouldShowPaymentGuideHere && !isPaymentCompleted && (
+                  <PaymentGuideUI
+                    data={paymentGuideData}
+                    currentUserId={user?.id}
+                    onPaymentComplete={handleCompletePayment}
+                    isLoading={paymentLoading}
+                  />
+                )}
+
+              </View>
+            );
+          }
+          
           return (
             <SystemMessage
               key={msg.id}
@@ -1257,6 +1542,38 @@ export default function ChatRoomScreen() {
           />
         );
       });
+    }
+    
+    // 🔧 백업: 정산이 진행 중이지만 정산 시작 메시지가 없는 경우 (첫 번째 그룹에서만)
+    if (index === 0 && showPaymentGuide && paymentGuideData) {
+      const isPaymentCompleted = paymentGuideData.is_completed || 
+                                (paymentGuideData.progress.completed === paymentGuideData.progress.total) ||
+                                paymentStatusData?.data?.payment_status === 'completed';
+      
+      if (!isPaymentCompleted) {
+        console.log('🔧 [백업] 정산 진행 중이지만 정산 시작 메시지 없음, 첫 번째 그룹에 PaymentGuideUI 표시');
+        console.log('🔧 [백업] 렌더링 데이터:', {
+          index,
+          showPaymentGuide,
+          hasPaymentGuideData: !!paymentGuideData,
+          paymentGuideId: paymentGuideData?.payment_id,
+          isCompleted: isPaymentCompleted,
+          groupType: group.type
+        });
+        
+        // 기존 메시지 그룹과 함께 렌더링
+        return (
+          <View>
+            <PaymentGuideUI
+              data={paymentGuideData}
+              currentUserId={user?.id}
+              onPaymentComplete={handleCompletePayment}
+              isLoading={paymentLoading}
+            />
+            {renderOriginalMessageGroup(group)}
+          </View>
+        );
+      }
     }
 
     // 사용자 메시지 그룹 - 시간 순서대로 정렬된 메시지 배열 생성
@@ -1447,68 +1764,32 @@ export default function ChatRoomScreen() {
             user: user?.id
           });
           
-          // 🧪 테스트용: 임시 PaymentGuideData 생성 (테스트 후 제거 예정)
-          const testPaymentGuideData = {
-            type: 'payment_guide' as const,
-            title: '예약금 안내',
-            store: {
-              name: '테스트 스포츠바',
-              address: '강남구 어딘가'
-            },
-            payment: {
-              per_person: 5000,
-              total_amount: 20000,
-              participants_count: 4
-            },
-            account: {
-              bank_name: '국민은행',
-              account_number: '123-456-789012',
-              account_holder: '테스트사장'
-            },
-            deadline: {
-              date: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-              display: '30분 후 마감'
-            },
-            progress: {
-              completed: 1,
-              total: 4,
-              percentage: 25
-            },
-            participants: [
-              {
-                user_id: user?.id || 'test1',
-                user_name: '나',
-                status: 'pending' as const
-              },
-              {
-                user_id: 'test2',
-                user_name: '김철수',
-                status: 'completed' as const,
-                completed_at: new Date().toISOString()
-              },
-              {
-                user_id: 'test3',
-                user_name: '이영희',
-                status: 'pending' as const
-              },
-              {
-                user_id: 'test4',
-                user_name: '박민수',
-                status: 'pending' as const
-              }
-            ],
-            payment_id: 'test_payment_123',
-            started_by: 'test2',
-            started_at: new Date().toISOString(),
-            is_completed: false
-          };
 
-          // 🧪 테스트용: 항상 PaymentGuideUI 표시 (실제 데이터가 없을 때)
-          if (!showPaymentGuide && !paymentGuideData) {
-            console.log('🧪 테스트용 PaymentGuideUI 표시');
+          // 🧪 임시 테스트: 개발 모드에서 정산이 시작되지 않았을 때도 UI 표시 (서버 테스트 시 false로 변경)
+          if (false && process.env.NODE_ENV === 'development' && !showPaymentGuide && !paymentGuideData) {
+            console.log('🧪 [개발 모드] 테스트용 PaymentGuideUI 강제 표시');
+            const testData: PaymentGuideData = {
+              type: 'payment_guide',
+              title: '예약금 안내',
+              store: { name: '테스트 가게' },
+              payment: { per_person: 5000, total_amount: 20000, participants_count: 4 },
+              account: { bank_name: '국민은행', account_number: '123-456-789012', account_holder: '사장님' },
+              deadline: { date: new Date(Date.now() + 30 * 60 * 1000).toISOString(), display: '30분 내 입금 필수' },
+              progress: { completed: 1, total: 4, percentage: 25 },
+              participants: [
+                { user_id: user?.id || 'test1', user_name: '나', status: 'pending' },
+                { user_id: 'test2', user_name: '김철수', status: 'completed', completed_at: new Date().toISOString() },
+                { user_id: 'test3', user_name: '이영희', status: 'pending' },
+                { user_id: 'test4', user_name: '박민수', status: 'pending' }
+              ],
+              payment_id: 'test_payment_123',
+              started_by: 'test2',
+              started_at: new Date().toISOString(),
+              is_completed: false
+            };
             return (
               <PaymentGuideUI
-                data={testPaymentGuideData}
+                data={testData}
                 currentUserId={user?.id}
                 onPaymentComplete={handleCompletePayment}
                 isLoading={paymentLoading}
@@ -1516,18 +1797,7 @@ export default function ChatRoomScreen() {
             );
           }
           
-          // 🆕 구조화된 예약금 안내 데이터가 있으면 PaymentGuideUI 사용
-          if (showPaymentGuide && paymentGuideData) {
-            console.log('✅ PaymentGuideUI 렌더링 중');
-            return (
-              <PaymentGuideUI
-                data={paymentGuideData}
-                currentUserId={user?.id}
-                onPaymentComplete={handleCompletePayment}
-                isLoading={paymentLoading}
-              />
-            );
-          }
+          // 🆕 PaymentGuideUI는 이제 정산 시작 메시지 바로 아래에 표시됨 (renderMessageGroup에서 처리)
           
           // 🆕 기존 정산 상태 API로 표시 (구조화된 데이터가 없는 경우)
           const shouldShowPaymentUI = paymentStatusData?.data.payment_status && 
