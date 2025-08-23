@@ -1424,13 +1424,21 @@ exports.startPayment = async (user_id, room_id, payment_per_person) => {
       };
 
       // 8. 실시간 소켓 알림 전송
-      // 🆕 정산 시작 이벤트 (구조화된 데이터 포함)
+      // 🆕 정산 시작 이벤트 (클라이언트가 기대하는 형태로 전송)
       io.to(room_id.toString()).emit('paymentStarted', {
         room_id: room_id,
         payment_id: paymentId,
         started_by: user_id,
         started_by_name: userName,
-        payment_guide_data: paymentGuideData // 🆕 클라이언트 UI용 구조화된 데이터
+        payment_per_person: finalPaymentAmount,
+        total_amount: totalAmount,
+        payment_deadline: paymentDeadline.toISOString(),
+        store_account: {
+          bank_name: store.bank_name,
+          account_number: store.account_number,
+          account_holder: store.account_holder
+        },
+        payment_guide_data: paymentGuideData // 🆕 추가적인 구조화된 데이터
       });
 
       // 🆕 시스템 메시지 브로드캐스트 (구조화된 데이터 포함)
