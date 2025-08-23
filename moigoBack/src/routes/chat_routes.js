@@ -54,6 +54,9 @@ router.post('/:roomId/payment/complete', authMiddleware, chatController.complete
 // 💰 정산 상태 조회 (GET /chats/:roomId/payment)
 router.get('/:roomId/payment', authMiddleware, chatController.getPaymentStatus);
 
+// 💰 정산 세션 초기화 (DELETE /chats/:roomId/payment/reset)
+router.delete('/:roomId/payment/reset', authMiddleware, chatController.resetPaymentSession);
+
 /*
 // 💰 결제 관련 라우터
 // 방장의 예약금 결제 요청 (POST /chats/:roomId/payments/request)

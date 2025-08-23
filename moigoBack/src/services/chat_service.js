@@ -66,7 +66,7 @@ exports.getChatRooms = async (user_id) => {
   console.log('🔍 [DEBUG] 중복 제거 후 채팅방 수:', rows.length);
   
   // 방장 여부 판별 및 상태 정보 추가
-  const processedRows = rows.map(row => {
+  const processedRows = await Promise.all(rows.map(async (row) => {
     const isHost = row.host_id === user_id;
     const role = isHost ? '방장' : '참가자';
     
@@ -98,6 +98,28 @@ exports.getChatRooms = async (user_id) => {
       selected_by: row.selected_by
     } : null;
 
+    // 🆕 정산 상태 간단 정보 조회
+    let paymentStatus = 'not_started';
+    let paymentProgress = null;
+    
+    try {
+      const [paymentSession] = await conn.query(
+        'SELECT payment_status, completed_payments, total_participants FROM payment_sessions WHERE chat_room_id = ? ORDER BY started_at DESC LIMIT 1',
+        [row.chat_room_id]
+      );
+
+      if (paymentSession.length > 0) {
+        const session = paymentSession[0];
+        paymentStatus = session.payment_status;
+        
+        if (session.payment_status === 'in_progress') {
+          paymentProgress = `${session.completed_payments}/${session.total_participants}`;
+        }
+      }
+    } catch (paymentError) {
+      console.log('🔍 [CHAT LIST] 정산 정보 조회 실패 (무시):', paymentError.message);
+    }
+
     return {
       ...row,
       is_host: isHost,                                            // 🆕 방장 여부 플래그
@@ -107,9 +129,11 @@ exports.getChatRooms = async (user_id) => {
       participant_info: `${row.reservation_participant_cnt}/${row.reservation_max_participant_cnt}`, // 🆕 참여자 정보
       reservation_start_time: row.reservation_start_time ? new Date(row.reservation_start_time).toISOString() : null,  // 🆕 시작 시간 ISO 형식
       match_title: row.reservation_match,                         // 🆕 모임명
-      selected_store: selectedStore                               // 🆕 선택된 가게 정보
+      selected_store: selectedStore,                              // 🆕 선택된 가게 정보
+      payment_status: paymentStatus,                              // 🆕 정산 상태
+      payment_progress: paymentProgress                           // 🆕 정산 진행률
     };
-  });
+  }));
 
   return processedRows;
 };
@@ -791,6 +815,60 @@ exports.enterChatRoom = async (user_id, reservation_id) => {
     selected_by: reservation.selected_by
   } : null;
 
+  // 🆕 정산 정보 조회
+  let paymentInfo = null;
+  try {
+    const [paymentSession] = await conn.query(
+      `SELECT ps.*, s.store_name, s.bank_name, s.account_number, s.account_holder
+       FROM payment_sessions ps
+       JOIN store_table s ON ps.store_id = s.store_id
+       WHERE ps.chat_room_id = ?
+       ORDER BY ps.started_at DESC
+       LIMIT 1`,
+      [reservation_id]
+    );
+
+    if (paymentSession.length > 0) {
+      const session = paymentSession[0];
+      
+      // 참여자별 입금 상태 조회
+      const [participants] = await conn.query(
+        `SELECT user_id, user_name, payment_status, paid_at
+         FROM payment_records
+         WHERE payment_id = ?
+         ORDER BY paid_at ASC, user_name ASC`,
+        [session.payment_id]
+      );
+
+      const participantsWithStatus = participants.map(p => ({
+        user_id: p.user_id,
+        user_name: p.user_name,
+        payment_status: p.payment_status,
+        completed_at: p.paid_at ? new Date(p.paid_at).toISOString() : null
+      }));
+
+      paymentInfo = {
+        payment_status: session.payment_status,
+        payment_id: session.payment_id,
+        payment_per_person: session.payment_per_person,
+        store_info: {
+          store_name: session.store_name,
+          bank_name: session.bank_name,
+          account_number: session.account_number,
+          account_holder: session.account_holder
+        },
+        participants: participantsWithStatus,
+        payment_deadline: session.payment_deadline ? new Date(session.payment_deadline).toISOString() : null,
+        started_at: session.started_at ? new Date(session.started_at).toISOString() : null,
+        completed_count: session.completed_payments || 0,
+        total_count: session.total_participants || 0
+      };
+    }
+  } catch (paymentError) {
+    console.log('🔍 [ENTER] 정산 정보 조회 실패 (무시):', paymentError.message);
+    // 정산 정보 조회 실패해도 입장은 가능하므로 에러를 던지지 않음
+  }
+
   return {
     reservation_id,
     message: '입장 완료',
@@ -805,7 +883,8 @@ exports.enterChatRoom = async (user_id, reservation_id) => {
       reservation_start_time: reservation.reservation_start_time ? new Date(reservation.reservation_start_time).toISOString() : null,
       host_id: reservation.host_id,
       is_host: reservation.host_id === user_id,
-      selected_store: selectedStore                                   // 🆕 선택된 가게 정보
+      selected_store: selectedStore,                                   // 🆕 선택된 가게 정보
+      payment_info: paymentInfo                                        // 🆕 정산 정보 추가
     }
   };
 };
@@ -1178,15 +1257,34 @@ exports.startPayment = async (user_id, room_id, payment_per_person) => {
     
     // 3. 이미 정산 진행 중인지 확인
     const [existingPayment] = await conn.query(
-      'SELECT payment_id FROM payment_sessions WHERE chat_room_id = ? AND payment_status = "in_progress"',
+      'SELECT payment_id, completed_payments, total_participants FROM payment_sessions WHERE chat_room_id = ? AND payment_status = "in_progress"',
       [room_id]
     );
     
     if (existingPayment.length > 0) {
-      const err = new Error("이미 정산이 진행 중입니다.");
-      err.statusCode = 409;
-      err.errorCode = "PAYMENT_ALREADY_STARTED";
-      throw err;
+      const existing = existingPayment[0];
+      console.log('⚠️ [PAYMENT] 기존 정산 세션 발견:', {
+        payment_id: existing.payment_id,
+        completed_payments: existing.completed_payments,
+        total_participants: existing.total_participants,
+        room_id: room_id
+      });
+      
+      // 기존 정산 세션이 있지만 아무도 입금하지 않은 경우 자동으로 초기화
+      if (existing.completed_payments === 0) {
+        console.log('🔄 [PAYMENT] 미사용 정산 세션 자동 초기화');
+        await this.resetPaymentSession(room_id);
+      } else {
+        const err = new Error(`이미 정산이 진행 중입니다. (${existing.completed_payments}/${existing.total_participants}명 완료)`);
+        err.statusCode = 409;
+        err.errorCode = "PAYMENT_ALREADY_STARTED";
+        err.existingSession = {
+          payment_id: existing.payment_id,
+          completed_payments: existing.completed_payments,
+          total_participants: existing.total_participants
+        };
+        throw err;
+      }
     }
     
     // 4. 가게 계좌 정보 조회
@@ -1442,6 +1540,102 @@ exports.completePayment = async (user_id, room_id, payment_method) => {
     if (!error.statusCode) {
       error.statusCode = 500;
       error.message = '입금 완료 처리 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
+
+// 정산 세션 초기화 (방장 전용)
+exports.resetPaymentSession = async (room_id, user_id = null) => {
+  const conn = getConnection();
+  
+  try {
+    console.log('🔄 [PAYMENT RESET] 정산 세션 초기화 시작:', { room_id, user_id });
+
+    // 진행 중인 정산 세션 확인
+    const [existingSession] = await conn.query(
+      'SELECT payment_id, started_by, completed_payments FROM payment_sessions WHERE chat_room_id = ? AND payment_status = "in_progress"',
+      [room_id]
+    );
+
+    if (!existingSession.length) {
+      console.log('✅ [PAYMENT RESET] 초기화할 정산 세션이 없음');
+      return { message: '초기화할 정산 세션이 없습니다.' };
+    }
+
+    const session = existingSession[0];
+
+    // 사용자 권한 확인 (user_id가 제공된 경우)
+    if (user_id) {
+      // 방장 권한 확인
+      const [hostCheck] = await conn.query(
+        'SELECT user_id FROM reservation_table WHERE reservation_id = ? AND user_id = ?',
+        [room_id, user_id]
+      );
+
+      if (!hostCheck.length) {
+        const err = new Error('방장만 정산을 초기화할 수 있습니다.');
+        err.statusCode = 403;
+        err.errorCode = 'PERMISSION_DENIED';
+        throw err;
+      }
+
+      // 이미 입금된 사용자가 있는 경우 초기화 금지
+      if (session.completed_payments > 0) {
+        const err = new Error(`이미 ${session.completed_payments}명이 입금을 완료했습니다. 초기화할 수 없습니다.`);
+        err.statusCode = 400;
+        err.errorCode = 'PAYMENT_IN_PROGRESS';
+        throw err;
+      }
+    }
+
+    await conn.query('START TRANSACTION');
+
+    // 1. 관련 정산 기록 삭제
+    await conn.query(
+      'DELETE FROM payment_records WHERE payment_id = ?',
+      [session.payment_id]
+    );
+
+    // 2. 정산 세션 삭제
+    await conn.query(
+      'DELETE FROM payment_sessions WHERE payment_id = ?',
+      [session.payment_id]
+    );
+
+    await conn.query('COMMIT');
+
+    console.log('✅ [PAYMENT RESET] 정산 세션 초기화 완료:', {
+      payment_id: session.payment_id,
+      room_id: room_id
+    });
+
+    // 실시간 알림 (세션 초기화)
+    try {
+      const { getIO } = require('../config/socket_hub');
+      const io = getIO();
+      
+      io.to(room_id.toString()).emit('paymentReset', {
+        room_id: room_id,
+        payment_id: session.payment_id,
+        message: '정산이 초기화되었습니다.',
+        reset_at: new Date().toISOString()
+      });
+    } catch (error) {
+      console.log('소켓 정산 초기화 알림 실패:', error.message);
+    }
+
+    return {
+      message: '정산 세션이 초기화되었습니다.',
+      reset_payment_id: session.payment_id
+    };
+
+  } catch (error) {
+    await conn.query('ROLLBACK');
+    console.error('❌ [PAYMENT RESET] 정산 세션 초기화 에러:', error);
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '정산 세션 초기화 중 오류가 발생했습니다.';
     }
     throw error;
   }

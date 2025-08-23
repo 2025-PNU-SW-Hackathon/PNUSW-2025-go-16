@@ -378,6 +378,18 @@ exports.startPayment = async (req, res, next) => {
     });
   } catch (err) {
     console.error('❌ [API] 정산 시작 중 오류:', err);
+    
+    // 이미 정산이 진행 중인 경우 상세 정보 제공
+    if (err.errorCode === 'PAYMENT_ALREADY_STARTED' && err.existingSession) {
+      return res.status(err.statusCode).json({
+        success: false,
+        message: err.message,
+        error_code: err.errorCode,
+        existing_session: err.existingSession,
+        suggestion: "기존 정산을 초기화하거나 계속 진행하세요."
+      });
+    }
+    
     next(err);
   }
 };
@@ -427,6 +439,30 @@ exports.getPaymentStatus = async (req, res, next) => {
     });
   } catch (err) {
     console.error('❌ [API] 정산 상태 조회 중 오류:', err);
+    next(err);
+  }
+};
+
+// 💰 정산 세션 초기화 (방장 전용)
+exports.resetPaymentSession = async (req, res, next) => {
+  try {
+    const user_id = req.user.user_id;
+    const { roomId } = req.params;
+
+    console.log('🔄 [API] 정산 세션 초기화 요청:', {
+      user_id,
+      roomId
+    });
+
+    const result = await chatService.resetPaymentSession(roomId, user_id);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: result
+    });
+  } catch (err) {
+    console.error('❌ [API] 정산 세션 초기화 중 오류:', err);
     next(err);
   }
 };
