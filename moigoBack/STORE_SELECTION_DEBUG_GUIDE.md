@@ -1,7 +1,7 @@
 # 🏪 가게 선택 소켓 이벤트 문제 해결 가이드
 
 ## 🔍 문제 상황
-클라이언트에서 가게 선택 시 **소켓 이벤트가 수신되지 않아 시스템 메시지가 나타나지 않는** 문제가 발생하고 있습니다.
+클라이언트에서 가게 선택 시 **서버에서 직접 채팅방에 시스템 메시지를 추가**해야 하는데, 현재는 소켓 이벤트만 발송하고 있어서 시스템 메시지가 채팅방에 나타나지 않는 문제가 발생하고 있습니다.
 
 ## ✅ 서버 측 구현 상태 확인
 
@@ -11,20 +11,42 @@
 - 가게 정보 업데이트 ✅
 - 소켓 이벤트 발송 코드 ✅
 
-### 2. 소켓 이벤트 발송 코드 ✅
+### 2. 시스템 메시지 추가 및 소켓 이벤트 발송 코드 ✅
 ```javascript
 // src/services/chat_service.js - selectStore 함수
+
+// 1. 시스템 메시지 생성 및 저장 (기존 패턴과 동일)
+const systemMessage = `${userName}님이 ${selectedStoreInfo.store_name}을 모임 장소로 선택하셨습니다.`;
+
+// 2. 시스템 메시지 DB 저장
+const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages WHERE chat_room_id = ?', [room_id]);
+const nextMessageId = (maxIdResult[0]?.maxId || 0) + 1;
+
+await conn.query(
+  `INSERT INTO chat_messages (message_id, chat_room_id, sender_id, message, created_at)
+   VALUES (?, ?, ?, ?, NOW())`,
+  [nextMessageId, room_id, 'system', systemMessage]
+);
+
+// 3. 가게 선택 이벤트 발송
 io.to(room_id.toString()).emit('storeSelected', {
   room_id: parseInt(room_id),
   store_id: selectedStoreInfo.store_id,
   store_name: selectedStoreInfo.store_name,
-  store_address: selectedStoreInfo.store_address,
-  store_rating: selectedStoreInfo.store_rating,
-  store_thumbnail: selectedStoreInfo.store_thumbnail,
-  selected_by: user_id,
-  selected_by_name: userName,
-  selected_at: selectedStoreInfo.selected_at,
+  // ... 기타 필드들
   action: store_id ? 'selected' : 'deselected'
+});
+
+// 4. 시스템 메시지 브로드캐스트
+io.to(room_id.toString()).emit('newMessage', {
+  message_id: nextMessageId,
+  chat_room_id: room_id,
+  sender_id: 'system',
+  message: systemMessage,
+  created_at: new Date(),
+  message_type: 'system_store_selected',
+  user_name: userName,
+  user_id: user_id
 });
 ```
 
@@ -37,10 +59,14 @@ io.to(room_id.toString()).emit('storeSelected', {
 // API 호출 시
 console.log('🏪 [API] 가게 선택 요청 시작:', { user_id, roomId, store_id, timestamp });
 
+// 시스템 메시지 생성 시
+console.log('💬 [STORE SELECT] 시스템 메시지 생성:', { room_id, message, sender_id: 'system' });
+console.log('✅ [STORE SELECT] 시스템 메시지 저장 완료:', { message_id, room_id });
+
 // 소켓 이벤트 발송 시
 console.log('🏪 [STORE SELECT] 소켓 이벤트 발송 준비:', { room_id, total_sockets, users });
 console.log('🏪 [STORE SELECT] 이벤트 데이터:', eventData);
-console.log('✅ [STORE SELECT] 소켓 이벤트 발송 완료:', { room_id, event, recipients_count });
+console.log('✅ [STORE SELECT] 소켓 이벤트 발송 완료:', { room_id, events: ['storeSelected', 'newMessage'], recipients_count });
 ```
 
 ### 2. 소켓 디버깅 리스너 추가 ✅
@@ -65,10 +91,14 @@ socket.on('storeSelected', (data) => {
 # 1. API 호출 로그
 🏪 [API] 가게 선택 요청 시작: { user_id: 'test1', roomId: '1', store_id: 'store_123', timestamp: '...' }
 
-# 2. 소켓 이벤트 발송 로그
+# 2. 시스템 메시지 생성 및 저장 로그
+💬 [STORE SELECT] 시스템 메시지 생성: { room_id: 1, message: '박태원님이 강남 스포츠바을 모임 장소로 선택하셨습니다.', sender_id: 'system' }
+✅ [STORE SELECT] 시스템 메시지 저장 완료: { message_id: 123, room_id: 1 }
+
+# 3. 소켓 이벤트 발송 로그
 🏪 [STORE SELECT] 소켓 이벤트 발송 준비: { room_id: 1, total_sockets: 3, users: [...] }
 🏪 [STORE SELECT] 이벤트 데이터: { room_id: 1, store_id: 'store_123', ... }
-✅ [STORE SELECT] 소켓 이벤트 발송 완료: { room_id: 1, event: 'storeSelected', recipients_count: 3 }
+✅ [STORE SELECT] 소켓 이벤트 발송 완료: { room_id: 1, events: ['storeSelected', 'newMessage'], recipients_count: 3 }
 ```
 
 ### 2. 테스트 스크립트 실행
@@ -90,6 +120,13 @@ console.log('현재 입장한 방:', socket.rooms);
 // 3. 이벤트 리스너 등록 확인
 socket.on('storeSelected', (data) => {
   console.log('🏪 [CLIENT] storeSelected 이벤트 수신:', data);
+});
+
+socket.on('newMessage', (data) => {
+  console.log('💬 [CLIENT] newMessage 이벤트 수신:', data);
+  if (data.sender_id === 'system') {
+    console.log('🔔 [CLIENT] 시스템 메시지 수신:', data.message);
+  }
 });
 ```
 
@@ -144,6 +181,8 @@ console.log('입장한 방:', Array.from(socket.rooms));
 ```javascript
 // 클라이언트에서 이벤트 수신 로그 확인
 🏪 [CLIENT] storeSelected 이벤트 수신: { room_id: 1, store_name: "강남 스포츠바", ... }
+💬 [CLIENT] newMessage 이벤트 수신: { sender_id: "system", message: "박태원님이 강남 스포츠바을 모임 장소로 선택하셨습니다.", ... }
+🔔 [CLIENT] 시스템 메시지 수신: 박태원님이 강남 스포츠바을 모임 장소로 선택하셨습니다.
 ```
 
 ## 🛠️ 문제 해결 체크리스트
@@ -152,8 +191,12 @@ console.log('입장한 방:', Array.from(socket.rooms));
 - [ ] 클라이언트가 소켓에 연결되었는지 확인
 - [ ] 클라이언트가 해당 채팅방에 입장했는지 확인
 - [ ] `storeSelected` 이벤트 리스너가 등록되었는지 확인
+- [ ] `newMessage` 이벤트 리스너가 등록되었는지 확인
+- [ ] API 호출 시 서버 로그에서 시스템 메시지 저장 로그 확인
 - [ ] API 호출 시 서버 로그에서 소켓 이벤트 발송 로그 확인
-- [ ] 클라이언트에서 이벤트 수신 로그 확인
+- [ ] 클라이언트에서 `storeSelected` 이벤트 수신 로그 확인
+- [ ] 클라이언트에서 `newMessage` 이벤트 수신 로그 확인
+- [ ] 채팅방에 시스템 메시지가 실제로 표시되는지 확인
 
 ## 📞 추가 지원
 

@@ -1005,7 +1005,7 @@ exports.selectStore = async (user_id, room_id, store_id) => {
       };
     }
     
-    // 5. 실시간 소켓 알림 전송
+    // 5. 시스템 메시지 추가 및 실시간 알림 전송
     try {
       const { getIO } = require('../config/socket_hub');
       const io = getIO();
@@ -1017,7 +1017,51 @@ exports.selectStore = async (user_id, room_id, store_id) => {
       );
       const userName = userInfo.length > 0 ? userInfo[0].user_name : '알 수 없는 사용자';
       
-      // 현재 방에 있는 소켓들 확인
+      // 6. 시스템 메시지 생성 및 저장
+      let systemMessage;
+      
+      if (store_id) {
+        // 가게 선택 시스템 메시지 (기존 패턴과 동일하게)
+        systemMessage = `${userName}님이 ${selectedStoreInfo.store_name}을 모임 장소로 선택하셨습니다.`;
+      } else {
+        // 가게 선택 해제 시스템 메시지
+        systemMessage = `${userName}님이 가게 선택을 해제하셨습니다.`;
+      }
+      
+      console.log('💬 [STORE SELECT] 시스템 메시지 생성:', {
+        room_id: room_id,
+        message: systemMessage,
+        sender_id: 'system'
+      });
+      
+      // 시스템 메시지를 채팅방에 저장 (기존 패턴과 동일하게)
+      const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages WHERE chat_room_id = ?', [room_id]);
+      const nextMessageId = (maxIdResult[0]?.maxId || 0) + 1;
+      
+      await conn.query(
+        `INSERT INTO chat_messages 
+         (message_id, chat_room_id, sender_id, message, created_at)
+         VALUES (?, ?, ?, ?, NOW())`,
+        [nextMessageId, room_id, 'system', systemMessage]
+      );
+      
+      const savedMessage = {
+        message_id: nextMessageId,
+        chat_room_id: room_id,
+        sender_id: 'system',
+        message: systemMessage,
+        created_at: new Date(),
+        message_type: store_id ? 'system_store_selected' : 'system_store_deselected',
+        user_name: userName,
+        user_id: user_id
+      };
+      
+      console.log('✅ [STORE SELECT] 시스템 메시지 저장 완료:', {
+        message_id: savedMessage.message_id,
+        room_id: room_id
+      });
+      
+      // 7. 실시간 소켓 알림 전송
       const currentSockets = await io.in(room_id.toString()).fetchSockets();
       console.log('🏪 [STORE SELECT] 소켓 이벤트 발송 준비:', {
         room_id: room_id,
@@ -1029,6 +1073,7 @@ exports.selectStore = async (user_id, room_id, store_id) => {
         }))
       });
       
+      // 가게 선택 이벤트 데이터
       const eventData = {
         room_id: parseInt(room_id),
         store_id: selectedStoreInfo.store_id,
@@ -1047,14 +1092,17 @@ exports.selectStore = async (user_id, room_id, store_id) => {
       // 채팅방의 모든 참여자에게 이벤트 발송
       io.to(room_id.toString()).emit('storeSelected', eventData);
       
+      // 시스템 메시지도 함께 브로드캐스트 (기존 패턴과 동일하게)
+      io.to(room_id.toString()).emit('newMessage', savedMessage);
+      
       console.log('✅ [STORE SELECT] 소켓 이벤트 발송 완료:', {
         room_id: room_id,
-        event: 'storeSelected',
+        events: ['storeSelected', 'newMessage'],
         recipients_count: currentSockets.length
       });
       
     } catch (error) {
-      console.error('❌ [STORE SELECT] 소켓 가게 선택 알림 실패:', error);
+      console.error('❌ [STORE SELECT] 시스템 메시지 및 소켓 알림 실패:', error);
       console.error('에러 상세:', error.stack);
     }
     
