@@ -43,6 +43,15 @@ export const updateUserInfo = async (userId: string, userData: any) => {
   return response.data;
 };
 
+// POST /users/push-token - 푸시 토큰 등록
+export const registerPushToken = async (pushToken: string) => {
+  const response = await apiClient.post('/users/push-token', { 
+    push_token: pushToken,
+    platform: 'expo' 
+  });
+  return response.data;
+};
+
 // GET /users/me - 마이페이지 정보 조회
 export const getMyInfo = async (): Promise<GetUserInfoResponseDTO> => {
   const response = await apiClient.get<GetUserInfoResponseDTO>('/users/me');

@@ -21,6 +21,7 @@ import { setAccessToken } from '../../apis/apiClient';
 import { useMyStore } from '../../store/myStore';
 import { useAuthStore } from '../../store/authStore';
 import { usePushNotifications } from '../usePushNotifications';
+import { registerPushToken } from '../../apis/users';
 
 // POST /auth/signup - 회원가입 훅
 export const useSignup = () => {
@@ -82,7 +83,7 @@ export const useStoreLogin = () => {
       
       return storeLogin(loginData);
     },
-    onSuccess: (data: StoreLoginResponseDTO) => {
+    onSuccess: async (data: StoreLoginResponseDTO) => {
       // 로그인 성공 시 액세스 토큰 설정
       if (data.data.token) {
         setAccessToken(`Bearer ${data.data.token}`);
@@ -113,6 +114,17 @@ export const useStoreLogin = () => {
           writtenReviews: 0,
           preferredSports: [],
         });
+
+        // 푸시 토큰 서버 등록 (사장님 로그인 성공 후)
+        try {
+          const pushToken = await registerForPushNotificationsAsync();
+          if (pushToken) {
+            await registerPushToken(pushToken);
+            console.log('✅ 사장님 로그인 후 푸시 토큰이 서버에 등록되었습니다');
+          }
+        } catch (tokenError) {
+          console.log('⚠️ 사장님 로그인 후 푸시 토큰 등록 실패:', tokenError);
+        }
       }
     },
     onError: (error) => {
@@ -140,7 +152,7 @@ export const useLogin = () => {
       
       return login(loginData);
     },
-    onSuccess: (data:LoginResponseDTO) => {
+    onSuccess: async (data:LoginResponseDTO) => {
       // 로그인 성공 시 액세스 토큰 설정
       if (data.data.token) {
         setAccessToken(`Bearer ${data.data.token}`);
@@ -171,6 +183,17 @@ export const useLogin = () => {
           writtenReviews: 0,
           preferredSports: [],
         });
+
+        // 푸시 토큰 서버 등록 (로그인 성공 후)
+        try {
+          const pushToken = await registerForPushNotificationsAsync();
+          if (pushToken) {
+            await registerPushToken(pushToken);
+            console.log('✅ 로그인 후 푸시 토큰이 서버에 등록되었습니다');
+          }
+        } catch (tokenError) {
+          console.log('⚠️ 로그인 후 푸시 토큰 등록 실패:', tokenError);
+        }
       }
     },
     onError: (error) => {
