@@ -4,6 +4,7 @@
 const e = require('express');
 const { getConnection } = require('../config/db_config');
 const messageService = require('../services/message_service');
+const pushService = require('./push_service');
 // 💬 1. 채팅방 목록 조회 (중복 제거)
 exports.getChatRooms = async (user_id) => {
   const conn = getConnection();
