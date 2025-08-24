@@ -56,9 +56,10 @@ exports.createReservation = async (req, res, next) => {
 exports.joinReservation = async (req, res, next) => {
   try {
     const user_id = req.user.user_id;
+    const user_name = req.user.user_name;
     const reservation_id = req.params.reservation_id;
 
-    const result = await reservationService.joinReservation(user_id, reservation_id);
+    const result = await reservationService.joinReservation(user_id, reservation_id, user_name);
 
     res.json({
       success: true,

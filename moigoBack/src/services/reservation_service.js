@@ -3,7 +3,7 @@
 
 const { getConnection } = require('../config/db_config');
 const chatService = require('../services/chat_service');
-
+const pushService = require('./push_service');
 // 🧾 1. 모임 생성 서비스
 exports.createReservation = async (user_id, data) => {
   const conn = getConnection();
@@ -132,7 +132,7 @@ exports.createReservation = async (user_id, data) => {
 };
 
 // 🙋 2. 모임 참여 서비스
-exports.joinReservation = async (user_id, reservation_id) => {
+exports.joinReservation = async (user_id, reservation_id, user_name) => {
   const conn = getConnection();
 
   // 이미 참여했는지 확인
@@ -189,6 +189,11 @@ exports.joinReservation = async (user_id, reservation_id) => {
     [reservation_id]
   );
 
+  try {
+    await pushService.sendUserJoinedPush(reservation_id, user_id, user_name);
+  } catch (err) {
+    console.log(err);
+  }
   return {
     message: "모임에 참여하였습니다.",
     participant_cnt: cnt[0].reservation_participant_cnt,
