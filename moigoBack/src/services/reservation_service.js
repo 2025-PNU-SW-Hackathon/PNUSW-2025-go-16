@@ -199,7 +199,7 @@ exports.getReservationList = async (filters) => {
   let query = `
     SELECT r.reservation_id, r.store_id, r.reservation_store_name,
            r.reservation_start_time, r.reservation_end_time,
-           r.reservation_bio, r.reservation_match, r.reservation_status,
+           r.reservation_bio, r.reservation_match as match_name, r.reservation_status,
            r.reservation_participant_cnt,
            r.reservation_max_participant_cnt,
            r.reservation_ex2
