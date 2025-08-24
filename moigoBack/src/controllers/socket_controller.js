@@ -127,6 +127,8 @@ module.exports = async function handleSocket(io) {
 
                 // 🔧 클라이언트가 보낸 sender_id 사용 (보안 검증 추가)
                 const actualSenderId = sender_id || tokenUserId;
+                // system 시 닉네임 설정.
+                const actualSenderName = (actualSenderId === 'system') ? '시스템' : userName;
 
                 console.log('📨 메시지 전송 요청:', {
                     token_user_id: tokenUserId,
@@ -254,7 +256,7 @@ module.exports = async function handleSocket(io) {
                                 targetUserIds: offlineUserIds,
                                 messageId,
                                 senderId: actualSenderId,
-                                senderName: userName,
+                                senderName: actualSenderName,
                                 text: message
                             });
                         }

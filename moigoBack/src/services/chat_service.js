@@ -444,6 +444,187 @@ exports.leaveChatRoom = async (user_id, room_id) => {
   }
 };
 
+// 👋 2. 채팅방 나가기 = 모임 완전 탈퇴 (방장 권한 이양 포함)
+// 상태코드: 0=모집중, 1=잠시대기(확정이전), 2=확정, 3=취소, 4=거절
+/*
+exports.leaveChatRoom = async (user_id, reservation_id) => {
+  const conn = getConnection();
+
+  try {
+    await conn.query('START TRANSACTION');
+
+    // 1) 모임 스냅샷 (락)
+    const [resvRows] = await conn.query(
+      `SELECT user_id AS host_id,
+              reservation_participant_cnt,
+              reservation_max_participant_cnt,
+              reservation_status,
+              reservation_match
+         FROM reservation_table
+        WHERE reservation_id = ? FOR UPDATE`,
+      [reservation_id]
+    );
+    if (!resvRows.length) throw new Error('존재하지 않는 모임입니다.');
+
+    const snap = resvRows[0];
+    const isHost = snap.host_id === user_id;
+    const beforeCnt = snap.reservation_participant_cnt;
+    const statusBefore = snap.reservation_status;
+
+    // 2) 사용자 표시명
+    const [urows] = await conn.query(
+      `SELECT user_name FROM user_table WHERE user_id = ?`,
+      [user_id]
+    );
+    const userName = urows.length ? urows[0].user_name : '알 수 없는 사용자';
+
+    // 3) 실제 참여자인지
+    const [partRows] = await conn.query(
+      `SELECT 1 FROM chat_room_users
+        WHERE reservation_id = ? AND user_id = ? AND COALESCE(is_kicked,0)=0`,
+      [reservation_id, user_id]
+    );
+    if (!partRows.length) {
+      throw new Error('이미 나간 모임이거나 참여하지 않은 모임입니다.');
+    }
+
+    // 4) 방장 이탈 처리(참여자 2명 이상일 때만 권한 이양)
+    let newHostId = null;
+    let hostTransferMessage = '';
+    if (isHost && beforeCnt > 1) {
+      const [nextRows] = await conn.query(
+        `SELECT cru.user_id, u.user_name
+           FROM chat_room_users AS cru
+           JOIN user_table u ON u.user_id = cru.user_id
+          WHERE cru.reservation_id = ?
+            AND cru.user_id <> ?
+            AND COALESCE(cru.is_kicked,0)=0
+          ORDER BY cru.joined_at ASC
+          LIMIT 1 FOR UPDATE`,
+        [reservation_id, user_id]
+      );
+      if (nextRows.length) {
+        newHostId = nextRows[0].user_id;
+        const newHostName = nextRows[0].user_name;
+        await conn.query(
+          `UPDATE reservation_table SET user_id = ? WHERE reservation_id = ?`,
+          [newHostId, reservation_id]
+        );
+        hostTransferMessage = ` 방장 권한이 ${newHostName}님에게 이양되었습니다.`;
+      }
+    }
+
+    // 5) 채팅방에서 사용자 제거
+    await conn.query(
+      `DELETE FROM chat_room_users WHERE reservation_id = ? AND user_id = ?`,
+      [reservation_id, user_id]
+    );
+
+    // 6) 참여자 수 감소 + 상태 업데이트 규칙 적용
+    //  - 감소 후 인원이 0명이면 3(취소)
+    //  - 그 외에는 기존 상태 유지(0/1/2 그대로)
+    if (statusBefore === 3 || statusBefore === 4) {
+      // 이미 취소/거절 상태면 인원만 감소, 상태 유지
+      await conn.query(
+        `UPDATE reservation_table
+            SET reservation_participant_cnt = GREATEST(reservation_participant_cnt - 1, 0)
+          WHERE reservation_id = ?`,
+        [reservation_id]
+      );
+    } else {
+      await conn.query(
+        `UPDATE reservation_table
+            SET reservation_participant_cnt = GREATEST(reservation_participant_cnt - 1, 0),
+                reservation_status = CASE
+                   WHEN reservation_participant_cnt - 1 <= 0 THEN 3  -- 모두 나가면 취소
+                   ELSE reservation_status                       -- 나머지는 상태 유지(0/1/2 유지)
+                END
+          WHERE reservation_id = ?`,
+        [reservation_id]
+      );
+    }
+
+    // 7) 최신 스냅샷 재조회
+    const [afterRows] = await conn.query(
+      `SELECT user_id AS host_id,
+              reservation_participant_cnt,
+              reservation_max_participant_cnt,
+              reservation_status
+         FROM reservation_table
+        WHERE reservation_id = ?`,
+      [reservation_id]
+    );
+    const after = afterRows[0];
+    const newParticipantCount = after.reservation_participant_cnt;
+    const meetingStatus = after.reservation_status;
+
+    // 8) 시스템 메시지 기록
+    const systemMessage = `${userName}님이 모임을 나가셨습니다.${hostTransferMessage}`;
+    const [maxIdRes] = await conn.query(`SELECT MAX(message_id) AS maxId FROM chat_messages FOR UPDATE`);
+    const nextMessageId = (maxIdRes[0]?.maxId || 0) + 1;
+    await conn.query(
+      `INSERT INTO chat_messages (message_id, chat_room_id, sender_id, message, created_at)
+       VALUES (?, ?, ?, ?, NOW())`,
+      [nextMessageId, reservation_id, 'system', systemMessage]
+    );
+
+    await conn.query('COMMIT');
+
+    // 9) 소켓 브로드캐스트 (업데이트 '후' 값 사용)
+    try {
+      const { getIO } = require('../config/socket_hub');
+      const io = getIO();
+
+      io.to(String(reservation_id)).emit('newMessage', {
+        message_id: nextMessageId,
+        chat_room_id: reservation_id,
+        sender_id: 'system',
+        message: systemMessage,
+        created_at: new Date(),
+        message_type: 'system_leave',
+        user_name: userName,
+        user_id: user_id
+      });
+
+      io.to(String(reservation_id)).emit('userLeftRoom', {
+        room_id: reservation_id,
+        user_id,
+        user_name: userName,
+        left_at: new Date().toISOString(),
+        remaining_participants: newParticipantCount,
+        is_host_left: isHost,
+        new_host_id: newHostId,
+        meeting_status: meetingStatus
+      });
+
+      if (newHostId) {
+        io.to(String(reservation_id)).emit('hostTransferred', {
+          room_id: reservation_id,
+          previous_host: user_id,
+          new_host: newHostId,
+          transferred_at: new Date().toISOString()
+        });
+      }
+    } catch (e) {
+      console.log('소켓 전송 실패:', e.message);
+    }
+    
+    // 10) 응답
+    return {
+      roomId: reservation_id,
+      reservation_id,
+      left_at: new Date().toISOString(),
+      remaining_participants: newParticipantCount,
+      is_host_left: isHost,
+      new_host_id: newHostId,
+      meeting_status: meetingStatus
+    };
+  } catch (error) {
+    try { await conn.query('ROLLBACK'); } catch (_) {}
+    throw error;
+  }
+};
+*/
 // 📌 3. 채팅방 상태 변경
 exports.updateChatRoomStatus = async (user_id, room_id, status) => {
   const conn = getConnection();
