@@ -142,16 +142,16 @@ export default function MeetingScreen() {
               >
                 {/* 상태 배지 및 시간/일자 */}
                 <View className="flex-row justify-between items-center mb-2">
-                  <View className="gap-1">
+                  <View className="flex-1 gap-1 mr-3">
                     <TagChip
                       label={getStatusText(item.reservation_status)}
                       color={COLORS.confirmBg}
                       textColor={COLORS.confirmText}
                     />
-                    <Text className="text-base font-bold text-gray-900">{reservation.title}</Text>
+                    <Text className="text-base font-bold text-gray-900" ellipsizeMode="tail" numberOfLines={1}>{reservation.title}</Text>
                     <Text className="text-sm text-gray-400 mt-0.5">{reservation.description}</Text>
                   </View>
-                  <View className="items-end">
+                  <View className="flex-shrink-0 items-end">
                     <Text className="text-base font-bold text-gray-800">{reservation.time}</Text>
                     <Text className="text-sm text-gray-400">{reservation.date}</Text>
                   </View>
