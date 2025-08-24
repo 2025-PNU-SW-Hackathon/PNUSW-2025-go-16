@@ -47,7 +47,11 @@ export function useEnterModal() {
       
       // 에러 메시지 설정
       let errorMessage = '모임 참여에 실패했습니다';
-      if (error?.response?.status === 409) {
+      if (error?.response?.status === 401) {
+        errorMessage = '이 모임에 참여할 권한이 없습니다.\n강퇴된 사용자는 재참여가 불가능합니다.';
+      } else if (error?.response?.status === 403) {
+        errorMessage = '모집이 마감된 모임입니다.\n새로운 참여자는 받지 않고 있습니다.';
+      } else if (error?.response?.status === 409) {
         errorMessage = '이미 참여 중인 모임입니다';
       } else if (error?.response?.status === 400) {
         errorMessage = '참여할 수 없는 모임입니다';

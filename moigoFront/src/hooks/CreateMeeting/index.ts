@@ -99,7 +99,7 @@ export function useCreateMeeting() {
     // 모임 생성 요청 데이터 구성 (match_id 포함)
     const createRequest: CreateReservationRequestDTO = {
       match_id: selectedEvent.id, // 🎯 경기 ID 전송 (백엔드에서 competition_code 자동 설정)
-      store_id: 1, // 기본 매장 ID (실제로는 사용자가 선택해야 함)
+      store_id: "1", // 기본 매장 ID (실제로는 사용자가 선택해야 함)
       reservation_max_participant_cnt: data.maxPeople, // 최대 참여자 수
       // 백엔드에서 match_id로 자동 설정되므로 아래 필드들은 제거
       // reservation_title: data.meetingName, // 사용자가 입력한 모임 이름
@@ -120,6 +120,26 @@ export function useCreateMeeting() {
     try {
       const response = await createReservationMutation.mutateAsync(createRequest);
       console.log('모임 생성 성공:', response);
+      
+      // 🆕 서버 응답에서 방장 정보와 채팅방 ID 확인
+      if (response.data.host_id && response.data.chat_room_id) {
+        console.log('✅ 방장 권한 획득:', {
+          reservation_id: response.data.reservation_id,
+          host_id: response.data.host_id,
+          chat_room_id: response.data.chat_room_id,
+          created_at: response.data.created_at
+        });
+        
+        // 사용자 상태에 방장 정보 저장 (선택사항)
+        const authStore = useAuthStore.getState();
+        if (authStore.user?.id === response.data.host_id) {
+          console.log('🎯 현재 사용자가 방장으로 확인됨');
+          // authStore.updateUser({ hosted_meetings: [..., response.data.reservation_id] });
+        }
+      } else {
+        console.warn('⚠️ 서버 응답에서 방장 정보가 누락됨');
+      }
+      
       return response;
     } catch (error) {
       console.error('모임 생성 실패:', error);

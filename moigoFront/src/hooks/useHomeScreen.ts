@@ -155,9 +155,19 @@ export const useUserHomeScreen = () => {
     gcTime: 10 * 60 * 1000, // 10분
   });
 
-  // 클라이언트 사이드 필터링 (reservation_ex2로 직접 필터링)
+  // 클라이언트 사이드 필터링 (reservation_ex2로 직접 필터링 + 🆕 모집 마감 제외)
   const filteredEvents = (reservationsData?.data || []).filter((event: any) => {
-    // 'all' 선택 시 모든 이벤트 표시
+    // 🆕 모집 마감된 모임 제외 (reservation_status가 1인 경우)
+    if (event.reservation_status === 1) {
+      console.log('🔒 모집 마감된 모임 제외:', {
+        id: event.reservation_id,
+        title: event.reservation_match,
+        status: event.reservation_status
+      });
+      return false;
+    }
+    
+    // 'all' 선택 시 모든 이벤트 표시 (단, 모집 중인 것만)
     if (selectedFilter === 'all') {
       return true;
     }
@@ -172,6 +182,7 @@ export const useUserHomeScreen = () => {
         eventId: event.reservation_id,
         eventTitle: event.reservation_match,
         eventCompetitionCode,
+        reservationStatus: event.reservation_status,
         matches: selectedFilter === eventCompetitionCode
       });
     }

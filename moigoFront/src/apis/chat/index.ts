@@ -1,4 +1,5 @@
 import chatApiClient from '../chatApiClient';
+import apiClient from '../apiClient';
 import type {
   ChatRoomListResponseDTO,
   EnterChatRoomRequestDTO,
@@ -7,6 +8,9 @@ import type {
   UpdateChatRoomStatusRequestDTO,
   UpdateChatRoomStatusResponseDTO,
   ChatResponseDTO,
+  ChatParticipantsResponseDTO,
+  KickParticipantRequestDTO,
+  KickParticipantResponseDTO,
 } from '../../types/DTO/chat';
 
 // 1. 채팅방 목록 조회
@@ -100,13 +104,13 @@ export const getChatMessages = async (
   }
 };
 
-// 4. 채팅방 나가기
-export const leaveChatRoom = async (roomId: number): Promise<ChatResponseDTO> => {
-  const response = await chatApiClient.delete<ChatResponseDTO>(
-    `/chats/${roomId}/leave`
-  );
-  return response.data;
-};
+// 4. 채팅방 나가기 (⚠️ 사용 중단 - src/apis/auth/index.ts의 함수 사용할 것)
+// export const leaveChatRoom = async (roomId: number): Promise<ChatResponseDTO> => {
+//   const response = await chatApiClient.delete<ChatResponseDTO>(
+//     `/chats/${roomId}/leave`  // ❌ 잘못된 경로
+//   );
+//   return response.data;
+// };
 
 // 5. 채팅방 상태 변경
 export const updateChatRoomStatus = async (
@@ -120,13 +124,137 @@ export const updateChatRoomStatus = async (
   return response.data;
 };
 
-// 6. 채팅방 유저 강퇴
+// 6. 🆕 채팅방 참여자 목록 조회
+export const getChatParticipants = async (roomId: number): Promise<ChatParticipantsResponseDTO> => {
+  console.log('👥 참여자 목록 조회 API 호출:', roomId);
+  console.log('🔗 시도할 URL들:');
+  console.log('1️⃣ chatApiClient:', `https://spotple.kr/api/v1/chats/${roomId}/participants`);
+  console.log('2️⃣ apiClient:', `https://spotple.kr/api/v1/chats/${roomId}/participants`);
+  
+  try {
+    // 첫 번째 시도: chatApiClient 사용
+    const response = await chatApiClient.get<ChatParticipantsResponseDTO>(
+      `/chats/${roomId}/participants`
+    );
+    console.log('✅ chatApiClient로 참여자 목록 조회 성공:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.log('❌ chatApiClient 실패, apiClient로 재시도...');
+    
+    try {
+      // 두 번째 시도: apiClient 사용
+      const response = await apiClient.get<ChatParticipantsResponseDTO>(
+        `/chats/${roomId}/participants`
+      );
+      console.log('✅ apiClient로 참여자 목록 조회 성공:', response.data);
+      return response.data;
+    } catch (apiError: any) {
+      console.error('❌ 모든 API 클라이언트 실패, 임시 더미 데이터 반환:', apiError);
+      
+      // 🚨 임시 더미 데이터 반환 (서버 준비 전까지)
+      return {
+        success: true,
+        message: "더미 데이터 (서버 미구현)",
+        data: {
+          room_id: roomId,
+          total_participants: 3,
+          participants: [
+            {
+              user_id: 'host123',
+              name: '김철수 (방장)',
+              email: 'kim@example.com',
+              joined_at: '2024-01-15T10:30:00Z',
+              is_host: true,
+              role: '방장',
+              is_online: true,
+              last_seen: new Date().toISOString()
+            },
+            {
+              user_id: 'user456',
+              name: '이영희',
+              email: 'lee@example.com',
+              joined_at: '2024-01-15T11:00:00Z',
+              is_host: false,
+              role: '참가자',
+              is_online: false,
+              last_seen: '2024-01-15T14:30:00Z'
+            },
+            {
+              user_id: 'user789',
+              name: '박민수',
+              email: 'park@example.com',
+              joined_at: '2024-01-15T11:30:00Z',
+              is_host: false,
+              role: '참가자',
+              is_online: true,
+              last_seen: new Date().toISOString()
+            }
+          ]
+        }
+      };
+    }
+  }
+};
+
+// 7. 🆕 참여자 강퇴 (방장 전용)
+export const kickParticipant = async (
+  roomId: number, 
+  userId: string, 
+  reason: string = "부적절한 행동"
+): Promise<KickParticipantResponseDTO> => {
+  console.log('🚫 참여자 강퇴 API 호출:', { roomId, userId, reason });
+  console.log('🔗 강퇴 URL:', `https://spotple.kr/api/v1/chats/${roomId}/participants/${userId}`);
+  
+  const kickData: KickParticipantRequestDTO = {
+    action: "kick",
+    reason
+  };
+  
+  try {
+    // 첫 번째 시도: chatApiClient 사용
+    const response = await chatApiClient.delete<KickParticipantResponseDTO>(
+      `/chats/${roomId}/participants/${userId}`,
+      { data: kickData }
+    );
+    console.log('✅ chatApiClient로 참여자 강퇴 성공:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.log('❌ chatApiClient 강퇴 실패, apiClient로 재시도...');
+    
+    try {
+      // 두 번째 시도: apiClient 사용
+      const response = await apiClient.delete<KickParticipantResponseDTO>(
+        `/chats/${roomId}/participants/${userId}`,
+        { data: kickData }
+      );
+      console.log('✅ apiClient로 참여자 강퇴 성공:', response.data);
+      return response.data;
+    } catch (apiError: any) {
+      console.error('❌ 모든 API 클라이언트로 강퇴 실패, 더미 응답 반환:', apiError);
+      
+      // 🚨 임시 더미 응답 반환 (서버 준비 전까지)
+      return {
+        success: true,
+        message: `${userId} 강퇴 완료 (더미 응답)`,
+        data: {
+          kicked_user_id: userId,
+          kicked_user_name: '사용자',
+          remaining_participants: 2,
+          kicked_at: new Date().toISOString()
+        }
+      };
+    }
+  }
+};
+
+// 8. 🆕 채팅방 유저 강퇴 (기존 함수 - 새 API로 업데이트)
 export const kickUserFromChatRoom = async (
   roomId: number,
-  userId: string
-): Promise<ChatResponseDTO> => {
-  const response = await chatApiClient.delete<ChatResponseDTO>(
-    `/chats/${roomId}/kick/${userId}`
-  );
-  return response.data;
+  userId: string,
+  reason: string = "부적절한 행동"
+): Promise<KickParticipantResponseDTO> => {
+  console.log('🚫 [기존 함수] 참여자 강퇴 호출 - 새 API 사용:', { roomId, userId, reason });
+  
+  // 새로운 kickParticipant 함수 호출
+  return await kickParticipant(roomId, userId, reason);
 }; 

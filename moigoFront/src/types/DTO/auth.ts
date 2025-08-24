@@ -150,8 +150,33 @@ export interface LeaveChatRoomRequestDTO {
 export interface LeaveChatRoomResponseDTO {
   success: boolean;
   message: string;
-  data?: {
+  data: {
     roomId: number;
     left_at: string;
+    reservation_id: number;        // 🆕 탈퇴한 모임 ID
+    remaining_participants: number; // 🆕 남은 참여자 수
+    is_host_left: boolean;         // 🆕 방장이 나갔는지 여부
+    new_host_id: string | null;    // 🆕 새 방장 ID (권한 이양 시)
+    meeting_status: number;        // 🆕 변경된 모임 상태
   };
+}
+
+// 🆕 사용자 퇴장 소켓 이벤트 DTO
+export interface UserLeftRoomEventDTO {
+  room_id: number;
+  user_id: string;
+  user_name: string;
+  left_at: string;
+  remaining_participants: number;
+  is_host_left: boolean;
+  new_host_id: string | null;
+  meeting_status: number;
+}
+
+// 🆕 방장 권한 이양 소켓 이벤트 DTO
+export interface HostTransferredEventDTO {
+  room_id: number;
+  previous_host: string;
+  new_host: string;
+  transferred_at: string;
 } 

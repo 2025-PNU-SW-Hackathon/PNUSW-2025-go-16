@@ -98,6 +98,9 @@ export interface CreateReservationResponseDTO {
   data: {
     reservation_id: number;
     reservation_match_name: string; // 생성된 모임명
+    host_id: string;        // 🆕 추가: 방장 ID
+    chat_room_id: number;   // 🆕 추가: 생성된 채팅방 ID
+    created_at: string;     // 🆕 추가: 생성 시간
   };
 }
 
