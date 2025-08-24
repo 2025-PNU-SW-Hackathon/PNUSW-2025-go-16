@@ -204,9 +204,6 @@ module.exports = async function handleSocket(io) {
                     messageId: messageId,
                     timestamp: new Date().toISOString()
                 });
-                Promise.all(
-                    messageService.markAllMessagesAsRead(socket.user.user_id, room)
-                ).catch(err => console.error('읽음 상태 업데이트 오류:', err));
                 console.log('✅ [DEBUG] messageAck 전송 완료');
 
                 // 6. 메시지 브로드캐스트 (방 전체에게 - 전송자 포함)
@@ -240,8 +237,10 @@ module.exports = async function handleSocket(io) {
 
                 // 7. 읽음 상태 업데이트 (비동기)
                 Promise.all(
-                    socketsInRoom.map(s => 
-                        messageService.markAllMessagesAsRead(s.user.user_id, room)
+                    socketsInRoom.map(s => {
+                        console.log(s.user.user_id, " is in socket");
+                        messageService.markAllMessagesAsRead(s.user.user_id, room);
+                        }
                     )
                 ).catch(err => console.error('읽음 상태 업데이트 오류:', err));
 
