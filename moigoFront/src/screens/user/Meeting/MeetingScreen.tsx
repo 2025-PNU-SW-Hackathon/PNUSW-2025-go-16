@@ -1,6 +1,7 @@
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCallback, useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
 
 import TagChip from '@/components/common/TagChip';
 
@@ -31,7 +32,7 @@ const convertReservationHistoryToReservation = (reservationHistory: any) => {
     status: getStatusText(reservationHistory.reservation_status),
     store_id: reservationHistory.store_id,
     max_participant_cnt: reservationHistory.reservation_max_participant_cnt,
-  };
+  } as any; // 타입 확장을 위해 any로 캐스팅
 };
 
 // 예약 상태를 텍스트로 변환하는 함수
@@ -46,6 +47,7 @@ const getStatusText = (status: number): string => {
 };
 
 export default function MeetingScreen() {
+  const navigation = useNavigation();
   const [refreshing, setRefreshing] = useState(false);
   
   const { 
@@ -68,6 +70,29 @@ export default function MeetingScreen() {
       setRefreshing(false);
     }
   }, [refreshMatchingHistory]);
+
+  // 채팅방으로 이동하는 함수
+  const navigateToChat = useCallback((reservationId: number) => {
+    // 예약 ID를 chat_room_id로 사용하는 ChatRoom 객체 생성
+    const chatRoom = {
+      chat_room_id: reservationId,
+      name: `모임 채팅방`,
+      last_message: '',
+      last_message_time: '',
+      sender_id: 0,
+      isHost: false,
+      host_id: 0,
+      title: `모임 채팅방`,
+      type: 'group'
+    };
+    
+    console.log('🚀 [MeetingScreen] 채팅방으로 이동:', {
+      reservationId,
+      chatRoom
+    });
+    
+    (navigation as any).navigate('ChatRoom', { chatRoom });
+  }, [navigation]);
 
   if (loading) {
     return (
@@ -99,6 +124,7 @@ export default function MeetingScreen() {
         visible={visible}
         selectedReservation={selectedReservation}
         onClose={closeModal}
+        onNavigateToChat={navigateToChat}
       />
 
       {/* 예약 현황 타이틀 */}

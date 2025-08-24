@@ -11,9 +11,10 @@ interface MeetingModalProps {
   visible: boolean;
   selectedReservation: Reservation | null;
   onClose: () => void;
+  onNavigateToChat: (reservationId: number) => void;
 }
 
-export default function MeetingModal({ visible, selectedReservation, onClose }: MeetingModalProps) {
+export default function MeetingModal({ visible, selectedReservation, onClose, onNavigateToChat }: MeetingModalProps) {
   if (!selectedReservation) {
     return null;
   } 
@@ -56,7 +57,14 @@ export default function MeetingModal({ visible, selectedReservation, onClose }: 
         </View>
 
         {/* 액션 버튼 */}
-        <PrimaryButton title="채팅하기" onPress={onClose} color="#F97316" />
+        <PrimaryButton 
+          title="채팅하기" 
+          onPress={() => {
+            onNavigateToChat((selectedReservation as any).id);
+            onClose();
+          }} 
+          color="#F97316" 
+        />
       </View>
     </ModalBox>
   );
