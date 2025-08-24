@@ -702,7 +702,7 @@ exports.getAllMessages = async (user_id, room_id) => {
 exports.enterChatRoom = async (user_id, reservation_id) => {
   const conn = getConnection();
   const [existingReservation] = await conn.query(
-    'SELECT reservation_match, reservation_status FROM reservation_table WHERE reservation_id = ?'
+    'SELECT reservation_match, reservation_bio, reservation_status FROM reservation_table WHERE reservation_id = ?'
     , [reservation_id]);
   if (existingReservation.length == 0) {
     const err = new Error("존재하지 않는 모임입니다.");
@@ -732,7 +732,7 @@ exports.enterChatRoom = async (user_id, reservation_id) => {
     // 없으면 새로 생성
     const [insertResult] = await conn.query(
       `INSERT INTO chat_rooms (reservation_id, name, status) VALUES (?, ?, 0)`,
-      [reservation_id, existingReservation[0].reservation_match]
+      [reservation_id, existingReservation[0].reservation_bio || '모임']  // 🆕 방 제목(reservation_title) 사용
     );
     chat_room_id = reservation_id;
   }
