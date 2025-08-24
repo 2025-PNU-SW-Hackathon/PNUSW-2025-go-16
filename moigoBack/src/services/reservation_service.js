@@ -26,7 +26,7 @@ exports.createReservation = async (user_id, data) => {
     reservation_date,  // 🆕 추가
   } = data;
   
-  let finalStartTime, finalEndTime, finalMatch, finalCategory, finalEx2;
+  let finalStartTime, finalEndTime, finalMatchName, finalReservationTitle, finalCategory, finalEx2;
   
   // 경기 ID가 있으면 경기 정보에서 가져오기
   if (match_id) {
@@ -46,8 +46,9 @@ exports.createReservation = async (user_id, data) => {
     const match = matchRows[0];
     finalStartTime = match.match_date;  // 경기 시작 시간
     finalEndTime = new Date(new Date(match.match_date).getTime() + 2 * 60 * 60 * 1000); // 2시간 후
-    finalMatch = `${match.home_team} vs ${match.away_team}`;
-    finalEx2 = match.competition_code; // 🆕 competition_code를 ex2에 저장
+    finalMatchName = `${match.home_team} vs ${match.away_team}`;  // 🆕 경기명 (match_name)
+    finalReservationTitle = reservation_title || '함께 시청해요';  // 🆕 방 제목 (reservation_title)
+    finalEx2 = match.competition_code; // competition_code를 ex2에 저장
     // competition_code를 정수로 매핑
     const categoryMap = {
       'PD': 1,     // 프리미어리그
@@ -57,7 +58,7 @@ exports.createReservation = async (user_id, data) => {
     };
     finalCategory = categoryMap[match.competition_code] || 0;  // 정수값으로 변환
     
-    console.log(`🔍 [DEBUG] 경기 정보로 설정 - 시작: ${finalStartTime}, 종료: ${finalEndTime}, ex2: ${finalEx2}`);
+    console.log(`🔍 [DEBUG] 경기 기반 - 경기명: ${finalMatchName}, 방제목: ${finalReservationTitle}`);
   } else {
     // 기존 수동 입력 방식
     console.log(`🔍 [DEBUG] 수동 입력 방식`);
@@ -71,22 +72,25 @@ exports.createReservation = async (user_id, data) => {
       const dateStr = reservation_date; // YYYY-MM-DD
       finalStartTime = `${dateStr} ${reservation_start_time}`;
       finalEndTime = `${dateStr} ${reservation_end_time}`;
-      finalMatch = reservation_title || '모임';  // NULL 방지
+      finalMatchName = null;  // 🆕 수동 모임은 경기명 없음
+      finalReservationTitle = reservation_title || '모임';  // 🆕 방 제목
       finalCategory = parseInt(reservation_match_category) || 0;  // 정수형으로 변환, NULL 방지
-      console.log(`🔍 [DEBUG] 새로운 형식 - 제목: ${finalMatch}, 시간: ${finalStartTime} - ${finalEndTime}`);
+      console.log(`🔍 [DEBUG] 수동 모임 - 방제목: ${finalReservationTitle}, 시간: ${finalStartTime} - ${finalEndTime}`);
     } else if (reservation_start_time && /^\d{2}:\d{2}:\d{2}$/.test(reservation_start_time)) {
       // 기존 방식: 시간만 들어온 경우 오늘 날짜와 합치기
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       finalStartTime = `${today} ${reservation_start_time}`;
       finalEndTime = `${today} ${reservation_end_time}`;
-      finalMatch = reservation_match || '모임';  // NULL 방지
+      finalMatchName = reservation_match || null;  // 🆕 경기명 (있으면)
+      finalReservationTitle = reservation_title || '모임';  // 🆕 방 제목
       finalCategory = parseInt(reservation_match_category) || 0;  // 정수형으로 변환, NULL 방지
-      console.log(`🔍 [DEBUG] 시간 형식 변환됨 - 시작: ${finalStartTime}, 종료: ${finalEndTime}`);
+      console.log(`🔍 [DEBUG] 기존 방식 - 경기명: ${finalMatchName}, 방제목: ${finalReservationTitle}`);
     } else {
       // 완전한 datetime이 들어온 경우
       finalStartTime = reservation_start_time;
       finalEndTime = reservation_end_time;
-      finalMatch = reservation_match || reservation_title || '모임';  // NULL 방지
+      finalMatchName = reservation_match || null;  // 🆕 경기명 (있으면)
+      finalReservationTitle = reservation_title || '모임';  // 🆕 방 제목
       finalCategory = parseInt(reservation_match_category) || 0;  // 정수형으로 변환, NULL 방지
     }
   }
@@ -109,8 +113,8 @@ exports.createReservation = async (user_id, data) => {
       store_id,
       finalStartTime,  // 🆕 경기 날짜 또는 수동 입력 날짜
       finalEndTime,    // 🆕 경기 날짜 + 2시간 또는 수동 입력 날짜
-      finalMatch,      // 🆕 "팀A vs 팀B" 또는 수동 입력 매치명
-      reservation_bio || reservation_description || '',  // NULL 방지
+      finalMatchName,      // 🆕 경기명 (match_name) - 경기 기반만
+      finalReservationTitle,  // 🆕 방 제목 (reservation_title)
       reservation_max_participant_cnt,
       finalCategory,   // 🆕 경기 카테고리 또는 수동 입력 카테고리
       createdAt,
@@ -199,7 +203,7 @@ exports.getReservationList = async (filters) => {
   let query = `
     SELECT r.reservation_id, r.store_id, r.reservation_store_name,
            r.reservation_start_time, r.reservation_end_time,
-           r.reservation_bio, r.reservation_match as match_name, r.reservation_status,
+           r.reservation_bio as reservation_title, r.reservation_match as match_name, r.reservation_status,
            r.reservation_participant_cnt,
            r.reservation_max_participant_cnt,
            r.reservation_ex2

@@ -984,6 +984,7 @@ exports.getMyStoreReservations = async (store_id) => {
       `SELECT 
         r.reservation_id,
         r.reservation_match as match_name,
+        r.reservation_bio as reservation_title,
         r.reservation_start_time,
         r.reservation_participant_cnt,
         r.reservation_max_participant_cnt,
@@ -1002,6 +1003,7 @@ exports.getMyStoreReservations = async (store_id) => {
     return rows.map(row => ({
       reservation_id: row.reservation_id,
       match_name: row.match_name,
+      reservation_title: row.reservation_title,
       reservation_start_time: row.reservation_start_time,
       reservation_participant_info: row.participant_names || '참가자 없음',
       reservation_table_info: '테이블 정보', // 실제 테이블 정보가 있다면 추가

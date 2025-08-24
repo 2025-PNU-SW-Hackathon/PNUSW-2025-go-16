@@ -22,7 +22,8 @@ exports.getChatRooms = async (user_id) => {
       rt.reservation_participant_cnt,                            -- 🆕 현재 참여자 수 추가
       rt.reservation_max_participant_cnt,                        -- 🆕 최대 참여자 수 추가
       rt.reservation_start_time,                                 -- 🆕 모임 시작 시간 추가
-      rt.reservation_match,                                      -- 🆕 모임명 추가
+      rt.reservation_match,                                      -- 🆕 경기명 추가
+      rt.reservation_bio,                                        -- 🆕 모임명 추가
       rt.selected_store_id,                                      -- 🆕 선택된 가게 ID 추가
       rt.selected_store_name,                                    -- 🆕 선택된 가게 이름 추가
       rt.selected_at,                                            -- 🆕 가게 선택 시간 추가
@@ -128,7 +129,8 @@ exports.getChatRooms = async (user_id) => {
       is_recruitment_closed: row.reservation_status === 1,        // 🆕 모집 마감 여부
       participant_info: `${row.reservation_participant_cnt}/${row.reservation_max_participant_cnt}`, // 🆕 참여자 정보
       reservation_start_time: row.reservation_start_time ? new Date(row.reservation_start_time).toISOString() : null,  // 🆕 시작 시간 ISO 형식
-      match_name: row.reservation_match,                         // 🆕 모임명
+      match_name: row.reservation_match,                         // 🆕 경기명
+      reservation_title: row.reservation_bio,                   // 🆕 방 제목
       selected_store: selectedStore,                              // 🆕 선택된 가게 정보
       payment_status: paymentStatus,                              // 🆕 정산 상태
       payment_progress: paymentProgress                           // 🆕 정산 진행률
@@ -793,7 +795,7 @@ exports.enterChatRoom = async (user_id, reservation_id) => {
   // 🆕 모집 상태 및 선택된 가게 정보 조회 후 반환
   const [reservationDetails] = await conn.query(
     `SELECT reservation_status, reservation_participant_cnt, reservation_max_participant_cnt, 
-            reservation_match, reservation_start_time, user_id as host_id,
+            reservation_match, reservation_bio, reservation_start_time, user_id as host_id,
             selected_store_id, selected_store_name, selected_at, selected_by
      FROM reservation_table WHERE reservation_id = ?`,
     [reservation_id]
@@ -880,6 +882,7 @@ exports.enterChatRoom = async (user_id, reservation_id) => {
       max_participant_count: reservation.reservation_max_participant_cnt,
       participant_info: `${reservation.reservation_participant_cnt}/${reservation.reservation_max_participant_cnt}`,
       match_name: reservation.reservation_match,
+      reservation_title: reservation.reservation_bio,
       reservation_start_time: reservation.reservation_start_time ? new Date(reservation.reservation_start_time).toISOString() : null,
       host_id: reservation.host_id,
       is_host: reservation.host_id === user_id,
@@ -913,7 +916,7 @@ exports.getChatParticipants = async (user_id, room_id) => {
     // 2. 모임 정보 조회 (방장 확인용)
     const [reservationInfo] = await conn.query(
       `SELECT user_id as host_id, reservation_participant_cnt, reservation_max_participant_cnt,
-              reservation_status, reservation_match, reservation_start_time,
+              reservation_status, reservation_match, reservation_bio, reservation_start_time,
               selected_store_id, selected_store_name, selected_at, selected_by
        FROM reservation_table WHERE reservation_id = ?`,
       [room_id]
@@ -993,6 +996,7 @@ exports.getChatParticipants = async (user_id, room_id) => {
         max_participant_count: reservationInfo[0].reservation_max_participant_cnt,
         participant_info: `${reservationInfo[0].reservation_participant_cnt}/${reservationInfo[0].reservation_max_participant_cnt}`,
         match_name: reservationInfo[0].reservation_match,
+        reservation_title: reservationInfo[0].reservation_bio,
         reservation_start_time: reservationInfo[0].reservation_start_time ? new Date(reservationInfo[0].reservation_start_time).toISOString() : null,
         host_id: reservationInfo[0].host_id,
         is_host: reservationInfo[0].host_id === user_id,
@@ -2385,6 +2389,7 @@ exports.getChatRoomDetail = async (user_id, room_id) => {
         rt.reservation_participant_cnt,
         rt.reservation_max_participant_cnt,
         rt.reservation_match,
+        rt.reservation_bio,
         rt.reservation_start_time,
         rt.selected_store_id,
         rt.selected_store_name,
@@ -2485,6 +2490,7 @@ exports.getChatRoomDetail = async (user_id, room_id) => {
       reservation_participant_cnt: reservation.reservation_participant_cnt,
       reservation_max_participant_cnt: reservation.reservation_max_participant_cnt,
       match_name: reservation.reservation_match,
+      reservation_title: reservation.reservation_bio,
       reservation_start_time: reservation.reservation_start_time ? new Date(reservation.reservation_start_time).toISOString() : null,
       
       // 선택된 가게 정보

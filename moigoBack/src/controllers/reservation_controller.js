@@ -84,7 +84,7 @@ exports.getReservationList = async (req, res, next) => {
         store_name: item.store_name,
         reservation_start_time: item.reservation_start_time,
         reservation_end_time: item.reservation_end_time,
-        reservation_bio: item.reservation_bio,
+        reservation_title: item.reservation_title,
         match_name: item.match_name,
         reservation_status: item.reservation_status,
         reservation_participant_cnt: item.reservation_participant_cnt,
