@@ -204,6 +204,9 @@ module.exports = async function handleSocket(io) {
                     messageId: messageId,
                     timestamp: new Date().toISOString()
                 });
+                Promise.all(
+                    messageService.markAllMessagesAsRead(socket.user.user_id, room)
+                ).catch(err => console.error('읽음 상태 업데이트 오류:', err));
                 console.log('✅ [DEBUG] messageAck 전송 완료');
 
                 // 6. 메시지 브로드캐스트 (방 전체에게 - 전송자 포함)
