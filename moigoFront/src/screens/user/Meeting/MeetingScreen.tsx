@@ -16,7 +16,7 @@ import MeetingModal from './MeetingModal';
 const convertReservationHistoryToReservation = (reservationHistory: any) => {
   return {
     id: reservationHistory.reservation_id,
-    title: reservationHistory.reservation_match,
+    title: reservationHistory.reservation_title || reservationHistory.match_name || reservationHistory.reservation_match,
     description: reservationHistory.reservation_bio || '모임',
     time: new Date(reservationHistory.reservation_start_time).toLocaleTimeString('ko-KR', {
       hour: '2-digit',

@@ -1,9 +1,11 @@
 import React from 'react';
-import { Modal, TouchableOpacity, ScrollView } from 'react-native';
+import { Modal, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
 import ModalHeader from './ModalHeader';
 import ReservationInfo from './ReservationInfo';
 import ModalButtons from './ModalButtons';
 import type { MatchDTO } from '@/types/DTO/reservations';
+
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 interface CreateModalProps {
   isConfirmModalVisible: boolean;
@@ -33,7 +35,7 @@ export default function CreateModal({
 }: CreateModalProps) {
   console.log('CreateModal 렌더링:', { selectedEventId, eventsLength: events.length, isConfirmModalVisible });
   
-  // 안전한 타입 체크 추가
+  // MatchDTO에서 id 필드 사용
   const selectedEvent = events.find((event) => {
     if (event.id === undefined || event.id === null) {
       console.warn('경기 데이터에 id가 없습니다:', event);
@@ -59,7 +61,12 @@ export default function CreateModal({
         onPress={handleCancel}
       >
         <TouchableOpacity
-          className="w-full bg-white rounded-t-3xl min-h-[55%] max-h-[80%]"
+          className="w-full bg-white rounded-t-3xl"
+          style={{
+            minHeight: screenHeight * 0.6, // 화면 높이의 60%
+            maxHeight: screenHeight * 0.85, // 화면 높이의 85%
+            marginTop: 'auto', // 하단에 붙이기
+          }}
           activeOpacity={1}
           onPress={(e) => e.stopPropagation()}
         >

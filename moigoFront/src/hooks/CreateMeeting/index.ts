@@ -4,7 +4,7 @@ import { useEventFilter } from './useEventFilter';
 import { useEventPagination } from './useEventPagination';
 import { useGetMatches, useCreateReservation } from '@/hooks/queries/useReservationQueries';
 import type { CreateMeetingForm } from './useMeetingForm';
-import type { CreateReservationRequestDTO } from '@/types/DTO/reservations';
+import type { CreateReservationRequestDTO, MatchDTO } from '@/types/DTO/reservations';
 import { useAuthStore } from '@/store/authStore';
 
 // 메인 훅 - 모든 기능을 조합
@@ -18,8 +18,8 @@ export function useCreateMeeting() {
   // 모임 생성 API
   const createReservationMutation = useCreateReservation();
 
-  // API 데이터 사용
-  const eventsToShow = matches?.data || [];
+  // API 데이터 사용 - MatchDTO 타입으로 명시
+  const eventsToShow: MatchDTO[] = matches?.data || [];
   
   // 디버깅 로그 (한 번만 출력)
   if (eventsToShow.length > 0) {
@@ -101,8 +101,10 @@ export function useCreateMeeting() {
       match_id: selectedEvent.id, // 🎯 경기 ID 전송 (백엔드에서 competition_code 자동 설정)
       store_id: "1", // 기본 매장 ID (실제로는 사용자가 선택해야 함)
       reservation_max_participant_cnt: data.maxPeople, // 최대 참여자 수
+      // 사용자가 입력한 모임 정보도 함께 전송
+      reservation_title: data.meetingName, // 사용자가 입력한 모임 이름 (경기명이 아닌 실제 모임명)
+      reservation_bio: data.description, // 사용자가 입력한 모임 설명
       // 백엔드에서 match_id로 자동 설정되므로 아래 필드들은 제거
-      // reservation_title: data.meetingName, // 사용자가 입력한 모임 이름
       // reservation_description: data.description, // 사용자가 입력한 모임 설명
       // reservation_date: formatDate(reservationStartTime), // YYYY-MM-DD 형식
       // reservation_start_time: formatTime(reservationStartTime), // HH:MM:SS 형식

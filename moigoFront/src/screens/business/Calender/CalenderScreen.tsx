@@ -70,7 +70,7 @@ export default function CalenderScreen() {
       
       console.log('📅 [예약 변환]', {
         id: reservation.reservation_id,
-        title: reservation.reservation_match,
+        title: reservation.reservation_title || reservation.match_name || reservation.reservation_match,
         date: reservation.reservation_start_time,
         dayIndex,
         dayName: ['월', '화', '수', '목', '금', '토', '일'][dayIndex],
@@ -81,7 +81,7 @@ export default function CalenderScreen() {
       
       events.push({
         id: `reservation_${reservation.reservation_id}`,
-        title: reservation.reservation_match,
+        title: reservation.reservation_title || reservation.match_name || reservation.reservation_match,
         startTime: reservationDate.toLocaleTimeString('ko-KR', { 
           hour: '2-digit', 
           minute: '2-digit',

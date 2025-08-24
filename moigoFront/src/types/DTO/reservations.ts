@@ -65,7 +65,8 @@ export interface MatchReservationDTO {
   reservation_created_at?: string;
   store_name?: string;
   store_address?: string;
-  reservation_match?: string; // 모임명
+  reservation_match?: string; // 모임명 (기존)
+  match_name?: string; // 사용자가 입력한 실제 모임명 (새로 추가)
   reservation_bio?: string; // 모임 설명
   reservation_match_category?: number; // 경기 카테고리
 }
@@ -85,6 +86,7 @@ export interface CreateReservationRequestDTO {
   store_id?: string | null; // 매장 ID (선택)
   reservation_start_time?: string; // 시작 시간 (YYYY-MM-DDTHH:mm:ss 형식)
   reservation_end_time?: string; // 종료 시간 (YYYY-MM-DDTHH:mm:ss 형식)
+  reservation_title?: string; // 모임 제목 (사용자가 입력한 모임명)
   reservation_match?: string; // 모임명 (예: "맨시티 vs 첼시")
   reservation_bio?: string; // 모임 설명 (예: "맥주한잔하며 즐겁게 보실분들!")
   reservation_max_participant_cnt: number; // 최대 참여자 수 (필수, 1 이상)
@@ -113,7 +115,8 @@ export interface ReservationDTO {
   reservation_start_time: string;
   reservation_end_time: string;
   reservation_bio: string;
-  reservation_match: string;
+  reservation_match: string; // 기존 모임명
+  match_name?: string; // 사용자가 입력한 실제 모임명
   reservation_status: number; // 0: 모집중, 1: 모집완료, 2: 취소됨
   reservation_participant_cnt: number;
   reservation_max_participant_cnt: number;

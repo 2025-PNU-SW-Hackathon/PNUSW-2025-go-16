@@ -12,7 +12,7 @@ interface EventCardProps {
 
 export default function EventCard({ event, onParticipate }: EventCardProps) {
   // 경기 데이터와 기존 데이터의 필드명 통합 처리
-  const eventTitle = event.title || event.reservation_match || `${event.home_team} vs ${event.away_team}` || '제목 없음';
+  const eventTitle = event.title || event.reservation_title || event.match_name || event.reservation_match || `${event.home_team} vs ${event.away_team}` || '제목 없음';
   const eventLocation = event.location || event.store_name || event.venue || '위치 정보 없음';
   // reservation_ex2 (competition_code)를 우선적으로 사용하여 TagChip에 표시
   const eventSportType = event.reservation_ex2 || event.sportType || event.reservation_ex1 || event.competition_code || '스포츠';
