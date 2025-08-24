@@ -1,5 +1,9 @@
 // src/controllers/user_controller.js
 const userService = require('../services/user_service');
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() }); // req.file.buffer 사용
+const imageService = require('../services/image_service');
+const { getConnection } = require('../config/db_config');
 
 // 👤 아이디 중복 검사 컨트롤러
 exports.checkUserIdDuplicate = async (req, res, next) => {
@@ -188,3 +192,59 @@ exports.deleteUser = async (req, res, next) => {
     next(err);
   }
 };
+
+// 사용자 프로필 이미지 저장
+
+/**
+ * POST /api/v1/users/me/thumbnail
+ * form-data: { thumbnail: <file> }
+ */
+exports.uploadThumbnail = [
+  upload.single('thumbnail'),
+  async (req, res, next) => {
+    try {
+      const userId = req.body.userId;
+      if (!req.file) {
+        return res.status(400).json({ error: '파일이 필요합니다.' });
+      }
+
+      // 1) 이미지 저장(images 테이블 insert)
+      const saved = await imageService.saveImageLocal({
+        ownerType: 'user',
+        ownerId: userId,
+        file: req.file,
+        isPublic: 0, // 인증이 필요한 이미지면 0 권장
+      });
+      // saved => { image_id, file_name, object_key, abs_path }
+
+      // 2) 기존 썸네일(있다면) 조회
+      const conn = getConnection();
+      const [rows] = await conn.query(
+        `SELECT user_thumbnail FROM user_table WHERE user_id = ?`,
+        [userId]
+      );
+      const prevImageId = rows?.[0]?.user_thumbnail || null;
+
+      // 3) user_table에 새 image_id 매핑
+      await conn.query(
+        `UPDATE user_table SET user_thumbnail = ? WHERE user_id = ?`,
+        [saved.image_id, userId]
+      );
+
+      // 4) 이전 이미지 삭제(선택) — 교체 시 디스크/DB 모두 정리하고 싶다면 활성화
+      // if (prevImageId) {
+      //   try { await imageService.deleteImage(prevImageId); } catch (_) {}
+      // }
+
+      return res.json({
+        ok: true,
+        image_id: saved.image_id,
+        object_key: saved.object_key,
+        // 정적 서빙을 쓰지 않는 구조라면 URL은 별도 API로 제공(아래 3번 참고)
+        // 정적 서빙을 쓴다면 `/uploads/${object_key}`를 내려도 됨
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+];
