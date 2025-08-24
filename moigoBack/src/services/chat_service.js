@@ -65,12 +65,12 @@ exports.getChatRooms = async (user_id) => {
   );
 
   console.log('🔍 [DEBUG] 중복 제거 후 채팅방 수:', rows.length);
-  
+
   // 방장 여부 판별 및 상태 정보 추가
   const processedRows = await Promise.all(rows.map(async (row) => {
     const isHost = row.host_id === user_id;
     const role = isHost ? '방장' : '참가자';
-    
+
     // 🆕 모집 상태 메시지 생성
     const statusMessages = {
       0: '모집 중',
@@ -78,7 +78,7 @@ exports.getChatRooms = async (user_id) => {
       2: '진행 중',
       3: '완료'
     };
-    
+
     console.log('📋 [DEBUG] 채팅방 정보:', {
       chat_room_id: row.chat_room_id,
       name: row.name,
@@ -102,7 +102,7 @@ exports.getChatRooms = async (user_id) => {
     // 🆕 정산 상태 간단 정보 조회
     let paymentStatus = 'not_started';
     let paymentProgress = null;
-    
+
     try {
       const [paymentSession] = await conn.query(
         'SELECT payment_status, completed_payments, total_participants FROM payment_sessions WHERE chat_room_id = ? ORDER BY started_at DESC LIMIT 1',
@@ -112,7 +112,7 @@ exports.getChatRooms = async (user_id) => {
       if (paymentSession.length > 0) {
         const session = paymentSession[0];
         paymentStatus = session.payment_status;
-        
+
         if (session.payment_status === 'in_progress') {
           paymentProgress = `${session.completed_payments}/${session.total_participants}`;
         }
@@ -143,7 +143,7 @@ exports.getChatRooms = async (user_id) => {
 // 🧹 중복된 chat_room_users 데이터 정리 함수 (개별 사용자)
 async function cleanupDuplicateChatRoomUsers(conn, user_id) {
   console.log('🧹 [CLEANUP] 중복 채팅방 사용자 데이터 정리 시작 - user_id:', user_id);
-  
+
   try {
     // 1. 현재 사용자의 중복 데이터 확인
     const [duplicates] = await conn.query(
@@ -157,11 +157,11 @@ async function cleanupDuplicateChatRoomUsers(conn, user_id) {
 
     if (duplicates.length > 0) {
       console.log('🚨 [CLEANUP] 발견된 중복 데이터:', duplicates.length, '개의 채팅방');
-      
+
       // 2. 각 reservation_id별로 가장 오래된 것만 남기고 나머지 삭제
       for (const duplicate of duplicates) {
         console.log(`🧹 [CLEANUP] 채팅방 ${duplicate.reservation_id}에서 ${duplicate.count}개 중복 데이터 정리`);
-        
+
         // ROW_NUMBER()를 사용하여 중복 제거 (id 컬럼이 없을 수도 있으므로)
         const [deleteResult] = await conn.query(
           `DELETE t1 FROM chat_room_users t1
@@ -171,7 +171,7 @@ async function cleanupDuplicateChatRoomUsers(conn, user_id) {
            AND t1.rowid > t2.rowid`,
           [user_id, duplicate.reservation_id]
         );
-        
+
         // 위 쿼리가 실패하면 대안 방법 사용
         if (deleteResult.affectedRows === 0) {
           await conn.query(
@@ -179,7 +179,7 @@ async function cleanupDuplicateChatRoomUsers(conn, user_id) {
              WHERE user_id = ? AND reservation_id = ?`,
             [user_id, duplicate.reservation_id]
           );
-          
+
           // 다시 하나만 추가
           await conn.query(
             `INSERT IGNORE INTO chat_room_users (reservation_id, user_id, is_kicked)
@@ -187,7 +187,7 @@ async function cleanupDuplicateChatRoomUsers(conn, user_id) {
             [duplicate.reservation_id, user_id]
           );
         }
-        
+
         console.log(`✅ [CLEANUP] 채팅방 ${duplicate.reservation_id} 중복 데이터 정리 완료`);
       }
     } else {
@@ -202,9 +202,9 @@ async function cleanupDuplicateChatRoomUsers(conn, user_id) {
 // 🧹 전체 시스템 중복 데이터 정리 함수 (관리자용)
 exports.cleanupAllDuplicateChatRoomUsers = async () => {
   const conn = getConnection();
-  
+
   console.log('🧹 [SYSTEM CLEANUP] 전체 시스템 중복 채팅방 데이터 정리 시작');
-  
+
   try {
     // 1. 전체 중복 데이터 현황 파악
     const [allDuplicates] = await conn.query(
@@ -217,13 +217,13 @@ exports.cleanupAllDuplicateChatRoomUsers = async () => {
 
     if (allDuplicates.length > 0) {
       console.log('🚨 [SYSTEM CLEANUP] 전체 중복 데이터 현황:', allDuplicates.length, '개 그룹');
-      
+
       let totalCleaned = 0;
-      
+
       // 2. 각 중복 그룹별로 정리
       for (const duplicate of allDuplicates) {
         console.log(`🧹 [SYSTEM CLEANUP] 사용자 ${duplicate.user_id}, 채팅방 ${duplicate.reservation_id}: ${duplicate.count}개 중복`);
-        
+
         // 가장 최근 레코드 하나만 남기고 나머지 삭제 (created_at 기준)
         const [deleteResult] = await conn.query(
           `DELETE FROM chat_room_users 
@@ -236,13 +236,13 @@ exports.cleanupAllDuplicateChatRoomUsers = async () => {
            )`,
           [duplicate.user_id, duplicate.reservation_id, duplicate.user_id, duplicate.reservation_id]
         );
-        
+
         totalCleaned += deleteResult.affectedRows;
         console.log(`✅ [SYSTEM CLEANUP] ${deleteResult.affectedRows}개 중복 레코드 삭제`);
       }
-      
+
       console.log(`🎉 [SYSTEM CLEANUP] 전체 정리 완료: 총 ${totalCleaned}개 중복 레코드 삭제`);
-      
+
       return {
         success: true,
         duplicateGroups: allDuplicates.length,
@@ -265,11 +265,11 @@ exports.cleanupAllDuplicateChatRoomUsers = async () => {
 // 👋 2. 채팅방 나가기 = 모임 완전 탈퇴 (방장 권한 이양 포함)
 exports.leaveChatRoom = async (user_id, room_id) => {
   const conn = getConnection();
-  
+
   try {
     // 트랜잭션 시작 (MySQL2 방식)
     await conn.query('START TRANSACTION');
-    
+
     // 1. 현재 모임 정보 및 방장 여부 확인
     const [reservationInfo] = await conn.query(
       `SELECT user_id as host_id, reservation_participant_cnt, reservation_max_participant_cnt, 
@@ -277,35 +277,35 @@ exports.leaveChatRoom = async (user_id, room_id) => {
        FROM reservation_table WHERE reservation_id = ?`,
       [room_id]
     );
-    
+
     if (!reservationInfo.length) {
       throw new Error('존재하지 않는 모임입니다.');
     }
-    
+
     const isHost = reservationInfo[0].host_id === user_id;
     const currentParticipantCount = reservationInfo[0].reservation_participant_cnt;
-    
+
     // 2. 사용자 정보 조회
     const [userInfo] = await conn.query(
       `SELECT user_name FROM user_table WHERE user_id = ?`,
       [user_id]
     );
-    
+
     const userName = userInfo.length > 0 ? userInfo[0].user_name : '알 수 없는 사용자';
-    
+
     // 3. 사용자가 실제 참여자인지 확인
     const [participantCheck] = await conn.query(
       `SELECT * FROM chat_room_users WHERE reservation_id = ? AND user_id = ? AND is_kicked = 0`,
       [room_id, user_id]
     );
-    
+
     if (!participantCheck.length) {
       throw new Error('이미 나간 모임이거나 참여하지 않은 모임입니다.');
     }
-    
+
     let newHostId = null;
     let hostTransferMessage = '';
-    
+
     // 4. 방장인 경우 권한 이양 처리
     if (isHost && currentParticipantCount > 1) {
       // 가장 먼저 가입한 다른 참여자에게 방장 권한 이양
@@ -318,17 +318,17 @@ exports.leaveChatRoom = async (user_id, room_id) => {
          LIMIT 1`,
         [room_id, user_id]
       );
-      
+
       if (nextHost.length > 0) {
         newHostId = nextHost[0].user_id;
         const newHostName = nextHost[0].user_name;
-        
+
         // 방장 권한 이양
         await conn.query(
           `UPDATE reservation_table SET user_id = ? WHERE reservation_id = ?`,
           [newHostId, room_id]
         );
-        
+
         hostTransferMessage = ` 방장 권한이 ${newHostName}님에게 이양되었습니다.`;
       }
     } else if (isHost && currentParticipantCount <= 1) {
@@ -338,13 +338,13 @@ exports.leaveChatRoom = async (user_id, room_id) => {
         [room_id]
       );
     }
-    
+
     // 5. 채팅방에서 사용자 제거
     await conn.query(
       `DELETE FROM chat_room_users WHERE reservation_id = ? AND user_id = ?`,
       [room_id, user_id]
     );
-    
+
     // 6. 모임 참여자 수 감소
     const newParticipantCount = currentParticipantCount - 1;
     await conn.query(
@@ -358,28 +358,28 @@ exports.leaveChatRoom = async (user_id, room_id) => {
        WHERE reservation_id = ?`,
       [newParticipantCount, newParticipantCount, newParticipantCount, room_id]
     );
-    
+
     // 7. 시스템 메시지 생성
     const systemMessage = `${userName}님이 모임을 나가셨습니다.${hostTransferMessage}`;
-    
+
     const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages');
     const nextMessageId = (maxIdResult[0]?.maxId || 0) + 1;
-    
+
     await conn.query(
       `INSERT INTO chat_messages 
        (message_id, chat_room_id, sender_id, message, created_at)
        VALUES (?, ?, ?, ?, NOW())`,
       [nextMessageId, room_id, 'system', systemMessage]
     );
-    
+
     // 트랜잭션 커밋
     await conn.query('COMMIT');
-    
+
     // 8. 실시간 알림 전송
     try {
       const { getIO } = require('../config/socket_hub');
       const io = getIO();
-      
+
       // 시스템 메시지 전송
       const systemMessageData = {
         message_id: nextMessageId,
@@ -391,9 +391,9 @@ exports.leaveChatRoom = async (user_id, room_id) => {
         user_name: userName,
         user_id: user_id
       };
-      
+
       io.to(room_id.toString()).emit('newMessage', systemMessageData);
-      
+
       // 사용자 퇴장 이벤트 전송
       const leaveEventData = {
         room_id: parseInt(room_id),
@@ -405,9 +405,9 @@ exports.leaveChatRoom = async (user_id, room_id) => {
         new_host_id: newHostId,
         meeting_status: newParticipantCount === 0 ? 3 : (newParticipantCount < reservationInfo[0].reservation_max_participant_cnt ? 0 : reservationInfo[0].reservation_status)
       };
-      
+
       io.to(room_id.toString()).emit('userLeftRoom', leaveEventData);
-      
+
       // 방장 권한 이양 시 추가 알림
       if (newHostId) {
         io.to(room_id.toString()).emit('hostTransferred', {
@@ -417,11 +417,21 @@ exports.leaveChatRoom = async (user_id, room_id) => {
           transferred_at: new Date().toISOString()
         });
       }
-      
+
     } catch (error) {
       console.log('소켓 전송 실패:', error.message);
     }
-    
+
+    try {
+      await sendUserLeftPush({
+        reservationId: room_id,
+        leftUserId: user_id,
+        leftUserName: userName
+      });
+    } catch (err) {
+      console.log('모임 나가기 푸시 알림', err);
+    }
+
     // 9. 응답 데이터 반환
     return {
       roomId: parseInt(room_id),
@@ -432,7 +442,7 @@ exports.leaveChatRoom = async (user_id, room_id) => {
       new_host_id: newHostId,
       meeting_status: newParticipantCount === 0 ? 3 : (newParticipantCount < reservationInfo[0].reservation_max_participant_cnt ? 0 : reservationInfo[0].reservation_status)
     };
-    
+
   } catch (error) {
     // 트랜잭션 롤백
     try {
@@ -628,26 +638,26 @@ exports.leaveChatRoom = async (user_id, reservation_id) => {
 // 📌 3. 채팅방 상태 변경
 exports.updateChatRoomStatus = async (user_id, room_id, status) => {
   const conn = getConnection();
-  
+
   // 🆕 방장 권한 확인 추가
   const [hostCheck] = await conn.query(
     'SELECT user_id FROM reservation_table WHERE reservation_id = ?',
     [room_id]
   );
-  
+
   if (!hostCheck.length || hostCheck[0].user_id !== user_id) {
     const err = new Error("권한이 없습니다. 방장만 모임 상태를 변경할 수 있습니다.");
     err.statusCode = 403;
     err.errorCode = "UNAUTHORIZED";
     throw err;
   }
-  
+
   // 모임 상태 변경
   await conn.query(
     `UPDATE reservation_table SET reservation_status = ? WHERE reservation_id = ?`,
     [status, room_id]
   );
-  
+
   // 🆕 실시간 상태 변경 알림
   try {
     const { getIO } = require('../config/socket_hub');
@@ -655,10 +665,10 @@ exports.updateChatRoomStatus = async (user_id, room_id, status) => {
     const statusMessages = {
       0: '모집 중',
       1: '모집 마감',
-      2: '진행 중', 
+      2: '진행 중',
       3: '완료'
     };
-    
+
     io.to(room_id.toString()).emit('reservationStatusChanged', {
       reservation_id: room_id,
       new_status: status,
@@ -700,22 +710,22 @@ exports.kickUser = async (room_id, target_user_id, requester_id) => {
         WHERE reservation_id = ?`,
         [room_id]
       );
-      
+
       // 강퇴된 사용자 정보 조회
       const [userInfo] = await conn.query(
         `SELECT user_name FROM user_table WHERE user_id = ?`,
         [target_user_id]
       );
-      
+
       const userName = userInfo.length > 0 ? userInfo[0].user_name : '알 수 없는 사용자';
-      
+
       // 시스템 메시지 생성 - 사용자 강퇴 알림
       const systemMessage = `${userName}님이 강퇴되었습니다.`;
-      
+
       // 시스템 메시지 저장
       const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages');
       const nextMessageId = (maxIdResult[0]?.maxId || 0) + 1;
-      
+
       await conn.query(
         `INSERT INTO chat_messages 
          (message_id, chat_room_id, sender_id, message, created_at)
@@ -728,7 +738,7 @@ exports.kickUser = async (room_id, target_user_id, requester_id) => {
         `SELECT reservation_participant_cnt FROM reservation_table WHERE reservation_id = ?`,
         [room_id]
       );
-      
+
       // 실시간으로 시스템 메시지 전송
       try {
         const { getIO } = require('../config/socket_hub');
@@ -744,9 +754,9 @@ exports.kickUser = async (room_id, target_user_id, requester_id) => {
           user_id: target_user_id, // 강퇴된 사용자 ID
           kicked_by: requester_id // 강퇴한 사용자 ID
         };
-        
+
         io.to(room_id.toString()).emit('newMessage', systemMessageData);
-        
+
         // 🆕 참여자 강퇴 전용 소켓 이벤트 추가
         const kickEventData = {
           room_id: parseInt(room_id),
@@ -756,14 +766,14 @@ exports.kickUser = async (room_id, target_user_id, requester_id) => {
           remaining_participants: participantCount.length > 0 ? participantCount[0].reservation_participant_cnt : 0,
           timestamp: new Date().toISOString()
         };
-        
+
         io.to(room_id.toString()).emit('participantKicked', kickEventData);
-        
+
       } catch (error) {
         console.log('소켓 전송 실패 (서버 시작 중일 수 있음):', error.message);
       }
-      
-      return { 
+
+      return {
         kicked_user_id: target_user_id,
         kicked_user_name: userName,
         remaining_participants: participantCount.length > 0 ? participantCount[0].reservation_participant_cnt : 0
@@ -789,18 +799,18 @@ exports.kickUser = async (room_id, target_user_id, requester_id) => {
 exports.getAllMessages = async (user_id, room_id) => {
   const conn = getConnection();
   console.log('🔍 [DEBUG] 메시지 조회 - user_id:', user_id, 'room_id:', room_id);
-  
+
   // 먼저 방장 정보 조회
   const [hostInfo] = await conn.query(
     `SELECT rt.user_id AS host_id FROM reservation_table rt WHERE rt.reservation_id = ?`,
     [room_id]
   );
   const hostId = hostInfo.length > 0 ? hostInfo[0].host_id : null;
-  
+
   console.log('🔍 [DEBUG] 방장 정보 - host_id:', hostId, 'current_user:', user_id, 'is_host:', hostId === user_id);
-  
+
   await messageService.markAllMessagesAsRead(user_id, room_id);
-  
+
   // 전체 메시지 조회 (최신순) + 사용자 이름과 방장 여부 포함
   const [messages] = await conn.query(
     `SELECT m.message_id AS id,
@@ -825,11 +835,11 @@ exports.getAllMessages = async (user_id, room_id) => {
   // 메시지 타입 처리 및 가게 공유 메시지 정보 추가
   const processedMessages = messages.map(message => {
     const messageData = { ...message };
-    
+
     // 🆕 방장 관련 정보 추가
     messageData.sender_role = messageData.is_sender_host ? '방장' : '참가자';
     messageData.current_user_is_host = hostId === user_id;  // 현재 사용자가 방장인지
-    
+
     console.log('📝 [DEBUG] 메시지 처리:', {
       message_id: messageData.id,
       sender_id: messageData.sender_id,
@@ -838,29 +848,29 @@ exports.getAllMessages = async (user_id, room_id) => {
       sender_role: messageData.sender_role,
       current_user_is_host: messageData.current_user_is_host
     });
-    
+
     // 가게 공유 메시지인지 확인
     if (message.message && message.message.includes('🏪')) {
       messageData.message_type = 'store_share';
-      
+
       // 가게 공유 메시지에서 store_id 추출
       const storeIdMatch = message.message.match(/store_id:\s*(\d+)/);
       if (storeIdMatch) {
         messageData.store_id = parseInt(storeIdMatch[1]);
       }
-      
+
       // 가게명 추출
       const storeMatch = message.message.match(/🏪\s*(.+?)\n/);
       if (storeMatch) {
         messageData.store_name = storeMatch[1];
       }
-      
+
       // 주소 추출
       const addressMatch = message.message.match(/📍\s*(.+?)\n/);
       if (addressMatch) {
         messageData.store_address = addressMatch[1];
       }
-      
+
       // 평점 추출
       const ratingMatch = message.message.match(/⭐\s*(\d+(?:\.\d+)?)/);
       if (ratingMatch) {
@@ -871,7 +881,7 @@ exports.getAllMessages = async (user_id, room_id) => {
     } else {
       messageData.message_type = 'user_message';
     }
-    
+
     return messageData;
   });
 
@@ -934,19 +944,19 @@ exports.enterChatRoom = async (user_id, reservation_id) => {
   // 3. 시스템 메시지 생성 - 사용자 입장 알림
   const messageService = require('../services/message_service');
   const { getIO } = require('../config/socket_hub');
-  
+
   const [userInfo] = await conn.query(
     `SELECT user_name FROM user_table WHERE user_id = ?`,
     [user_id]
   );
-  
+
   const userName = userInfo.length > 0 ? userInfo[0].user_name : '알 수 없는 사용자';
   const systemMessage = `${userName}님이 모임에 참여하셨습니다.`;
-  
+
   // 시스템 메시지 저장
   const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages');
   const nextMessageId = (maxIdResult[0]?.maxId || 0) + 1;
-  
+
   await conn.query(
     `INSERT INTO chat_messages 
      (message_id, chat_room_id, sender_id, message, created_at)
@@ -967,7 +977,7 @@ exports.enterChatRoom = async (user_id, reservation_id) => {
       user_name: userName, // 참여한 사용자 이름
       user_id: user_id // 참여한 사용자 ID
     };
-    
+
     io.to(reservation_id.toString()).emit('newMessage', systemMessageData);
   } catch (error) {
     console.log('소켓 전송 실패 (서버 시작 중일 수 있음):', error.message);
@@ -981,7 +991,7 @@ exports.enterChatRoom = async (user_id, reservation_id) => {
      FROM reservation_table WHERE reservation_id = ?`,
     [reservation_id]
   );
-  
+
   const reservation = reservationDetails[0];
   const statusMessages = {
     0: '모집 중',
@@ -1013,7 +1023,7 @@ exports.enterChatRoom = async (user_id, reservation_id) => {
 
     if (paymentSession.length > 0) {
       const session = paymentSession[0];
-      
+
       // 참여자별 입금 상태 조회
       const [participants] = await conn.query(
         `SELECT user_id, user_name, payment_status, paid_at
@@ -1076,24 +1086,24 @@ exports.enterChatRoom = async (user_id, reservation_id) => {
 // 👥 참여자 목록 조회
 exports.getChatParticipants = async (user_id, room_id) => {
   const conn = getConnection();
-  
+
   try {
     console.log('🔍 [DEBUG] 참여자 목록 조회 - user_id:', user_id, 'room_id:', room_id);
-    
+
     // 1. 요청자가 해당 채팅방 참여자인지 확인
     const [authCheck] = await conn.query(
       `SELECT * FROM chat_room_users 
        WHERE reservation_id = ? AND user_id = ? AND is_kicked = 0`,
       [room_id, user_id]
     );
-    
+
     if (!authCheck.length) {
       const err = new Error('채팅방에 참여하지 않았거나 접근 권한이 없습니다.');
       err.statusCode = 403;
       err.errorCode = 'FORBIDDEN';
       throw err;
     }
-    
+
     // 2. 모임 정보 조회 (방장 확인용)
     const [reservationInfo] = await conn.query(
       `SELECT user_id as host_id, reservation_participant_cnt, reservation_max_participant_cnt,
@@ -1102,17 +1112,17 @@ exports.getChatParticipants = async (user_id, room_id) => {
        FROM reservation_table WHERE reservation_id = ?`,
       [room_id]
     );
-    
+
     if (!reservationInfo.length) {
       const err = new Error('존재하지 않는 모임입니다.');
       err.statusCode = 404;
       err.errorCode = 'ROOM_NOT_FOUND';
       throw err;
     }
-    
+
     const hostId = reservationInfo[0].host_id;
     const totalParticipants = reservationInfo[0].reservation_participant_cnt;
-    
+
     // 3. 참여자 목록 조회 (강퇴되지 않은 사용자만)
     const [participants] = await conn.query(
       `SELECT 
@@ -1131,7 +1141,7 @@ exports.getChatParticipants = async (user_id, room_id) => {
          cru.joined_at ASC`,
       [hostId, hostId, room_id, hostId]
     );
-    
+
     // 4. 온라인 상태는 현재 소켓 연결 정보로 확인 (간단 구현)
     const processedParticipants = participants.map(participant => {
       return {
@@ -1146,9 +1156,9 @@ exports.getChatParticipants = async (user_id, room_id) => {
         last_seen: null    // 추후 구현 가능
       };
     });
-    
+
     console.log(`🔍 [DEBUG] 참여자 목록 조회 완료 - 총 ${processedParticipants.length}명`);
-    
+
     // 🆕 모집 상태 정보 추가
     const statusMessages = {
       0: '모집 중',
@@ -1184,7 +1194,7 @@ exports.getChatParticipants = async (user_id, room_id) => {
         selected_store: selectedStore                                     // 🆕 선택된 가게 정보
       }
     };
-    
+
   } catch (error) {
     if (!error.statusCode) {
       error.statusCode = 500;
@@ -1199,23 +1209,23 @@ exports.getChatParticipants = async (user_id, room_id) => {
 // 방장이 채팅방의 최종 가게 선택
 exports.selectStore = async (user_id, room_id, store_id) => {
   const conn = getConnection();
-  
+
   try {
     // 1. 방장 권한 확인
     const [hostCheck] = await conn.query(
       'SELECT user_id FROM reservation_table WHERE reservation_id = ?',
       [room_id]
     );
-    
+
     if (!hostCheck.length || hostCheck[0].user_id !== user_id) {
       const err = new Error("방장만 가게를 선택할 수 있습니다.");
       err.statusCode = 403;
       err.errorCode = "PERMISSION_DENIED";
       throw err;
     }
-    
+
     let selectedStoreInfo = null;
-    
+
     // 2. 가게 선택 해제인 경우 (store_id가 null)
     if (!store_id) {
       await conn.query(
@@ -1225,7 +1235,7 @@ exports.selectStore = async (user_id, room_id, store_id) => {
          WHERE reservation_id = ?`,
         [room_id]
       );
-      
+
       selectedStoreInfo = {
         store_id: null,
         store_name: null,
@@ -1238,17 +1248,17 @@ exports.selectStore = async (user_id, room_id, store_id) => {
         'SELECT store_id, store_name, store_address, store_rating, store_thumbnail FROM store_table WHERE store_id = ?',
         [store_id]
       );
-      
+
       if (!storeInfo.length) {
         const err = new Error("존재하지 않는 가게입니다.");
         err.statusCode = 404;
         err.errorCode = "STORE_NOT_FOUND";
         throw err;
       }
-      
+
       const store = storeInfo[0];
       const selectedAt = new Date();
-      
+
       // 4. 가게 선택 정보 업데이트
       await conn.query(
         `UPDATE reservation_table 
@@ -1257,7 +1267,7 @@ exports.selectStore = async (user_id, room_id, store_id) => {
          WHERE reservation_id = ?`,
         [store_id, store.store_name, selectedAt, user_id, room_id]
       );
-      
+
       selectedStoreInfo = {
         store_id: store.store_id,
         store_name: store.store_name,
@@ -1268,22 +1278,22 @@ exports.selectStore = async (user_id, room_id, store_id) => {
         selected_by: user_id
       };
     }
-    
+
     // 5. 시스템 메시지 추가 및 실시간 알림 전송
     try {
       const { getIO } = require('../config/socket_hub');
       const io = getIO();
-      
+
       // 방장 이름 조회
       const [userInfo] = await conn.query(
         'SELECT user_name FROM user_table WHERE user_id = ?',
         [user_id]
       );
       const userName = userInfo.length > 0 ? userInfo[0].user_name : '알 수 없는 사용자';
-      
+
       // 6. 시스템 메시지 생성 및 저장
       let systemMessage;
-      
+
       if (store_id) {
         // 가게 선택 시스템 메시지 (기존 패턴과 동일하게)
         systemMessage = `${userName}님이 ${selectedStoreInfo.store_name}을 모임 장소로 선택하셨습니다.`;
@@ -1291,24 +1301,24 @@ exports.selectStore = async (user_id, room_id, store_id) => {
         // 가게 선택 해제 시스템 메시지
         systemMessage = `${userName}님이 가게 선택을 해제하셨습니다.`;
       }
-      
+
       console.log('💬 [STORE SELECT] 시스템 메시지 생성:', {
         room_id: room_id,
         message: systemMessage,
         sender_id: 'system'
       });
-      
+
       // 시스템 메시지를 채팅방에 저장 (기존 패턴과 동일하게)
       const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages WHERE chat_room_id = ?', [room_id]);
       const nextMessageId = (maxIdResult[0]?.maxId || 0) + 1;
-      
+
       await conn.query(
         `INSERT INTO chat_messages 
          (message_id, chat_room_id, sender_id, message, created_at)
          VALUES (?, ?, ?, ?, NOW())`,
         [nextMessageId, room_id, 'system', systemMessage]
       );
-      
+
       const savedMessage = {
         message_id: nextMessageId,
         chat_room_id: room_id,
@@ -1319,12 +1329,12 @@ exports.selectStore = async (user_id, room_id, store_id) => {
         user_name: userName,
         user_id: user_id
       };
-      
+
       console.log('✅ [STORE SELECT] 시스템 메시지 저장 완료:', {
         message_id: savedMessage.message_id,
         room_id: room_id
       });
-      
+
       // 7. 실시간 소켓 알림 전송
       const currentSockets = await io.in(room_id.toString()).fetchSockets();
       console.log('🏪 [STORE SELECT] 소켓 이벤트 발송 준비:', {
@@ -1336,7 +1346,7 @@ exports.selectStore = async (user_id, room_id, store_id) => {
           user_name: s.user?.user_name
         }))
       });
-      
+
       // 가게 선택 이벤트 데이터
       const eventData = {
         room_id: parseInt(room_id),
@@ -1350,32 +1360,32 @@ exports.selectStore = async (user_id, room_id, store_id) => {
         selected_at: selectedStoreInfo.selected_at,
         action: store_id ? 'selected' : 'deselected'
       };
-      
+
       console.log('🏪 [STORE SELECT] 이벤트 데이터:', eventData);
-      
+
       // 채팅방의 모든 참여자에게 이벤트 발송
       io.to(room_id.toString()).emit('storeSelected', eventData);
-      
+
       // 시스템 메시지도 함께 브로드캐스트 (기존 패턴과 동일하게)
       io.to(room_id.toString()).emit('newMessage', savedMessage);
-      
+
       console.log('✅ [STORE SELECT] 소켓 이벤트 발송 완료:', {
         room_id: room_id,
         events: ['storeSelected', 'newMessage'],
         recipients_count: currentSockets.length
       });
-      
+
     } catch (error) {
       console.error('❌ [STORE SELECT] 시스템 메시지 및 소켓 알림 실패:', error);
       console.error('에러 상세:', error.stack);
     }
-    
+
     return {
       chat_room_id: parseInt(room_id),
       selected_store: selectedStoreInfo,
       message: store_id ? '가게가 선택되었습니다.' : '가게 선택이 해제되었습니다.'
     };
-    
+
   } catch (error) {
     if (!error.statusCode) {
       error.statusCode = 500;
@@ -1390,23 +1400,23 @@ exports.selectStore = async (user_id, room_id, store_id) => {
 // 방장이 정산 시작
 exports.startPayment = async (user_id, room_id, payment_per_person) => {
   const conn = getConnection();
-  
+
   try {
     await conn.query('START TRANSACTION');
-    
+
     // 1. 방장 권한 확인
     const [hostCheck] = await conn.query(
       'SELECT user_id FROM reservation_table WHERE reservation_id = ?',
       [room_id]
     );
-    
+
     if (!hostCheck.length || hostCheck[0].user_id !== user_id) {
       const err = new Error("방장만 정산을 시작할 수 있습니다.");
       err.statusCode = 403;
       err.errorCode = "PERMISSION_DENIED";
       throw err;
     }
-    
+
     // 2. 정산 시작 조건 확인
     const [reservationInfo] = await conn.query(
       `SELECT reservation_status, selected_store_id, reservation_participant_cnt,
@@ -1414,16 +1424,16 @@ exports.startPayment = async (user_id, room_id, payment_per_person) => {
        FROM reservation_table WHERE reservation_id = ?`,
       [room_id]
     );
-    
+
     if (!reservationInfo.length) {
       const err = new Error("존재하지 않는 채팅방입니다.");
       err.statusCode = 404;
       err.errorCode = "CHAT_ROOM_NOT_FOUND";
       throw err;
     }
-    
+
     const reservation = reservationInfo[0];
-    
+
     // 모집 마감 상태 확인
     if (reservation.reservation_status !== 1) {
       const err = new Error("모집이 마감된 후에만 정산을 시작할 수 있습니다.");
@@ -1431,7 +1441,7 @@ exports.startPayment = async (user_id, room_id, payment_per_person) => {
       err.errorCode = "INVALID_CONDITIONS";
       throw err;
     }
-    
+
     // 가게 선택 완료 확인
     if (!reservation.selected_store_id) {
       const err = new Error("가게가 선택된 후에만 정산을 시작할 수 있습니다.");
@@ -1439,13 +1449,13 @@ exports.startPayment = async (user_id, room_id, payment_per_person) => {
       err.errorCode = "INVALID_CONDITIONS";
       throw err;
     }
-    
+
     // 3. 이미 정산 진행 중인지 확인
     const [existingPayment] = await conn.query(
       'SELECT payment_id, completed_payments, total_participants FROM payment_sessions WHERE chat_room_id = ? AND payment_status = "in_progress"',
       [room_id]
     );
-    
+
     if (existingPayment.length > 0) {
       const existing = existingPayment[0];
       console.log('⚠️ [PAYMENT] 기존 정산 세션 발견:', {
@@ -1454,7 +1464,7 @@ exports.startPayment = async (user_id, room_id, payment_per_person) => {
         total_participants: existing.total_participants,
         room_id: room_id
       });
-      
+
       // 기존 정산 세션이 있지만 아무도 입금하지 않은 경우 자동으로 초기화
       if (existing.completed_payments === 0) {
         console.log('🔄 [PAYMENT] 미사용 정산 세션 자동 초기화');
@@ -1471,7 +1481,7 @@ exports.startPayment = async (user_id, room_id, payment_per_person) => {
         throw err;
       }
     }
-    
+
     // 4. 가게 계좌 정보 조회
     const [storeInfo] = await conn.query(
       `SELECT store_name, bank_name, account_number, account_holder, 
@@ -1479,33 +1489,33 @@ exports.startPayment = async (user_id, room_id, payment_per_person) => {
        FROM store_table WHERE store_id = ?`,
       [reservation.selected_store_id]
     );
-    
+
     if (!storeInfo.length) {
       const err = new Error("가게 정보를 찾을 수 없습니다.");
       err.statusCode = 404;
       err.errorCode = "STORE_NOT_FOUND";
       throw err;
     }
-    
+
     const store = storeInfo[0];
     const finalPaymentAmount = payment_per_person || store.default_payment;
     const totalParticipants = reservation.reservation_participant_cnt;
     const totalAmount = finalPaymentAmount * totalParticipants;
-    
+
     // 5. 정산 세션 생성
     const paymentId = `payment_${room_id}_${Date.now()}`;
     const paymentDeadline = new Date();
     paymentDeadline.setDate(paymentDeadline.getDate() + 3); // 3일 후 마감
-    
+
     await conn.query(
       `INSERT INTO payment_sessions 
        (payment_id, chat_room_id, reservation_id, store_id, payment_per_person, 
         total_amount, total_participants, started_by, payment_deadline)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [paymentId, room_id, room_id, reservation.selected_store_id, 
-       finalPaymentAmount, totalAmount, totalParticipants, user_id, paymentDeadline]
+      [paymentId, room_id, room_id, reservation.selected_store_id,
+        finalPaymentAmount, totalAmount, totalParticipants, user_id, paymentDeadline]
     );
-    
+
     // 6. 참여자별 정산 기록 생성
     const [participants] = await conn.query(
       `SELECT cru.user_id, u.user_name
@@ -1514,30 +1524,30 @@ exports.startPayment = async (user_id, room_id, payment_per_person) => {
        WHERE cru.reservation_id = ? AND cru.is_kicked = 0`,
       [room_id]
     );
-    
+
     const participantRecords = participants.map(p => [
       paymentId, p.user_id, p.user_name
     ]);
-    
+
     await conn.query(
       `INSERT INTO payment_records (payment_id, user_id, user_name) VALUES ?`,
       [participantRecords]
     );
-    
+
     await conn.query('COMMIT');
-    
+
     // 7. 채팅방에 예약금 안내 시스템 메시지 추가
     try {
       const { getIO } = require('../config/socket_hub');
       const io = getIO();
-      
+
       // 방장 이름 조회
       const [userInfo] = await conn.query(
         'SELECT user_name FROM user_table WHERE user_id = ?',
         [user_id]
       );
       const userName = userInfo.length > 0 ? userInfo[0].user_name : '방장';
-      
+
       // 🆕 구조화된 예약금 안내 데이터 생성 (클라이언트 UI용)
       const paymentGuideData = {
         type: 'payment_guide',
@@ -1577,10 +1587,10 @@ exports.startPayment = async (user_id, room_id, payment_per_person) => {
 
       // 시스템 메시지로 저장 (간단한 텍스트 + 구조화된 데이터)
       const simpleMessage = `💰 정산이 시작되었습니다 (${finalPaymentAmount.toLocaleString()}원)`;
-      
+
       const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages WHERE chat_room_id = ?', [room_id]);
       const nextMessageId = (maxIdResult[0]?.maxId || 0) + 1;
-      
+
       await conn.query(
         `INSERT INTO chat_messages 
          (message_id, chat_room_id, sender_id, message, created_at)
@@ -1639,7 +1649,7 @@ exports.startPayment = async (user_id, room_id, payment_per_person) => {
       console.error('❌ [PAYMENT START] 시스템 메시지 및 소켓 알림 실패:', error);
       console.error('에러 상세:', error.stack);
     }
-    
+
     // 8. 응답 데이터 구성
     const participantsResponse = participants.map(p => ({
       user_id: p.user_id,
@@ -1648,7 +1658,7 @@ exports.startPayment = async (user_id, room_id, payment_per_person) => {
       payment_status: 'pending',
       paid_at: null
     }));
-    
+
     return {
       payment_id: paymentId,
       chat_room_id: parseInt(room_id),
@@ -1663,7 +1673,7 @@ exports.startPayment = async (user_id, room_id, payment_per_person) => {
       payment_deadline: paymentDeadline.toISOString(),
       participants: participantsResponse
     };
-    
+
   } catch (error) {
     await conn.query('ROLLBACK');
     if (!error.statusCode) {
@@ -1677,49 +1687,49 @@ exports.startPayment = async (user_id, room_id, payment_per_person) => {
 // 개별 사용자 입금 완료 처리
 exports.completePayment = async (user_id, room_id, payment_method) => {
   const conn = getConnection();
-  
+
   try {
     await conn.query('START TRANSACTION');
-    
+
     // 1. 진행 중인 정산 세션 확인
     const [paymentSession] = await conn.query(
       'SELECT payment_id, total_participants FROM payment_sessions WHERE chat_room_id = ? AND payment_status = "in_progress"',
       [room_id]
     );
-    
+
     if (!paymentSession.length) {
       const err = new Error("진행 중인 정산이 없습니다.");
       err.statusCode = 404;
       err.errorCode = "NO_PAYMENT_SESSION";
       throw err;
     }
-    
+
     const paymentId = paymentSession[0].payment_id;
     const totalParticipants = paymentSession[0].total_participants;
-    
+
     // 2. 사용자의 정산 기록 확인
     const [userRecord] = await conn.query(
       'SELECT payment_status, user_name FROM payment_records WHERE payment_id = ? AND user_id = ?',
       [paymentId, user_id]
     );
-    
+
     if (!userRecord.length) {
       const err = new Error("정산 대상자가 아닙니다.");
       err.statusCode = 403;
       err.errorCode = "NOT_PARTICIPANT";
       throw err;
     }
-    
+
     if (userRecord[0].payment_status === 'completed') {
       const err = new Error("이미 입금이 완료되었습니다.");
       err.statusCode = 409;
       err.errorCode = "ALREADY_PAID";
       throw err;
     }
-    
+
     const userName = userRecord[0].user_name;
     const paidAt = new Date();
-    
+
     // 3. 입금 완료 처리
     await conn.query(
       `UPDATE payment_records 
@@ -1727,7 +1737,7 @@ exports.completePayment = async (user_id, room_id, payment_method) => {
        WHERE payment_id = ? AND user_id = ?`,
       [payment_method, paidAt, paymentId, user_id]
     );
-    
+
     // 4. 완료된 입금 수 업데이트
     await conn.query(
       `UPDATE payment_sessions 
@@ -1738,17 +1748,17 @@ exports.completePayment = async (user_id, room_id, payment_method) => {
        WHERE payment_id = ?`,
       [paymentId, paymentId]
     );
-    
+
     // 5. 현재 상태 조회
     const [updatedSession] = await conn.query(
       'SELECT completed_payments FROM payment_sessions WHERE payment_id = ?',
       [paymentId]
     );
-    
+
     const completedPayments = updatedSession[0].completed_payments;
     const remainingPending = totalParticipants - completedPayments;
     const isFullyCompleted = remainingPending === 0;
-    
+
     // 6. 전체 정산 완료 시 세션 상태 업데이트
     if (isFullyCompleted) {
       await conn.query(
@@ -1756,17 +1766,17 @@ exports.completePayment = async (user_id, room_id, payment_method) => {
         [paidAt, paymentId]
       );
     }
-    
+
     await conn.query('COMMIT');
-    
+
     // 7. 채팅방 예약금 안내 메시지 업데이트 및 실시간 소켓 알림
     try {
       const { getIO } = require('../config/socket_hub');
       const io = getIO();
-      
+
       // 🆕 예약금 안내 데이터 업데이트 (구조화된 데이터)
       await updatePaymentGuideData(conn, room_id, paymentId, completedPayments, totalParticipants, isFullyCompleted);
-      
+
       // 개별 입금 완료 알림
       io.to(room_id.toString()).emit('paymentCompleted', {
         room_id: room_id,
@@ -1778,14 +1788,14 @@ exports.completePayment = async (user_id, room_id, payment_method) => {
         completed_payments: completedPayments,
         total_participants: totalParticipants
       });
-      
+
       // 전체 정산 완료 알림 및 완료 메시지 추가
       if (isFullyCompleted) {
         const [totalAmountInfo] = await conn.query(
           'SELECT total_amount FROM payment_sessions WHERE payment_id = ?',
           [paymentId]
         );
-        
+
         // 정산 완료 시스템 메시지 추가
         const completionMessage = `✅ 정산이 완료되었습니다!
 
@@ -1797,7 +1807,7 @@ exports.completePayment = async (user_id, room_id, payment_method) => {
         // 정산 완료 시스템 메시지 저장
         const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages WHERE chat_room_id = ?', [room_id]);
         const nextMessageId = (maxIdResult[0]?.maxId || 0) + 1;
-        
+
         await conn.query(
           `INSERT INTO chat_messages 
            (message_id, chat_room_id, sender_id, message, created_at)
@@ -1817,7 +1827,7 @@ exports.completePayment = async (user_id, room_id, payment_method) => {
 
         // 정산 완료 시스템 메시지 브로드캐스트
         io.to(room_id.toString()).emit('newMessage', completionSystemMessage);
-        
+
         // 전체 정산 완료 이벤트
         io.to(room_id.toString()).emit('paymentFullyCompleted', {
           room_id: room_id,
@@ -1833,7 +1843,7 @@ exports.completePayment = async (user_id, room_id, payment_method) => {
           total_amount: totalAmountInfo[0].total_amount
         });
       }
-      
+
       console.log('✅ [PAYMENT UPDATE] 입금 완료 처리 및 메시지 업데이트 완료:', {
         room_id: room_id,
         user_id: user_id,
@@ -1841,12 +1851,12 @@ exports.completePayment = async (user_id, room_id, payment_method) => {
         total_participants: totalParticipants,
         is_fully_completed: isFullyCompleted
       });
-      
+
     } catch (error) {
       console.error('❌ [PAYMENT UPDATE] 소켓 알림 및 메시지 업데이트 실패:', error);
       console.error('에러 상세:', error.stack);
     }
-    
+
     return {
       user_id: user_id,
       user_name: userName,
@@ -1855,7 +1865,7 @@ exports.completePayment = async (user_id, room_id, payment_method) => {
       remaining_pending: remainingPending,
       is_fully_completed: isFullyCompleted
     };
-    
+
   } catch (error) {
     await conn.query('ROLLBACK');
     if (!error.statusCode) {
@@ -1869,7 +1879,7 @@ exports.completePayment = async (user_id, room_id, payment_method) => {
 // 정산 세션 초기화 (방장 전용)
 exports.resetPaymentSession = async (room_id, user_id = null) => {
   const conn = getConnection();
-  
+
   try {
     console.log('🔄 [PAYMENT RESET] 정산 세션 초기화 시작:', { room_id, user_id });
 
@@ -1935,7 +1945,7 @@ exports.resetPaymentSession = async (room_id, user_id = null) => {
     try {
       const { getIO } = require('../config/socket_hub');
       const io = getIO();
-      
+
       io.to(room_id.toString()).emit('paymentReset', {
         room_id: room_id,
         payment_id: session.payment_id,
@@ -1965,21 +1975,21 @@ exports.resetPaymentSession = async (room_id, user_id = null) => {
 // 정산 상태 조회
 exports.getPaymentStatus = async (user_id, room_id) => {
   const conn = getConnection();
-  
+
   try {
     // 1. 사용자 권한 확인 (해당 채팅방 참여자인지)
     const [participantCheck] = await conn.query(
       'SELECT user_id FROM chat_room_users WHERE reservation_id = ? AND user_id = ? AND is_kicked = 0',
       [room_id, user_id]
     );
-    
+
     if (!participantCheck.length) {
       const err = new Error("채팅방 참여자만 정산 상태를 조회할 수 있습니다.");
       err.statusCode = 403;
       err.errorCode = "FORBIDDEN";
       throw err;
     }
-    
+
     // 2. 정산 세션 정보 조회
     const [paymentSession] = await conn.query(
       `SELECT ps.*, s.store_name, s.bank_name, s.account_number, s.account_holder
@@ -1990,16 +2000,16 @@ exports.getPaymentStatus = async (user_id, room_id) => {
        LIMIT 1`,
       [room_id]
     );
-    
+
     if (!paymentSession.length) {
       return {
         payment_status: 'not_started',
         message: '정산이 시작되지 않았습니다.'
       };
     }
-    
+
     const session = paymentSession[0];
-    
+
     // 3. 참여자별 입금 상태 조회
     const [participants] = await conn.query(
       `SELECT user_id, user_name, payment_status, payment_method, paid_at
@@ -2008,7 +2018,7 @@ exports.getPaymentStatus = async (user_id, room_id) => {
        ORDER BY paid_at ASC, user_name ASC`,
       [session.payment_id]
     );
-    
+
     const participantsWithHostFlag = participants.map(p => ({
       user_id: p.user_id,
       user_name: p.user_name,
@@ -2017,7 +2027,7 @@ exports.getPaymentStatus = async (user_id, room_id) => {
       payment_method: p.payment_method,
       paid_at: p.paid_at ? new Date(p.paid_at).toISOString() : null
     }));
-    
+
     return {
       payment_id: session.payment_id,
       payment_status: session.payment_status,
@@ -2037,7 +2047,7 @@ exports.getPaymentStatus = async (user_id, room_id) => {
       completed_at: session.completed_at ? new Date(session.completed_at).toISOString() : null,
       participants: participantsWithHostFlag
     };
-    
+
   } catch (error) {
     if (!error.statusCode) {
       error.statusCode = 500;
@@ -2057,7 +2067,7 @@ exports.requestPayment = async (roomId, userId, paymentData) => {
   try {
     // 방장 권한 확인 (테스트용으로 임시 비활성화)
     console.log('RoomId:', roomId, 'UserId:', userId); // 디버깅용
-    
+
     // 테스트용으로 권한 확인 비활성화 - 나중에 다시 활성화할 예정
     /*
     const [roomInfo] = await conn.query(
@@ -2087,7 +2097,7 @@ exports.requestPayment = async (roomId, userId, paymentData) => {
     // message_id 자동 생성
     const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages');
     const nextMessageId = (maxIdResult[0]?.maxId || 0) + 1;
-    
+
     await conn.query(
       `INSERT INTO chat_messages 
        (message_id, chat_room_id, sender_id, message, created_at)
@@ -2177,7 +2187,7 @@ exports.processPayment = async (roomId, userId, paymentData) => {
     // message_id 자동 생성
     const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages');
     const nextMessageId = (maxIdResult[0]?.maxId || 0) + 1;
-    
+
     await conn.query(
       `INSERT INTO chat_messages 
        (message_id, chat_room_id, sender_id, message, created_at)
@@ -2207,7 +2217,7 @@ exports.kickUnpaidParticipant = async (roomId, targetUserId, requesterId) => {
   try {
     // 1. 방장 권한 확인 (테스트용으로 임시 비활성화)
     console.log('Kick request - RoomId:', roomId, 'TargetUserId:', targetUserId, 'RequesterId:', requesterId);
-    
+
     // 테스트용으로 권한 확인 비활성화
     /*
     const [roomInfo] = await conn.query(
@@ -2266,7 +2276,7 @@ exports.kickUnpaidParticipant = async (roomId, targetUserId, requesterId) => {
     // 5. 강퇴 메시지 발송
     const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages');
     const nextMessageId = (maxIdResult[0]?.maxId || 0) + 1;
-    
+
     await conn.query(
       `INSERT INTO chat_messages 
        (message_id, chat_room_id, sender_id, message, created_at)
@@ -2290,7 +2300,7 @@ exports.kickUnpaidParticipant = async (roomId, targetUserId, requesterId) => {
 // 🏪 채팅용 가게 리스트 조회 (간단한 정보만)
 exports.getStoreListForChat = async (keyword, limit = 10) => {
   const conn = getConnection();
-  
+
   try {
     let query = `
       SELECT 
@@ -2317,13 +2327,13 @@ exports.getStoreListForChat = async (keyword, limit = 10) => {
     params.push(limit);
 
     const [rows] = await conn.query(query, params);
-    
+
     // store_id를 숫자로 변환
     const convertedRows = rows.map(row => ({
       ...row,
       store_id: parseInt(row.store_id) || 0
     }));
-    
+
     return convertedRows;
   } catch (error) {
     if (!error.statusCode) {
@@ -2346,7 +2356,7 @@ const extractStoreIdFromMessage = (message) => {
 // 🏪 가게 공유 메시지 전송
 exports.shareStore = async (user_id, room_id, store_id) => {
   const conn = getConnection();
-  
+
   try {
     // 1. 가게 정보 조회
     const [storeInfo] = await conn.query(
@@ -2405,7 +2415,7 @@ exports.shareStore = async (user_id, room_id, store_id) => {
     try {
       const { getIO } = require('../config/socket_hub');
       const io = getIO();
-      
+
       const messageData = {
         message_id: nextMessageId,
         chat_room_id: room_id,
@@ -2513,7 +2523,7 @@ const updatePaymentGuideData = async (conn, room_id, payment_id, completed_payme
     // 🆕 실시간 예약금 안내 업데이트 이벤트 발송
     const { getIO } = require('../config/socket_hub');
     const io = getIO();
-    
+
     // 예약금 안내 업데이트 이벤트 (클라이언트 UI 업데이트용)
     io.to(room_id.toString()).emit('paymentGuideUpdated', {
       room_id: room_id,
@@ -2541,7 +2551,7 @@ const updatePaymentGuideData = async (conn, room_id, payment_id, completed_payme
 // 🆕 채팅방 상세 정보 조회
 exports.getChatRoomDetail = async (user_id, room_id) => {
   const conn = getConnection();
-  
+
   try {
     console.log('🔍 [CHAT DETAIL] 채팅방 상세 정보 조회 시작:', { user_id, room_id });
 
@@ -2662,7 +2672,7 @@ exports.getChatRoomDetail = async (user_id, room_id) => {
       host_id: reservation.host_id,
       is_host: isHost,
       user_role: isHost ? '방장' : '참가자',
-      
+
       // 모집 상태 정보
       reservation_status: reservation.reservation_status,
       status_message: statusMessages[reservation.reservation_status],
@@ -2673,10 +2683,10 @@ exports.getChatRoomDetail = async (user_id, room_id) => {
       match_name: reservation.reservation_match,
       reservation_title: reservation.reservation_bio,
       reservation_start_time: reservation.reservation_start_time ? new Date(reservation.reservation_start_time).toISOString() : null,
-      
+
       // 선택된 가게 정보
       selected_store: selectedStore,
-      
+
       // 마지막 메시지 정보
       last_message: lastMessageInfo.length > 0 ? lastMessageInfo[0].message : null,
       last_message_time: lastMessageInfo.length > 0 ? new Date(lastMessageInfo[0].created_at).toISOString() : null,

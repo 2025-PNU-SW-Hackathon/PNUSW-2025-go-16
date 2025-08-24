@@ -591,6 +591,60 @@ async function sendUserJoinedPush({ reservationId, joinedUserId, joinedUserName 
   }
 }
 
+/** 12) USER_LEFT: 참가자 퇴장 알림(참가자 전원, 본인 제외) */
+async function sendUserLeftPush({ reservationId, leftUserId, leftUserName }) {
+  try {
+    // 1) 현재 예약방 참가자 조회
+    const allUserIds = await getUserIdsByReservation(reservationId);
+    if (!allUserIds?.length) {
+      console.log('[USER_LEFT] no participants');
+      return { requested: 0, sent: 0, reason: 'no-participants' };
+    }
+
+    // 2) 본인 제외 대상 계산 (호출 타이밍이 퇴장 전/후 어떤 경우든 안전하게)
+    const targets = allUserIds.filter(uid => uid !== leftUserId);
+    if (!targets.length) {
+      console.log('[USER_LEFT] no targets after exclude');
+      return { requested: 0, sent: 0, reason: 'no-targets-after-exclude' };
+    }
+
+    // 3) 푸시 토큰 조회
+    const tokens = await getTokensByAccountIds(USER_TOKEN_TABLE, targets);
+    if (!tokens.length) {
+      return { requested: targets.length, sent: 0, reason: 'no-tokens' };
+    }
+
+    // 4) 메시지/페이로드
+    const title = '참가자가 모임을 떠났어요';
+    const body  = leftUserName
+      ? `${leftUserName}님이 모임에서 나갔습니다`
+      : '어떤 참가자가 모임에서 나갔습니다';
+
+    const data = {
+      v: 1,
+      eventId: `user_left_${reservationId}_${leftUserId || 'unknown'}_${Date.now()}`,
+      type: 'USER_LEFT',
+      reservationId,
+      leftUserId,
+      leftUserName,
+      deepLink: `app://reservation/${reservationId}`
+    };
+
+    // 5) 전송 (만료 토큰 정리 포함)
+    return await sendWithCleanup({
+      table: USER_TOKEN_TABLE,
+      tokens,
+      title,
+      body,
+      data,
+      options: { priority: 'high', channelId: 'default' }
+    });
+  } catch (err) {
+    console.error('[USER_LEFT] error:', err);
+    throw err;
+  }
+}
+
 module.exports = {
     // 타입별 API (컨트롤러/서비스에서 바로 import)
     saveUserExpoToken,
@@ -605,5 +659,6 @@ module.exports = {
     sendPaymentFailedPush,
     sendReservationRequestedPush,
     sendPayoutCompletedPush, 
-    sendUserJoinedPush
+    sendUserJoinedPush,
+    sendUserLeftPush
 };
