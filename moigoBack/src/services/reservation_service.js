@@ -135,9 +135,11 @@ exports.createReservation = async (user_id, data) => {
 exports.joinReservation = async (user_id, reservation_id, user_name) => {
   const conn = getConnection();
 
-  // 이미 참여했는지 확인
+  // 1) 이미 참여했는지 확인
   const [exists] = await conn.query(
-    `SELECT * FROM chat_room_users WHERE user_id = ? AND reservation_id = ?`,
+    `SELECT user_id, is_kicked
+       FROM chat_room_users
+      WHERE user_id = ? AND reservation_id = ?`,
     [user_id, reservation_id]
   );
   if (exists.length > 0) {
@@ -146,59 +148,83 @@ exports.joinReservation = async (user_id, reservation_id, user_name) => {
       err.statusCode = 401;
       err.errorCode = "KICKED";
       throw err;
-    }
-    else {
+    } else {
       const err = new Error("이미 참여 중입니다.");
       err.statusCode = 409;
       err.errorCode = "ALREADY_JOINED";
       throw err;
     }
   }
-  console.log('available approach');
-  // 모임 유효성 검사
+
+  // 2) 모임 유효성 검사(모집중인지)
   const [reservation] = await conn.query(
-    `SELECT reservation_status FROM reservation_table WHERE reservation_id = ?`,
+    `SELECT reservation_status,
+            reservation_participant_cnt,
+            reservation_max_participant_cnt
+       FROM reservation_table
+      WHERE reservation_id = ?`,
     [reservation_id]
   );
-  if (reservation.length == 0 || reservation[0].reservation_status !== 0) {
+  if (reservation.length === 0 || reservation[0].reservation_status !== 0) {
     const err = new Error("참여할 수 없는 모임입니다.");
     err.statusCode = 400;
     err.errorCode = "INVALID_ACTION";
     throw err;
   }
 
-  // 참여 등록
-  // 참여자 목록에 추가
-  // 채팅방에 참여자로 추가
-  try {await chatService.enterChatRoom(user_id, reservation_id);} 
-  catch (err) {console.log(err);}
-  
-  // 참여자 수 증가 (reservation_table에 기록된 수치 업데이트)
-  // 모임 정보 업데이트
-  var reservation_status_value = reservation[0].reservation_participant_cnt + 1 >= reservation[0].reservation_max_participant_cnt ? 1 : 0;
-  await conn.query(
-    `UPDATE reservation_table
-    SET reservation_participant_cnt = reservation_participant_cnt + 1,
-    reservation_status = ?
-    WHERE reservation_id = ?`,
-    [reservation_status_value, reservation_id]
-  );
+  // 3) 채팅방 입장(참가자 등록)
+  try {
+    await chatService.enterChatRoom(user_id, reservation_id);
+  } catch (err) {
+    console.log("[JOIN] enterChatRoom error:", err);
+    // 계속 진행은 가능(알림/카운트 업데이트는 독립)
+  }
 
-  // 현재 참여자 수 반환 (return 용)
-  const [cnt] = await conn.query(
-    `SELECT reservation_participant_cnt FROM reservation_table WHERE reservation_id = ?`,
+  // 4) 인원 수 증가 + 상태 업데이트 (원자적 업데이트)
+  const updateSql = `
+    UPDATE reservation_table
+       SET reservation_participant_cnt = reservation_participant_cnt + 1,
+           reservation_status = CASE
+             WHEN reservation_participant_cnt + 1 >= reservation_max_participant_cnt THEN 1
+             ELSE 0
+           END
+     WHERE reservation_id = ?
+       AND reservation_status = 0
+       AND reservation_participant_cnt < reservation_max_participant_cnt
+  `;
+  const [upd] = await conn.query(updateSql, [reservation_id]);
+  if (upd.affectedRows === 0) {
+    const err = new Error("참여할 수 없는 모임입니다.");
+    err.statusCode = 400;
+    err.errorCode = "INVALID_ACTION";
+    throw err;
+  }
+
+  // 5) 현재 인원 수 조회
+  const [cntRows] = await conn.query(
+    `SELECT reservation_participant_cnt
+       FROM reservation_table
+      WHERE reservation_id = ?`,
     [reservation_id]
   );
-  console.log('just before push');
+  const participantCnt = cntRows?.[0]?.reservation_participant_cnt ?? null;
+
+  // 6) 푸시 알림 (본인 제외하여 참가자들에게)
   try {
-    await pushService.sendUserJoinedPush(reservation_id, user_id, user_name);
-    console.log("### 알림 전송 완료");
+    await pushService.sendUserJoinedPush({
+      reservationId: reservation_id,
+      joinedUserId: user_id,
+      joinedUserName: user_name
+    });
+    console.log("[JOIN] push sent");
   } catch (err) {
-    console.log('### ' , err);
+    console.log("[JOIN] push error:", err);
   }
+
+  // 7) 응답
   return {
     message: "모임에 참여하였습니다.",
-    participant_cnt: cnt[0].reservation_participant_cnt,
+    participant_cnt: participantCnt,
   };
 };
 
