@@ -154,7 +154,7 @@ exports.joinReservation = async (user_id, reservation_id, user_name) => {
       throw err;
     }
   }
-
+  console.log('available approach');
   // 모임 유효성 검사
   const [reservation] = await conn.query(
     `SELECT reservation_status FROM reservation_table WHERE reservation_id = ?`,
@@ -170,8 +170,9 @@ exports.joinReservation = async (user_id, reservation_id, user_name) => {
   // 참여 등록
   // 참여자 목록에 추가
   // 채팅방에 참여자로 추가
-  const create_chatRoom = await chatService.enterChatRoom(user_id, reservation_id);
-
+  try {await chatService.enterChatRoom(user_id, reservation_id);} 
+  catch (err) {console.log(err);}
+  
   // 참여자 수 증가 (reservation_table에 기록된 수치 업데이트)
   // 모임 정보 업데이트
   var reservation_status_value = reservation[0].reservation_participant_cnt + 1 >= reservation[0].reservation_max_participant_cnt ? 1 : 0;
@@ -188,7 +189,7 @@ exports.joinReservation = async (user_id, reservation_id, user_name) => {
     `SELECT reservation_participant_cnt FROM reservation_table WHERE reservation_id = ?`,
     [reservation_id]
   );
-
+  console.log('just before push');
   try {
     await pushService.sendUserJoinedPush(reservation_id, user_id, user_name);
     console.log("### 알림 전송 완료");
