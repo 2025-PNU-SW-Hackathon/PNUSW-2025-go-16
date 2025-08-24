@@ -545,12 +545,14 @@ async function sendUserJoinedPush({ reservationId, joinedUserId, joinedUserName 
     // 1) 현재 예약방 참가자 조회
     const allUserIds = await getUserIdsByReservation(reservationId);
     if (!allUserIds?.length) {
+      console.log('no participant');
       return { requested: 0, sent: 0, reason: 'no-participants' };
     }
 
     // 2) 본인 제외 대상 계산
     const targets = allUserIds.filter(uid => uid !== joinedUserId);
     if (!targets.length) {
+      console.log('no targets');
       return { requested: 0, sent: 0, reason: 'no-targets-after-exclude' };
     }
 

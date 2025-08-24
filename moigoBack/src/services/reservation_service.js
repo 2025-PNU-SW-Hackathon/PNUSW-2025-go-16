@@ -191,6 +191,7 @@ exports.joinReservation = async (user_id, reservation_id, user_name) => {
 
   try {
     await pushService.sendUserJoinedPush(reservation_id, user_id, user_name);
+    console.log("### 알림 전송 완료");
   } catch (err) {
     console.log(err);
   }
