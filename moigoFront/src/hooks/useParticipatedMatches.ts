@@ -3,6 +3,40 @@ import { useParticipatedMatchesStore } from '@/store/participatedMatchesStore';
 import { useGetMatchingHistory } from '@/hooks/queries/useUserQueries';
 import { Alert } from 'react-native';
 
+// 카테고리 코드를 한글로 변환하는 함수
+const getCategoryFromCode = (code: string | number | undefined): '축구' | '야구' | '농구' | '격투기' | '게임' | '전체' => {
+  if (!code) return '축구'; // 기본값
+  
+  const codeStr = String(code).toLowerCase();
+  
+  // 축구 관련 코드들
+  if (['pl', 'pd', 'bl1', 'sa', 'fl1', 'cl', 'el', 'ec', 'wc', 'cli', 'acl', '1'].includes(codeStr)) {
+    return '축구';
+  }
+  
+  // 야구 관련 코드들
+  if (['kbo', '2'].includes(codeStr)) {
+    return '야구';
+  }
+  
+  // 농구 관련 코드들
+  if (['nba', 'kbl', '3'].includes(codeStr)) {
+    return '농구';
+  }
+  
+  // 격투기 관련 코드들
+  if (['ufc', 'mma', '4'].includes(codeStr)) {
+    return '격투기';
+  }
+  
+  // 게임 관련 코드들
+  if (['lol', 'dota', 'csgo', '5'].includes(codeStr)) {
+    return '게임';
+  }
+  
+  return '축구'; // 기본값
+};
+
 export function useParticipatedMatches() {
   // API에서 매칭 이력 가져오기
   const { data: matchingHistory, isLoading: isApiLoading, error } = useGetMatchingHistory();
@@ -29,7 +63,7 @@ export function useParticipatedMatches() {
         const date = new Date(item.reservation_start_time);
         return {
           id: item.reservation_id.toString(),
-          title: item.reservation_match,
+          title: item.reservation_title || item.match_name || item.reservation_match,
           date: date,
           time: date.toLocaleTimeString('ko-KR', { 
             hour: '2-digit', 
@@ -38,7 +72,7 @@ export function useParticipatedMatches() {
           }),
           location: item.store_name,
           status: item.status,
-          category: '축구' as const, // 타입을 union 타입으로 고정
+          category: getCategoryFromCode(item.reservation_ex2 || item.reservation_match_category), // 카테고리 코드를 한글로 변환
           participants: 0, // API에서 참가자 수 정보가 없으므로 기본값 사용
           maxParticipants: 0, // API에서 최대 참가자 수 정보가 없으므로 기본값 사용
           hasReview: false, // 기본값

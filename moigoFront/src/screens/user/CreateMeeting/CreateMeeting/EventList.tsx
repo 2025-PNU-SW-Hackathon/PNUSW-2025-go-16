@@ -2,11 +2,12 @@ import React from 'react';
 import { View, Text, TouchableOpacity, FlatList, Dimensions } from 'react-native';
 import TagChip from '@/components/common/TagChip';
 import { COLORS } from '@/constants/colors';
+import type { MatchDTO } from '@/types/DTO/reservations';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 interface EventListProps {
-  groupedEvents: any[][];
+  groupedEvents: MatchDTO[][];
   selectedEventId: string | null;
   handleSelectEvent: (eventId: string) => void;
   currentPage: number;
@@ -25,21 +26,29 @@ export default function EventList({
   handleViewableItemsChanged,
   viewabilityConfig,
 }: EventListProps) {
-  const renderEventGroup = ({ item: events, index }: { item: any[]; index: number }) => (
+  const renderEventGroup = ({ item: events, index }: { item: MatchDTO[]; index: number }) => (
     <View style={{ width: screenWidth - 32, paddingHorizontal: 16 }}>
-      {events.map((event: any) => {
-        // 안전한 타입 체크 추가
+      {events.map((event: MatchDTO) => {
+        // MatchDTO에서 id 필드 사용
         let eventId: string;
+        
         if (event.id !== undefined && event.id !== null) {
           eventId = event.id.toString();
-        } else if (event.reservation_id !== undefined && event.reservation_id !== null) {
-          eventId = event.reservation_id.toString();
         } else {
           console.warn('경기 데이터에 유효한 ID가 없습니다:', event);
-          eventId = 'unknown';
+          eventId = `unknown_${Math.random()}`; // 고유한 문자열 생성
         }
         
         const isSelected = selectedEventId === eventId;
+        
+        // MatchDTO에서 데이터 추출
+        const eventTitle = `${event.home_team} vs ${event.away_team}`;
+        const eventTime = new Date(event.match_date).toLocaleTimeString('ko-KR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+        const eventCategory = event.competition_code;
         
         return (
           <View
@@ -50,36 +59,20 @@ export default function EventList({
           >
             <View className="flex-row justify-between items-center mb-2">
               <TagChip
-                label={event.competition_code || event.reservation_ex1 || event.league || '스포츠'}
+                label={eventCategory}
                 color={`${COLORS.mainOrange}20`}
                 textColor={COLORS.mainOrange}
                 classNameView="px-2 py-1"
                 classNameText="text-xs font-medium"
               />
               <Text className="text-gray-500">
-                {event.match_date 
-                  ? new Date(event.match_date).toLocaleTimeString('ko-KR', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: false
-                    })
-                  : event.reservation_start_time 
-                  ? new Date(event.reservation_start_time).toLocaleTimeString('ko-KR', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: false
-                    })
-                  : event.time || '시간 정보 없음'
-                }
+                {eventTime}
               </Text>
             </View>
 
             <View className="flex-row justify-between items-center my-4">
               <Text className="flex-1 text-center">
-                {event.home_team && event.away_team 
-                  ? `${event.home_team} vs ${event.away_team}`
-                  : event.reservation_match || event.title || '경기 정보 없음'
-                }
+                {eventTitle}
               </Text>
             </View>
 

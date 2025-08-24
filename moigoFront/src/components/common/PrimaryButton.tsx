@@ -27,7 +27,7 @@ export default function PrimaryButton({
   
   return (
     <TouchableOpacity
-      className="items-center px-5 py-3 rounded-lg"
+      className={`items-center px-5 py-3 rounded-lg ${className || ''}`}
       style={{ backgroundColor: buttonColor }}
       onPress={onPress}
       activeOpacity={0.8}

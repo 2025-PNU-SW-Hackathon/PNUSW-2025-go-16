@@ -223,8 +223,8 @@ export default function BusinessHomeScreen() {
               {reservations.map((reservation) => (
                 <ReservationCard
                   key={reservation.reservation_id}
-                  eventType={reservation.reservation_match}
-                  eventTitle={reservation.reservation_match}
+                  eventType={reservation.reservation_title || reservation.match_name || reservation.reservation_match}
+                  eventTitle={reservation.reservation_title || reservation.match_name || reservation.reservation_match}
                   time={new Date(reservation.reservation_start_time).toLocaleTimeString('ko-KR', {
                     hour: '2-digit',
                     minute: '2-digit'
