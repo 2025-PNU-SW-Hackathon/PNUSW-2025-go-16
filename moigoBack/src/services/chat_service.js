@@ -424,7 +424,7 @@ exports.leaveChatRoom = async (user_id, room_id) => {
     }
 
     try {
-      await sendUserLeftPush({
+      await pushService.sendUserLeftPush({
         reservationId: room_id,
         leftUserId: user_id,
         leftUserName: userName
