@@ -430,7 +430,7 @@ exports.leaveChatRoom = async (user_id, room_id) => {
         leftUserName: userName
       });
     } catch (err) {
-      console.log('모임 나가기 푸시 알림', err);
+      console.log('모임 나가기 푸시 알림', room_id, user_id, userName, err);
     }
 
     // 9. 응답 데이터 반환
