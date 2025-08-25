@@ -442,12 +442,12 @@ export default function StoreDetailScreen() {
 
           {/* 하단 액션 버튼 */}
           <View className="px-4 py-4 bg-white border-t border-gray-200">
-            <View className="flex-row space-x-3">
+            <View className="flex-row space-x-3 gap-3">
               <TouchableOpacity
                 onPress={handleSharePress}
                 disabled={shareStoreMutation.isPending}
                 className={`flex-1 py-3 rounded-lg ${
-                  shareStoreMutation.isPending ? 'bg-gray-400' : 'bg-blue-500'
+                  shareStoreMutation.isPending ? 'bg-gray-400' : 'bg-gray-400'
                 }`}
                 activeOpacity={0.8}
               >

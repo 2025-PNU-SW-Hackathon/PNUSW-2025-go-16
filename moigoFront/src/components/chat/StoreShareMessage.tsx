@@ -68,11 +68,11 @@ const StoreShareMessage: React.FC<StoreShareMessageProps> = ({
   return (
     <View className={`${isMyMessage ? 'self-end' : 'self-start'}`}>
       {!isMyMessage ? (
-        <TouchableOpacity 
-          onPress={handleStorePress}
-          activeOpacity={0.8}
-          className="rounded-2xl w-[240px] shadow-sm overflow-hidden bg-white"
-        >
+          <TouchableOpacity 
+            onPress={handleStorePress}
+            activeOpacity={0.8}
+            className="rounded-2xl w-[240px] shadow-sm overflow-hidden bg-white"
+          >
               {/* 가게 대표 사진 */}
               <View className="w-full h-32">
                 {storeInfo.imageUrl ? (
@@ -108,7 +108,7 @@ const StoreShareMessage: React.FC<StoreShareMessageProps> = ({
                   </Text>
                 </View>
               </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
       ) : (
         /* 내 메시지 */
         <TouchableOpacity 

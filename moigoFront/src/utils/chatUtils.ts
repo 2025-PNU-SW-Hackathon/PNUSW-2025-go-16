@@ -48,28 +48,13 @@ export function groupMessages(messages: ChatMessage[], currentUserId: string): M
     const isMyMessage = msg.senderId === currentUserId;
     // console.log('→ 내 메시지 여부:', isMyMessage);
 
-    // 🆕 가게 공유 메시지는 항상 별도 그룹으로 처리
-    if (msg.type === 'store_share') {
-      // console.log('→ 가게 공유 메시지: 새로운 그룹 생성');
-      groups.push({
-        id: `store-share-${msg.senderId}-${msg.timestamp.getTime()}`,
-        senderId: msg.senderId,
-        senderName: msg.senderName,
-        senderAvatar: msg.senderAvatar,
-        isMyMessage: isMyMessage,
-        messages: [msg],
-        type: 'user'
-      });
-      return;
-    }
+    // 💬 가게 공유 메시지도 일반 사용자 메시지로 그룹화 가능
 
-    // 같은 사용자의 연속된 메시지인지 확인 (일반 텍스트 메시지만)
+    // 같은 사용자의 연속된 메시지인지 확인 (텍스트 + 가게 공유 모두 가능)
     if (lastGroup && 
         lastGroup.type === 'user' &&
         lastGroup.senderId === msg.senderId && 
-        lastGroup.isMyMessage === isMyMessage &&
-        // 🆕 마지막 그룹의 마지막 메시지가 가게 공유가 아닌 경우에만 그룹화
-        lastGroup.messages[lastGroup.messages.length - 1].type !== 'store_share') {
+        lastGroup.isMyMessage === isMyMessage) {
       // 기존 그룹에 메시지 추가
       // console.log('→ 기존 그룹에 메시지 추가');
       lastGroup.messages.push(msg);
