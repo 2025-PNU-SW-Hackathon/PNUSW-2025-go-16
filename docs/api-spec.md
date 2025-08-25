@@ -1268,32 +1268,7 @@ Content-Type: application/json
 ```
 
 이미지를 함께 보낼 때만 `multipart/form-data`를 사용하십시오.
-
-
-### 6.2 프로필 수정
-- **URL**: `PUT /api/v1/users/me`
-- **설명**: 현재 사용자의 프로필 정보를 수정합니다.
-- **Headers**: `Authorization: Bearer <JWT>` ✅ 필수
-- **Request Body**:
-```json
-{
-  "user_name": "홍길동",
-  "user_email": "newemail@example.com",
-  "user_phone_number": "010-9876-5432",
-  "user_region": "부산"
-}
-```
-- **Response**:
-```json
-{
-  "success": true,
-  "message": "프로필이 수정되었습니다.",
-  "data": {
-    "user_id": "testuser123",
-    "user_name": "홍길동"
-  }
-}
-```
+---
 
 ### 6.3 비밀번호 변경
 - **URL**: `PUT /api/v1/users/me/password`
