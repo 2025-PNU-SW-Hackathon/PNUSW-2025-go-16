@@ -24,8 +24,8 @@ export const useStartPayment = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ roomId, data }: { roomId: number; data: StartPaymentRequestDTO }) => 
-      startPayment(roomId, data),
+    mutationFn: ({ roomId }: { roomId: number }) => 
+      startPayment(roomId),
     onSuccess: (response, variables) => {
       console.log('✅ 정산 시작 성공:', response);
       

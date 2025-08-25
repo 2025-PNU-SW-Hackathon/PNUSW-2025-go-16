@@ -1,16 +1,17 @@
-import type { ChatRoom } from './ChatTypes';
+import { ChatRoom } from './ChatTypes';
 
 export type RootStackParamList = {
   Onboarding: undefined;
   Login: undefined;
   Signup: undefined;
-  Main: undefined;
+  Main: { screen?: string };
   StoreBasicInfo: undefined;
   StoreDetailInfo: undefined;
   SportsRegistration: undefined;
   BusinessHours: undefined;
   ReservationTime: undefined;
   BusinessInfoEdit: { storeId?: string; isSignup?: boolean };
+  Business: undefined;
   Chat: undefined;
   ChatRoom: { chatRoom: ChatRoom };
   CreateMeeting: undefined;

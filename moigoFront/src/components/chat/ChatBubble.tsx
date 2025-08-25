@@ -9,7 +9,7 @@ import Feather from 'react-native-vector-icons/Feather';
 interface ChatBubbleProps {
   messages: Array<{
     id: string;
-    type: 'text' | 'store' | 'system';
+    type: 'text' | 'store' | 'store_share' | 'system';
     content: string;
     storeInfo?: any;
     status?: MessageStatus; // 메시지 상태 추가
@@ -32,10 +32,10 @@ interface ChatBubbleProps {
 
 // 메시지 상태 아이콘 컴포넌트
 const MessageStatusIcon = ({ status }: { status?: MessageStatus }) => {
-  console.log('🎯 MessageStatusIcon 렌더링:', status);
+  // console.log('🎯 MessageStatusIcon 렌더링:', status);
   
   if (!status) {
-    console.log('⚠️ 상태가 없어서 아이콘 표시 안 함');
+    // console.log('⚠️ 상태가 없어서 아이콘 표시 안 함');
     return null;
   }
 
@@ -90,6 +90,15 @@ export default function ChatBubble({
   chatRoom,
   isHost
 }: ChatBubbleProps) {
+  // 🔍 렌더링 디버깅
+  // console.log('📱 ChatBubble 렌더링:', {
+  //   messageCount: messages.length,
+  //   isMyMessage,
+  //   senderName,
+  //   messageTypes: messages.map(m => m.type),
+  //   hasStoreShare: messages.some(m => m.type === 'store_share')
+  // });
+
   // 시스템 메시지인지 확인
   const isSystemMessage = messages.length > 0 && messages[0].type === 'system';
   
@@ -140,7 +149,7 @@ export default function ChatBubble({
               if (message.type === 'text') {
                 return (
                   <View 
-                    key={message.id}
+                    key={`other-text-${message.id}-${index}`}
                     className={`rounded-2xl px-4 py-3 bg-gray-100 self-start ${
                       index > 0 ? 'mt-2' : ''
                     }`}
@@ -154,9 +163,9 @@ export default function ChatBubble({
                     </Text>
                   </View>
                 );
-              } else if (message.type === 'store' && message.storeInfo) {
+              } else if ((message.type === 'store' || message.type === 'store_share') && message.storeInfo) {
                 return (
-                  <View key={message.id} className={index > 0 ? 'mt-2' : ''}>
+                  <View key={`other-store-${message.id}-${index}`} className={index > 0 ? 'mt-2' : ''}>
                     <StoreShareMessage
                       isMyMessage={isMyMessage}
                       senderName={undefined} // 이미 위에서 표시했으므로
@@ -180,7 +189,7 @@ export default function ChatBubble({
           {messages.map((message, index) => {
             if (message.type === 'text') {
               return (
-                <View key={message.id} className={index > 0 ? 'mt-2' : ''}>
+                <View key={`my-text-${message.id}-${index}`} className={index > 0 ? 'mt-2' : ''}>
                   <View className="flex-row items-end justify-end">
                     {/* 📱 카카오톡 스타일: 메시지 상태 표시 */}
                     <TouchableOpacity 
@@ -210,23 +219,23 @@ export default function ChatBubble({
                   </View>
                 </View>
               );
-            } else if (message.type === 'store' && message.storeInfo) {
+            } else if ((message.type === 'store' || message.type === 'store_share') && message.storeInfo) {
               return (
-                <View key={message.id} className={index > 0 ? 'mt-2' : ''}>
+                <View key={`my-store-${message.id}-${index}`} className={index > 0 ? 'mt-2' : ''}>
                   <View className="flex-row items-end justify-end">
                     {/* 가게 공유 메시지에도 상태 표시 */}
                     <MessageStatusIcon status={message.status} />
                     
                     <View className="ml-2">
-                                          <StoreShareMessage
-                      isMyMessage={isMyMessage}
-                      senderName={undefined} // 내 메시지는 프로필 표시 안함
-                      senderAvatar={undefined} // 내 메시지는 프로필 표시 안함
-                      storeInfo={message.storeInfo}
-                      storeId={message.store_id}
-                      chatRoom={chatRoom}
-                      isHost={isHost}
-                    />
+                      <StoreShareMessage
+                        isMyMessage={isMyMessage}
+                        senderName={undefined} // 내 메시지는 프로필 표시 안함
+                        senderAvatar={undefined} // 내 메시지는 프로필 표시 안함
+                        storeInfo={message.storeInfo}
+                        storeId={message.store_id}
+                        chatRoom={chatRoom}
+                        isHost={isHost}
+                      />
                     </View>
                   </View>
                 </View>

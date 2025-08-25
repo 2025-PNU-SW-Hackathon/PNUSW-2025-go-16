@@ -38,6 +38,8 @@ class SocketManager {
   private paymentCompletedCallbacks: ((data: any) => void)[] = [];
   private paymentFullyCompletedCallbacks: ((data: any) => void)[] = [];
   private paymentGuideUpdatedCallbacks: ((data: any) => void)[] = [];
+  // 🆕 새로운 정산 현황 이벤트 콜백
+  private paymentStatusUpdatedCallbacks: ((data: any) => void)[] = [];
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectInterval: any = null;
@@ -220,6 +222,20 @@ class SocketManager {
       this.paymentFullyCompletedCallbacks.forEach(callback => callback(data));
     });
 
+    // 🆕 정산 현황 업데이트 이벤트
+    this.socket.on('paymentStatusUpdated', (data: any) => {
+      console.log('📊 [소켓] 정산 현황 업데이트 수신:', data);
+      console.log('📊 [소켓] 등록된 paymentStatusUpdated 콜백 수:', this.paymentStatusUpdatedCallbacks.length);
+      this.paymentStatusUpdatedCallbacks.forEach((callback, index) => {
+        console.log(`📊 [소켓] paymentStatusUpdated 콜백 ${index + 1} 실행`);
+        try {
+          callback(data);
+        } catch (error) {
+          console.error(`📊 [소켓] paymentStatusUpdated 콜백 ${index + 1} 실행 실패:`, error);
+        }
+      });
+    });
+
     // 🆕 예약금 안내 업데이트 이벤트
     this.socket.on('paymentGuideUpdated', (data: any) => {
       console.log('🔄 [소켓] 예약금 안내 업데이트 수신:', data);
@@ -390,11 +406,15 @@ class SocketManager {
 
   // 새 메시지 콜백 등록
   onNewMessage(callback: (message: NewMessageDTO) => void) {
+    // 중복 콜백 방지: 기존 콜백들을 모두 제거하고 새로 등록
+    this.messageCallbacks = [];
     this.messageCallbacks.push(callback);
+    console.log('📝 [소켓] newMessage 콜백 등록됨. 총 콜백 수:', this.messageCallbacks.length);
   }
 
   // 🆕 메시지 업데이트 콜백 등록
   onMessageUpdated(callback: (data: any) => void) {
+    this.messageUpdatedCallbacks = [];
     this.messageUpdatedCallbacks.push(callback);
   }
 
@@ -405,6 +425,7 @@ class SocketManager {
 
   // 연결 상태 콜백 등록
   onConnectionStatusChange(callback: (isConnected: boolean) => void) {
+    this.connectionStatusCallbacks = [];
     this.connectionStatusCallbacks.push(callback);
     // 현재 연결 상태를 즉시 콜백으로 전달
     callback(this.isConnected());
@@ -449,16 +470,19 @@ class SocketManager {
 
   // 🆕 정산 시작 이벤트 콜백 등록
   onPaymentStarted(callback: (data: any) => void) {
+    this.paymentStartedCallbacks = [];
     this.paymentStartedCallbacks.push(callback);
   }
 
   // 🆕 개별 입금 완료 이벤트 콜백 등록
   onPaymentCompleted(callback: (data: any) => void) {
+    this.paymentCompletedCallbacks = [];
     this.paymentCompletedCallbacks.push(callback);
   }
 
   // 🆕 전체 정산 완료 이벤트 콜백 등록
   onPaymentFullyCompleted(callback: (data: any) => void) {
+    this.paymentFullyCompletedCallbacks = [];
     this.paymentFullyCompletedCallbacks.push(callback);
   }
 
@@ -497,6 +521,13 @@ class SocketManager {
     if (index > -1) {
       this.messageErrorCallbacks.splice(index, 1);
     }
+  }
+
+  // 🆕 정산 현황 업데이트 콜백 등록
+  onPaymentStatusUpdated(callback: (data: any) => void) {
+    this.paymentStatusUpdatedCallbacks = [];
+    this.paymentStatusUpdatedCallbacks.push(callback);
+    console.log('📊 [소켓] paymentStatusUpdated 콜백 등록됨. 총 콜백 수:', this.paymentStatusUpdatedCallbacks.length);
   }
 
   // 🧹 모든 콜백 정리 (채팅방 나갈 때 사용)

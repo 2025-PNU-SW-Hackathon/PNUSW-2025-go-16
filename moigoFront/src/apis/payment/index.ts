@@ -7,17 +7,17 @@ import type {
   GetPaymentStatusResponseDTO
 } from '@/types/DTO/payment';
 
-// 정산 시작 (방장만 가능)
-export const startPayment = async (roomId: number, data: StartPaymentRequestDTO): Promise<StartPaymentResponseDTO> => {
+// 정산 시작 (방장만 가능) - 서버에서 자동 계산
+export const startPayment = async (roomId: number): Promise<StartPaymentResponseDTO> => {
   const url = `/chats/${roomId}/payment/start`;
   
   console.log('=== 정산 시작 API 요청 ===');
   console.log('URL:', url);
   console.log('roomId:', roomId);
-  console.log('payment_per_person:', data.payment_per_person);
+  console.log('요청 데이터: 없음 (서버에서 자동 계산)');
   
   try {
-    const response = await apiClient.post<StartPaymentResponseDTO>(url, data);
+    const response = await apiClient.post<StartPaymentResponseDTO>(url, {});
     
     console.log('=== 정산 시작 API 응답 ===');
     console.log('상태 코드:', response.status);
@@ -41,6 +41,8 @@ export const startPayment = async (roomId: number, data: StartPaymentRequestDTO)
       const errorData = error.response?.data;
       if (errorData?.error_code === 'INVALID_CONDITIONS') {
         throw new Error('모집이 마감되고 가게가 선택된 후에만 정산을 시작할 수 있습니다.');
+      } else if (errorData?.error_code === 'NO_DEPOSIT_AMOUNT') {
+        throw new Error('가게에서 예약금이 설정되지 않았습니다. 가게에 문의해주세요.');
       } else {
         throw new Error('잘못된 요청입니다.');
       }
@@ -112,10 +114,14 @@ export const getPaymentStatus = async (roomId: number): Promise<GetPaymentStatus
     console.log('=== 정산 상태 조회 API 응답 ===');
     console.log('상태 코드:', response.status);
     console.log('응답 데이터:', response.data);
+    console.log('응답 데이터 타입:', typeof response.data.data);
+    console.log('응답 데이터 키들:', response.data.data ? Object.keys(response.data.data) : 'null');
     
     if (response.data.success === false) {
       throw new Error('정산 상태 조회에 실패했습니다.');
     }
+    
+    // ✅ 서버가 올바른 응답을 보내고 있음 - 구 버전 처리 코드 제거됨
     
     return response.data;
   } catch (error: any) {
@@ -130,21 +136,8 @@ export const getPaymentStatus = async (roomId: number): Promise<GetPaymentStatus
       return {
         success: true,
         data: {
-          payment_id: '',
           payment_status: 'not_started',
-          total_participants: 0,
-          completed_payments: 0,
-          pending_payments: 0,
-          payment_per_person: 0,
-          total_amount: 0,
-          store_info: {
-            store_name: '',
-            bank_name: '',
-            account_number: '',
-            account_holder: ''
-          },
-          payment_deadline: '',
-          participants: []
+          message: '정산이 시작되지 않았습니다.'
         }
       };
     } else if (error.response?.status === 500) {

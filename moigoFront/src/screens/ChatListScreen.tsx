@@ -11,19 +11,20 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/types/RootStackParamList';
-import { useChatRooms, useLeaveChatRoom } from '@/hooks/queries/useChatQueries';
+import { useChatRooms } from '@/hooks/queries/useChatQueries';
 import { formatTimeAgo } from '@/utils/dateUtils';
 import type { ChatRoomDTO } from '@/types/DTO/chat';
+import type { ChatRoom } from '@/types/ChatTypes';
 
 type ChatListScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
-  'ChatList'
+  'Chat'
 >;
 
 export default function ChatListScreen() {
   const navigation = useNavigation<ChatListScreenNavigationProp>();
   const { data, isLoading, error, refetch } = useChatRooms();
-  const leaveChatRoomMutation = useLeaveChatRoom();
+  // const leaveChatRoomMutation = useLeaveChatRoom(); // 임시 비활성화
 
   // 디버깅을 위한 로그 추가
   console.log('ChatListScreen - 데이터 상태:', {
@@ -34,7 +35,27 @@ export default function ChatListScreen() {
   });
 
   const handleChatRoomPress = (chatRoom: ChatRoomDTO) => {
-    navigation.navigate('ChatRoom', { chatRoom });
+    // ChatRoomDTO를 ChatRoom 타입으로 변환
+    const chatRoomForNavigation: ChatRoom = {
+      id: chatRoom.chat_room_id.toString(),
+      chat_room_id: chatRoom.chat_room_id,
+      name: chatRoom.name,
+      type: 'matching',
+      title: chatRoom.name || '채팅방',
+      subtitle: chatRoom.participant_info || `${chatRoom.reservation_participant_cnt || 0}/${chatRoom.reservation_max_participant_cnt || 0}명`,
+      lastMessage: chatRoom.last_message || '',
+      timestamp: chatRoom.last_message_time || new Date().toISOString(),
+      unreadCount: 0,
+      isHost: chatRoom.is_host || false,
+      host_id: chatRoom.host_id,
+      icon: {
+        text: '👥',
+        backgroundColor: '#FF6B35',
+        textColor: '#FFFFFF'
+      }
+    };
+    
+    navigation.navigate('ChatRoom', { chatRoom: chatRoomForNavigation });
   };
 
   const handleLeaveChatRoom = (roomId: number, roomName: string) => {
@@ -47,15 +68,8 @@ export default function ChatListScreen() {
           text: '나가기',
           style: 'destructive',
           onPress: () => {
-            leaveChatRoomMutation.mutate(roomId, {
-              onSuccess: () => {
-                Alert.alert('알림', '채팅방을 나갔습니다.');
-              },
-              onError: (error) => {
-                Alert.alert('오류', '채팅방을 나가는데 실패했습니다.');
-                console.error('채팅방 나가기 실패:', error);
-              },
-            });
+            // TODO: 채팅방 나가기 기능 구현 필요
+            Alert.alert('알림', '채팅방 나가기 기능은 준비 중입니다.');
           },
         },
       ]
@@ -97,7 +111,7 @@ export default function ChatListScreen() {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>채팅방 목록을 불러오는데 실패했습니다.</Text>
-        <Text style={styles.errorDetailText}>{error.message}</Text>
+        <Text style={styles.errorDetailText}>{(error as any)?.message || '알 수 없는 오류'}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
           <Text style={styles.retryButtonText}>다시 시도</Text>
         </TouchableOpacity>
@@ -106,7 +120,7 @@ export default function ChatListScreen() {
   }
 
   // 데이터가 없고 로딩 중일 때
-  if (isLoading && !data?.data?.length) {
+  if (isLoading && !(data as any)?.data?.length) {
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.loadingText}>채팅방을 불러오는 중...</Text>
@@ -115,7 +129,7 @@ export default function ChatListScreen() {
   }
 
   // 데이터가 없고 로딩이 끝났을 때
-  if (!isLoading && (!data?.data || data.data.length === 0)) {
+  if (!isLoading && (!(data as any)?.data || (data as any).data.length === 0)) {
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyText}>참여 중인 채팅방이 없습니다.</Text>
@@ -129,7 +143,7 @@ export default function ChatListScreen() {
   return (
     <View style={styles.container}>
       <FlatList
-        data={data?.data || []}
+        data={(data as any)?.data || []}
         renderItem={renderChatRoom}
         keyExtractor={(item) => item.chat_room_id.toString()}
         refreshControl={
