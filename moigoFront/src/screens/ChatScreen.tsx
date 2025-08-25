@@ -61,92 +61,57 @@ export default function ChatScreen() {
 
   // API 데이터를 기존 ChatRoom 형식으로 변환
   const convertToChatRoom = (apiData: ChatRoomDTO): ChatRoom => {
-    // 🚨 디버깅: 서버에서 받은 원본 데이터 로깅 (주석 처리)
-    // console.log('🔍 [ChatScreen] 서버에서 받은 원본 채팅방 데이터:', {
-    //   chatRoom: apiData.name,
-    //   fullApiData: apiData,
-    //   availableFields: Object.keys(apiData),
-    //   sender_id: apiData.sender_id,
-    //   host_id: (apiData as any).host_id,
-    //   is_host: (apiData as any).is_host,
-    //   current_user_is_host: (apiData as any).current_user_is_host,
-    //   user_role: (apiData as any).user_role,
-    //   currentUserId: user?.id
-    // });
-
-    const isMatching = apiData.name.includes('모임') || apiData.name.includes('매칭');
-    const isStore = apiData.name.includes('펍') || apiData.name.includes('스포츠');
+    // 🏷️ 채팅방 제목 결정 (우선순위: reservation_title > reservation_match > match_name > name)
+    const roomTitle = apiData.reservation_title || apiData.reservation_match || apiData.match_name || apiData.name;
     
-    // 아이콘 생성 로직
-    const getIcon = (name: string, type: 'matching' | 'store') => {
-      if (type === 'store') {
-        return {
-          text: 'SPORTS\nPUB',
-          backgroundColor: '#000000',
-          textColor: '#FFFFFF'
-        };
-      }
-      
-      // 매칭방의 경우 첫 글자로 아이콘 생성
-      const firstChar = name.charAt(0);
-      const colors = ['#FF6B35', '#C8102E', '#1E3A8A', '#059669', '#DC2626'];
-      const randomColor = colors[Math.floor(Math.random() * colors.length)];
-      
-      return {
-        text: firstChar,
-        backgroundColor: randomColor,
-        textColor: '#FFFFFF'
-      };
+    // 📊 부제목 생성 (정산 상태 우선 표시)
+    let subtitle = '';
+    if (apiData.payment_status === 'in_progress' && apiData.payment_progress) {
+      subtitle = `💰 정산 중 (${apiData.payment_progress})`;
+    } else if (apiData.payment_status === 'completed') {
+      subtitle = '✅ 정산 완료';
+    } else {
+      subtitle = apiData.participant_info || `${apiData.reservation_participant_cnt}/${apiData.reservation_max_participant_cnt}명`;
+    }
+    
+    // 🎨 아이콘 생성 (채팅방 제목 첫 글자)
+    const firstChar = roomTitle.charAt(0);
+    const colors = ['#FF6B35', '#C8102E', '#1E3A8A', '#059669', '#DC2626'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    
+    const icon = {
+      text: firstChar,
+      backgroundColor: randomColor,
+      textColor: '#FFFFFF'
     };
-
-    const type: 'matching' | 'store' = isStore ? 'store' : 'matching';
-    const icon = getIcon(apiData.name, type);
-
-    // 🆕 개선된 방장 판별 로직 - 서버 제공 필드 우선 사용
-    const apiDataAny = apiData as any;
-    
-    // 1️⃣ 서버에서 제공하는 방장 정보 확인
-    const serverHostId = apiDataAny.host_id || apiData.sender_id;
-    const serverIsHost = apiDataAny.is_host || apiDataAny.current_user_is_host;
-    
-    // 2️⃣ 클라이언트 측 검증
-    const clientIsHost = user?.id === serverHostId;
-    
-    // 3️⃣ 최종 방장 판별 (서버 정보 우선)
-    const finalIsHost = serverIsHost !== undefined ? serverIsHost : clientIsHost;
-    
-    // console.log('🔍 [ChatScreen] 방장 판별 과정:', {
-    //   chatRoom: apiData.name,
-    //   '1️⃣ 서버 host_id': serverHostId,
-    //   '2️⃣ 서버 is_host': serverIsHost,
-    //   '3️⃣ 클라이언트 검증': clientIsHost,
-    //   '🎯 최종 결과': finalIsHost,
-    //   '현재 사용자 ID': user?.id,
-    //   '상태': finalIsHost ? '✅ 방장' : '👤 일반 참여자'
-    // });
-    
-    // console.log('🔍 [ChatScreen] 방장 판별 상세 분석:', {
-    //   chatRoomId: apiData.chat_room_id,
-    //   chatRoomName: apiData.name,
-    //   '⚠️ SENDER_ID (마지막 메시지 발신자?)': apiData.sender_id,
-    //   '📊 현재 사용자 ID': user?.id,
-    //   '🤔 sender_id === user_id?': user?.id === apiData.sender_id,
-    //   '📝 마지막 메시지': apiData.last_message,
-    //   '🕐 마지막 메시지 시간': apiData.last_message_time,
-    //   '❓ 문제': 'sender_id가 모임 생성자가 아니라 마지막 메시지 보낸 사람일 수 있음'
-    // });
 
     return {
       id: apiData.chat_room_id.toString(),
-      title: apiData.name,
-      type: 'matching' as const,
-      isHost: serverHostId === user?.id, // 🆕 서버에서 제공하는 방장 ID로 정확한 방장 여부 계산
-      host_id: serverHostId, // 🆕 서버에서 제공하는 방장 ID 사용
+      chat_room_id: apiData.chat_room_id,
+      name: roomTitle,
+      type: 'matching',
+      title: roomTitle,
+      subtitle: subtitle,
+      lastMessage: apiData.last_message || '',
+      timestamp: formatTimeAgo(apiData.last_message_time),
+      unreadCount: apiData.unread_count || 0,
+      isHost: apiData.is_host,
+      host_id: apiData.host_id,
       icon,
-      location: type === 'store' ? '강남역 2번 출구' : undefined,
-      // 🆕 서버에서 추가된 새 필드들 직접 추가
-      ...(apiData as any) // 타입 안전성을 위해 any로 캐스팅
-    };
+      // 🆕 새로운 API 필드들 직접 추가 (ChatRoomScreen에서 사용)
+      reservation_status: apiData.reservation_status,
+      status_message: apiData.status_message,
+      is_recruitment_closed: apiData.is_recruitment_closed,
+      participant_info: apiData.participant_info,
+      reservation_participant_cnt: apiData.reservation_participant_cnt,
+      reservation_max_participant_cnt: apiData.reservation_max_participant_cnt,
+      match_title: apiData.reservation_match || apiData.match_name,
+      reservation_start_time: apiData.reservation_start_time,
+      last_message_sender_id: apiData.last_message_sender_id,
+      selected_store: apiData.selected_store,
+      payment_status: apiData.payment_status,
+      payment_progress: apiData.payment_progress
+    } as ChatRoom;
   };
 
   const handleChatRoomPress = (chatRoom: ChatRoom) => {

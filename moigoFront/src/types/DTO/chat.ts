@@ -7,27 +7,56 @@ export interface ChatRoomListResponseDTO {
 }
 
 export interface ChatRoomDTO {
-  chat_room_id: number;
-  name: string;
-  last_message: string;
-  last_message_time: string;
-  sender_id: string;
-  // 🆕 서버팀에서 추가한 방장 정보 필드들
-  host_id?: string; // 실제 방장 ID
-  is_host?: boolean; // 현재 사용자가 방장인지
-  current_user_is_host?: boolean; // 현재 사용자가 방장인지 (대안 필드명)
-  user_role?: string; // 사용자 역할 ("방장" 또는 "참가자")
-  reservation_id?: number; // 연결된 모임 ID
-  reservation_status?: number; // 모임 상태 (0: 모집중, 1: 마감, 2: 진행중, 3: 완료)
-  // 🆕 서버에서 새로 추가된 모집 상태 정보들
-  status_message?: string; // "모집 중", "모집 마감" 등
-  is_recruitment_closed?: boolean; // 모집 마감 여부
-  participant_info?: string; // "5/8" 형태의 참여자 정보
-  reservation_participant_cnt?: number; // 현재 참여자 수
-  reservation_max_participant_cnt?: number; // 최대 참여자 수
-  match_title?: string; // 경기 제목
-  reservation_start_time?: string; // 모임 시작 시간
-  last_message_sender_id?: string; // 마지막 메시지 발신자 ID
+  // 🏠 기본 채팅방 정보
+  chat_room_id: number;                    // 채팅방 ID (= reservation_id)
+  name: string;                           // 채팅방 이름
+  host_id: string;                        // 방장 사용자 ID
+  reservation_status: number;             // 모집 상태 (0: 모집중, 1: 모집마감, 2: 진행중, 3: 완료)
+  
+  // 👥 참여자 정보
+  reservation_participant_cnt: number;     // 현재 참여자 수
+  reservation_max_participant_cnt: number; // 최대 참여자 수
+  participant_info: string;               // 참여자 정보 문자열 ("4/6")
+  
+  // 📅 일정 정보
+  reservation_start_time: string;         // 모임 시작 시간 (ISO 형식)
+  reservation_match: string;              // 경기명
+  reservation_title: string;              // 모임 제목 (reservation_bio)
+  
+  // 🏪 선택된 가게 정보
+  selected_store_id?: string;
+  selected_store_name?: string;
+  selected_at?: string;                   // 가게 선택 시간
+  selected_by?: string;                   // 가게 선택한 사용자
+  selected_store?: {                      // 구조화된 가게 정보
+    store_id: string;
+    store_name: string;
+    selected_at: string;
+    selected_by: string;
+  };
+  
+  // 💬 최근 메시지 정보
+  last_message: string;                   // 최근 메시지 내용
+  last_message_time: string;              // 최근 메시지 시간
+  last_message_sender_id: string;         // 최근 메시지 보낸 사용자 ID
+  sender_id: string;                      // 동일 (중복 필드)
+  
+  // 👑 사용자 역할 정보
+  is_host: boolean;                       // 현재 사용자가 방장인지 여부
+  user_role: string;                      // 사용자 역할 ("방장" 또는 "참가자")
+  
+  // 📊 상태 정보
+  status_message: string;                 // 상태 메시지 ("모집 마감" 등)
+  is_recruitment_closed: boolean;         // 모집 마감 여부
+  match_name: string;                     // 경기명 (중복)
+  
+  // 💰 정산 정보
+  payment_status: string;                 // 정산 상태 ("not_started", "in_progress", "completed")
+  payment_progress?: string;              // 정산 진행률 ("2/4" 형태, 정산 중일 때만)
+  
+  // 추가 호환성 필드들
+  match_title?: string;                   // 호환성을 위한 별칭
+  unread_count?: number;                  // 읽지 않은 메시지 수 (클라이언트 계산)
 }
 
 // 채팅방 입장/생성 요청

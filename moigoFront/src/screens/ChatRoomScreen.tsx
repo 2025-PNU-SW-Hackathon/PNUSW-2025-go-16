@@ -13,7 +13,7 @@ import PaymentGuideUI from '@/components/chat/PaymentGuideUI';
 import PaymentModal from '@/components/common/PaymentModal';
 import DropdownMenu, { DropdownOption } from '@/components/common/DropdownMenu';
 import HostBadge from '@/components/chat/HostBadge';
-import MeetingStatusBadge from '@/components/chat/MeetingStatusBadge';
+
 import ParticipantManagementModal from '@/components/chat/ParticipantManagementModal';
 import MeetingEditModal from '@/components/chat/MeetingEditModal';
 import Toast from '@/components/common/Toast';
@@ -62,16 +62,7 @@ export default function ChatRoomScreen() {
     const isRecruitmentClosed = (chatRoom as any)?.is_recruitment_closed;
     const participantInfo = (chatRoom as any)?.participant_info;
     
-    console.log('🆕 [ChatRoomScreen] 서버 새 필드들 확인:', {
-      chatRoomId: chatRoom.chat_room_id,
-      chatRoomName: chatRoom.title || chatRoom.name,
-      reservation_status: initialStatus,
-      status_message: statusMessage,
-      is_recruitment_closed: isRecruitmentClosed,
-      participant_info: participantInfo,
-      match_title: (chatRoom as any)?.match_title,
-      reservation_start_time: (chatRoom as any)?.reservation_start_time
-    });
+
     
     return initialStatus;
   });
@@ -494,26 +485,11 @@ export default function ChatRoomScreen() {
       // 상태 업데이트
       setReservationStatus(data.new_status);
       
-      // 시스템 메시지 추가
-      const statusMessage = data.new_status === 1 ? '모집이 마감되었습니다' : '모집이 다시 열렸습니다';
-      const systemMessage: ChatMessage = {
-        id: `system-status-${Date.now()}`,
-        senderId: 'system',
-        senderName: '시스템',
-        senderAvatar: '⚙️',
-        message: `📢 ${statusMessage}`,
-        timestamp: new Date(),
-        type: 'system',
-        message_type: 'system_join'
-      };
-      
-      setMessages(prev => [systemMessage, ...prev]);
-      
-      // 토스트 알림
+      // 토스트 알림만 유지 (시스템 메시지는 제거)
       if (data.new_status === 1) {
-        showInfo('모집이 마감되었습니다 🔒');
+        showInfo('모집이 마감되었습니다');
       } else {
-        showInfo('모집이 다시 열렸습니다 🔓');
+        showInfo('모집이 다시 열렸습니다');
       }
     };
 
@@ -1996,12 +1972,7 @@ export default function ChatRoomScreen() {
               {isCurrentUserHost && (
                 <HostBadge size="small" style="crown" />
               )}
-              {/* 🔥 모임 상태 표시 */}
-              {reservationStatus !== null && (
-                <View className="ml-2">
-                  <MeetingStatusBadge status={reservationStatus} size="small" />
-                </View>
-              )}
+
             </View>
             <View className="flex-row items-center">
               {/* 🆕 경기 정보 또는 기본 부제목 */}
