@@ -1,8 +1,9 @@
 // src/screens/HomeScreen.tsx
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { useMyScreen } from '@/hooks/useMyScreen';
 import { COLORS } from '@/constants/colors';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 // 컴포넌트들
 import GradeCard from '@/components/my/GradeCard';
@@ -10,8 +11,13 @@ import ProfileCard from '@/components/my/ProfileCard';
 import StatsCard from '@/components/my/StatsCard';
 import MenuItem from '@/components/my/MenuItem';
 import ToggleSwitch from '@/components/common/ToggleSwitch';
+import LogoutConfirmModal from '@/components/business/LogoutConfirmModal';
 
 export default function MyScreen() {
+  const [refreshing, setRefreshing] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const navigation = useNavigation();
+  
   const {
     userProfile,
     settings,
@@ -24,13 +30,37 @@ export default function MyScreen() {
     handleContactCustomerService,
     toggleNotifications,
     handleEditPassword,
+    refreshUserProfile,
   } = useMyScreen();
 
+  // 화면이 포커스될 때마다 프로필 데이터 새로고침
+  useFocusEffect(
+    useCallback(() => {
+      refreshUserProfile();
+    }, [refreshUserProfile])
+  );
+
+  // 새로고침 처리
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      if (refreshUserProfile) {
+        await refreshUserProfile();
+      }
+    } catch (error) {
+      // 에러 처리 (필요시 사용자에게 알림)
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshUserProfile]);
+
   const handleLogoutPress = () => {
-    Alert.alert('로그아웃', '정말 로그아웃 하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      { text: '로그아웃', style: 'destructive', onPress: handleLogout },
-    ]);
+    setShowLogoutModal(true);
+  };
+
+  const handleConfirmLogout = () => {
+    setShowLogoutModal(false);
+    handleLogout();
   };
 
   if (isLoading) {
@@ -52,7 +82,19 @@ export default function MyScreen() {
 
   return (
     <View className="flex-1 bg-white">
-      <ScrollView className="flex-1 pt-4">
+      <ScrollView 
+        className="flex-1 pt-4"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#FF6B35']} // 메인 오렌지 색상
+            tintColor="#FF6B35"
+            title="새로고침 중..."
+            titleColor="#FF6B35"
+          />
+        }
+      >
         {/* 등급 카드 */}
         <GradeCard
           grade={userProfile?.grade || 'BRONZE'}
@@ -137,18 +179,26 @@ export default function MyScreen() {
             icon="info"
             iconColor="#6B7280"
             onPress={() => {}}
-            className="mb-4 rounded-b-2xl border-2 border-t-0 border-mainGray"
+            className="border-2 border-t-0 border-mainGray"
             rightComponent={
               <Text className="font-medium text-gray-500">{settings.appVersion}</Text>
             }
           />
+          <MenuItem
+            title="로그아웃"
+            icon="log-out"
+            iconColor="#EF4444"
+            onPress={handleLogoutPress}
+            className="mb-4 rounded-b-2xl border-2 border-t-0 border-mainGray"
+          />
         </View>
 
-        {/* 로그아웃 버튼 */}
-        <TouchableOpacity className="items-center mx-4 mt-4 mb-8" onPress={handleLogoutPress}>
-          <Text className="font-medium text-red-500">로그아웃</Text>
-        </TouchableOpacity>
       </ScrollView>
+      <LogoutConfirmModal
+        visible={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleConfirmLogout}
+      />
     </View>
   );
 }
