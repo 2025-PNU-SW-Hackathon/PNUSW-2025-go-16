@@ -1926,13 +1926,7 @@ exports.completePayment = async (user_id, room_id, payment_method) => {
         await this.sendReservationToStore(room_id, paymentId);
 
         // 🔴 예약 등록 완료 시스템 메시지 추가
-        const completionMessage = `✅ 예약이 정상적으로 등록되었습니다.
-
-📅 예약 정보가 가게에 전달되었습니다.
-💰 입금 총액: ${totalAmountInfo[0].total_amount.toLocaleString()}원
-👥 참여자: ${totalParticipants}명
-
-가게에서 예약 확인 후 연락드릴 예정입니다. 🎉`;
+        const completionMessage = `예약이 정상적으로 등록되었습니다.`;
 
         // 예약 등록 완료 시스템 메시지 저장
         const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages WHERE chat_room_id = ?', [room_id]);
@@ -1961,7 +1955,7 @@ exports.completePayment = async (user_id, room_id, payment_method) => {
         // 🔄 채팅 리스트 업데이트 이벤트 전송 - 개별 사용자별로
         const chatListUpdateData = {
           chat_room_id: parseInt(room_id),
-          last_message: '✅ 예약이 정상적으로 등록되었습니다.',
+          last_message: '예약이 정상적으로 등록되었습니다.',
           last_message_time: new Date().toISOString(),
           last_message_sender_id: 'system',
           last_message_sender_name: 'System'
