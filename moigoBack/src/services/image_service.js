@@ -83,7 +83,7 @@ exports.saveImageLocal = async ({ ownerType, ownerId, file, isPublic = 1 }) => {
     `UPDATE images
         SET is_public = 0
       WHERE owner_type = ? AND owner_id = ?`,
-    [ownerType, String(ownerId)]
+    ['user', String(ownerId)]
   );
 
   // DB insert (storage_type='local', bucket=NULL, object_key='images/<fileName>')
