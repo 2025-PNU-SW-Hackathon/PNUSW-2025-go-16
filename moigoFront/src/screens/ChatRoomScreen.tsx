@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, RefreshControl, ActivityIndicator, SafeAreaView } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types/RootStackParamList';
@@ -1947,7 +1947,7 @@ export default function ChatRoomScreen() {
   // 로딩 상태
   if (isLoading && messages.length === 0) {
     return (
-      <View className="flex-1 bg-white justify-center items-center">
+      <View className="flex-1 justify-center items-center bg-white">
         <Text className="text-gray-600">메시지를 불러오는 중...</Text>
       </View>
     );
@@ -1956,13 +1956,13 @@ export default function ChatRoomScreen() {
   // 에러 상태
   if (error && messages.length === 0) {
     return (
-      <View className="flex-1 bg-white justify-center items-center px-4">
-        <Text className="text-gray-600 text-center mb-4">메시지를 불러오는데 실패했습니다.</Text>
+      <View className="flex-1 justify-center items-center px-4 bg-white">
+        <Text className="mb-4 text-center text-gray-600">메시지를 불러오는데 실패했습니다.</Text>
         <TouchableOpacity 
-          className="bg-mainOrange px-6 py-3 rounded-lg"
+          className="px-6 py-3 rounded-lg bg-mainOrange"
           onPress={() => refetch()}
         >
-          <Text className="text-white font-semibold">다시 시도</Text>
+          <Text className="font-semibold text-white">다시 시도</Text>
         </TouchableOpacity>
       </View>
     );
@@ -1974,89 +1974,50 @@ export default function ChatRoomScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
         {/* 헤더 */}
-        <View className="flex-row items-center px-6 pt-12 pb-4 bg-white border-b border-gray-100 shadow-sm">
-          <TouchableOpacity 
-            onPress={() => {
-              // 현재 채팅방에서만 나가기 (소켓 연결은 유지)
-              socketManager.leaveRoom(chatRoom.chat_room_id || 1);
-              // 채팅방 목록 새로고침
-              queryClient.invalidateQueries({ queryKey: ['chatRooms'] });
-              console.log('🔙 [ChatRoomScreen] 뒤로가기: 채팅방 나가기 완료');
-              navigation.goBack();
-            }}
-            className="mr-3"
-          >
-            <Text className="text-2xl">←</Text>
-          </TouchableOpacity>
-          
-          <View className="flex-1">
-            <View className="flex-row items-center">
-              <Text className="text-lg font-semibold text-gray-900 mr-2">
-                {chatRoom.title || chatRoom.name}
-              </Text>
-              {/* 👑 방장 표시 */}
-              {isCurrentUserHost && (
-                <HostBadge size="small" style="crown" />
-              )}
+        <SafeAreaView className="mb-1">
+          <View className="flex-row items-center px-6 py-2 bg-white border-b-2 border-mainGray">
+            <TouchableOpacity 
+              onPress={() => {
+                // 현재 채팅방에서만 나가기 (소켓 연결은 유지)
+                socketManager.leaveRoom(chatRoom.chat_room_id || 1);
+                // 채팅방 목록 새로고침
+                queryClient.invalidateQueries({ queryKey: ['chatRooms'] });
+                console.log('🔙 [ChatRoomScreen] 뒤로가기: 채팅방 나가기 완료');
+                navigation.goBack();
+              }}
+              className="mr-3"
+            >
+              <Text className="text-2xl">←</Text>
+            </TouchableOpacity>
+            
+            <View className="flex-1">
+              <View className="flex-row items-center">
+                <Text className="mr-2 text-lg font-semibold text-gray-900">
+                  {chatRoom.title || chatRoom.name}
+                </Text>
+              </View>
+              <View className="flex-row items-center">
+                
+                {/* 🆕 참여자 정보 */}
+                {(chatRoom as any)?.participant_info && (
+                  <View className="flex-1">
+                  <Text className="mt-1 text-sm text-gray-500" numberOfLines={1}>
+                    참여자 {(chatRoom as any).reservation_participant_cnt || 0}명
+                  </Text>
+                </View>
+                )}
+              </View>
+            </View>
 
-            </View>
-            <View className="flex-row items-center">
-              {/* 🆕 경기 정보 또는 기본 부제목 */}
-              <Text className="text-sm text-gray-600 mr-2">
-                {(chatRoom as any)?.match_title ? `⚽ ${(chatRoom as any).match_title}` : (chatRoom.subtitle || '채팅방')}
-              </Text>
-              
-              {/* 🆕 참여자 정보 */}
-              {(chatRoom as any)?.participant_info && (
-                <Text className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full mr-2">
-                  👥 {(chatRoom as any).participant_info}
-                </Text>
-              )}
-              
-              {/* 🆕 선택된 가게 정보 */}
-              {(selectedStore || (chatRoom as any)?.selected_store) && (
-                <Text className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full mr-2">
-                  🏪 {(selectedStore || (chatRoom as any)?.selected_store)?.store_name}
-                </Text>
-              )}
-                        {/* 연결 상태 표시 */}
-          <TouchableOpacity 
-            className="flex-row items-center"
-            onPress={() => {
-              if (!isSocketConnected) {
-                console.log('🔄 수동 소켓 재연결 시도');
-                console.log('소켓 디버그 정보:', socketManager.getDebugInfo());
-                // 🆕 이미 연결 중이거나 연결된 경우 재연결하지 않음
-                if (!socketManager.isConnected() && !socketManager.isConnecting()) {
-                  socketManager.connect();
-                } else {
-                  console.log('⚠️ 소켓이 이미 연결 중이거나 연결되어 있음');
-                }
-              }
-            }}
-          >
-            <View 
-              className={`w-2 h-2 rounded-full mr-1 ${
-                isSocketConnected ? 'bg-green-500' : 'bg-red-500'
-              }`} 
-            />
-            <Text className={`text-xs ${
-              isSocketConnected ? 'text-green-600' : 'text-red-600'
-            }`}>
-              {isSocketConnected ? '실시간' : '오프라인 (탭해서 재연결)'}
-            </Text>
-          </TouchableOpacity>
-            </View>
+            {/* 메뉴 버튼 */}
+            <TouchableOpacity
+              onPress={() => setShowMenu(!showMenu)}
+              className="p-2"
+            >
+              <Text className="text-xl font-bold text-gray-700">⋮</Text>
+            </TouchableOpacity>
           </View>
-
-          {/* 메뉴 버튼 */}
-          <TouchableOpacity
-            onPress={() => setShowMenu(!showMenu)}
-            className="p-2"
-          >
-            <Text className="text-xl font-bold text-gray-700">⋮</Text>
-          </TouchableOpacity>
-        </View>
+        </SafeAreaView>
 
                  {/* 드롭다운 메뉴 */}
          <DropdownMenu

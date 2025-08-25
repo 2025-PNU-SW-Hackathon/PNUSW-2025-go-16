@@ -24,11 +24,11 @@ export default function ChatRoomItem({ chatRoom, onPress }: ChatRoomItemProps) {
     <TouchableOpacity
       onPress={() => onPress(chatRoom)}
       activeOpacity={0.7}
-      className="bg-white px-4 py-3 flex-row items-center rounded-2xl border border-gray-200 shadow-lg mx-1 my-1"
+      className="flex-row items-center px-4 py-4 my-2 bg-white rounded-2xl border border-gray-200 shadow-sm"
     >
       {/* 왼쪽 아이콘 */}
-      <View className="w-12 h-12 rounded-full bg-orange-500 justify-center items-center mr-3">
-        <Text className="text-white text-lg font-semibold">{getIconText()}</Text>
+      <View className="justify-center items-center mr-3 w-12 h-12 bg-orange-500 rounded-full">
+        <Text className="text-lg font-semibold text-white">{getIconText()}</Text>
       </View>
       
       {/* 중간 내용 */}
@@ -40,18 +40,18 @@ export default function ChatRoomItem({ chatRoom, onPress }: ChatRoomItemProps) {
             <Text className="text-xs text-gray-400">{timeAgo}</Text>
         </View>
           <View className="flex-1">
-            <Text className="text-sm text-gray-500 mt-1" numberOfLines={1}>
+            <Text className="mt-1 text-sm text-gray-500" numberOfLines={1}>
               참여자 {(chatRoom as any).reservation_participant_cnt || 0}명
             </Text>
           </View>
         <View className="flex-row justify-between items-center mt-1">
-          <Text className="text-sm text-gray-500 flex-1" numberOfLines={1}>
+          <Text className="flex-1 text-sm text-gray-500" numberOfLines={1}>
             {chatRoom.lastMessage || '메시지가 없습니다.'}
           </Text>
           {/* 오른쪽 읽지 않은 메시지 카운트 */}
           {unreadCount > 0 && (
             <View className="bg-red-500 rounded-full min-w-[20px] h-5 justify-center items-center px-1.5 ml-2">
-              <Text className="text-white text-xs font-semibold">{unreadCount}</Text>
+              <Text className="text-xs font-semibold text-white">{unreadCount}</Text>
             </View>
           )}
         </View>
