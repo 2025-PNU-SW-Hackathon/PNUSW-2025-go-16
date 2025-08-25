@@ -11,9 +11,11 @@ import ProfileCard from '@/components/my/ProfileCard';
 import StatsCard from '@/components/my/StatsCard';
 import MenuItem from '@/components/my/MenuItem';
 import ToggleSwitch from '@/components/common/ToggleSwitch';
+import LogoutConfirmModal from '@/components/business/LogoutConfirmModal';
 
 export default function MyScreen() {
   const [refreshing, setRefreshing] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const navigation = useNavigation();
   
   const {
@@ -53,10 +55,12 @@ export default function MyScreen() {
   }, [refreshUserProfile]);
 
   const handleLogoutPress = () => {
-    Alert.alert('로그아웃', '정말 로그아웃 하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      { text: '로그아웃', style: 'destructive', onPress: handleLogout },
-    ]);
+    setShowLogoutModal(true);
+  };
+
+  const handleConfirmLogout = () => {
+    setShowLogoutModal(false);
+    handleLogout();
   };
 
   if (isLoading) {
@@ -175,18 +179,26 @@ export default function MyScreen() {
             icon="info"
             iconColor="#6B7280"
             onPress={() => {}}
-            className="mb-4 rounded-b-2xl border-2 border-t-0 border-mainGray"
+            className="border-2 border-t-0 border-mainGray"
             rightComponent={
               <Text className="font-medium text-gray-500">{settings.appVersion}</Text>
             }
           />
+          <MenuItem
+            title="로그아웃"
+            icon="log-out"
+            iconColor="#EF4444"
+            onPress={handleLogoutPress}
+            className="mb-4 rounded-b-2xl border-2 border-t-0 border-mainGray"
+          />
         </View>
 
-        {/* 로그아웃 버튼 */}
-        <TouchableOpacity className="items-center mx-4 mt-4 mb-8" onPress={handleLogoutPress}>
-          <Text className="font-medium text-red-500">로그아웃</Text>
-        </TouchableOpacity>
       </ScrollView>
+      <LogoutConfirmModal
+        visible={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleConfirmLogout}
+      />
     </View>
   );
 }
