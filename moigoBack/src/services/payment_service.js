@@ -429,15 +429,15 @@ exports.confirmReservationByStore = async ({ reservationId, storeId }) => {
 
   try {
     // 메시지를 db에 저장
-    const new_message_result = await messageService.saveNewMessage('admin', chat_room_id, '가게가 예약을 확정했습니다.');
+    const new_message_result = await messageService.saveNewMessage('admin', reservationId, '가게가 예약을 확정했습니다.');
 
     // 메시지를 해당 방에 브로드캐스트
-    io.to(chat_room_id).emit('newMessage', new_message_result);
+    io.to(reservationId.toString()).emit('newMessage', new_message_result);
 
     // 읽음 처리
-    const socketsInRoom = await io.in(chat_room_id).fetchSockets();
+    const socketsInRoom = await io.in(reservationId.toString()).fetchSockets();
     for (const socket of socketsInRoom) {
-      await messageService.markAllMessagesAsRead(socket.user.user_id, chat_room_id);
+      await messageService.markAllMessagesAsRead(socket.user.user_id, reservationId);
     }
   } catch (err) {
     console.error('메시지 저장 오류:', err);
@@ -445,7 +445,7 @@ exports.confirmReservationByStore = async ({ reservationId, storeId }) => {
 
   // 예약 확정 푸쉬 알림
   // 🔔 푸시 발송
-  await pushService.sendReservationConfirmedPush(chat_room_id);
+  await pushService.sendReservationConfirmedPush(reservationId);
 
   return { ok: true, released: releaseResult };
 };
@@ -484,15 +484,15 @@ exports.rejectReservationByStore = async ({ reservationId, storeId}) => {
 
   try {
     // 메시지를 db에 저장
-    const new_message_result = await messageService.saveNewMessage('admin', chat_room_id, '예약이 거절되었습니다.');
+    const new_message_result = await messageService.saveNewMessage('admin', reservationId, '예약이 거절되었습니다.');
 
     // 메시지를 해당 방에 브로드캐스트
-    io.to(chat_room_id).emit('newMessage', new_message_result);
+    io.to(reservationId.toString()).emit('newMessage', new_message_result);
 
     // 읽음 처리
-    const socketsInRoom = await io.in(chat_room_id).fetchSockets();
+    const socketsInRoom = await io.in(reservationId.toString()).fetchSockets();
     for (const socket of socketsInRoom) {
-      await messageService.markAllMessagesAsRead(socket.user.user_id, chat_room_id);
+      await messageService.markAllMessagesAsRead(socket.user.user_id, reservationId);
     }
   } catch (err) {
     console.error('메시지 저장 오류:', err);
