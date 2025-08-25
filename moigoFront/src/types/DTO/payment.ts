@@ -109,3 +109,5 @@ export interface PaymentFullyCompletedEventDTO {
   total_amount: number;
   all_participants_paid: boolean;
 }
+
+

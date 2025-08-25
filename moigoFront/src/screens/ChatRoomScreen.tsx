@@ -28,6 +28,7 @@ import { useChatMessages } from '@/hooks/queries/useChatQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import { socketManager } from '@/utils/socketUtils';
 import { useAuthStore } from '@/store/authStore';
+import apiClient from '@/apis/apiClient';
 import type { ChatMessageDTO, NewMessageDTO, ReservationStatusChangedEventDTO } from '@/types/DTO/chat';
 import { signup, checkUserIdDuplicate, checkStoreIdDuplicate, signupWithDuplicateCheck, storeSignupWithDuplicateCheck, leaveChatRoom } from '@/apis/auth';
 
@@ -197,6 +198,20 @@ export default function ChatRoomScreen() {
         
         const isMyMessage = msg.sender_id === currentUserId;
         
+        // 🆕 메시지 타입 결정 (API 데이터용)
+        let messageType: 'text' | 'store_share' = 'text';
+        if (msg.message_type === 'store_share' && msg.store_id) {
+          messageType = 'store_share';
+        }
+        
+        console.log('🔄 [API 메시지 변환]', {
+          id: msg.id,
+          message_type: msg.message_type,
+          store_id: msg.store_id,
+          determined_type: messageType,
+          has_store_fields: !!(msg.store_name || msg.store_address || msg.store_rating || msg.store_thumbnail)
+        });
+        
         return {
           id: msg.id.toString(),
           senderId: msg.sender_id,
@@ -204,8 +219,21 @@ export default function ChatRoomScreen() {
           senderAvatar: isMyMessage ? '나' : (msg.user_name || msg.sender_id)[0],
           message: msg.message,
           timestamp: new Date(msg.created_at),
-          type: 'text',
-          store_id: msg.store_id
+          type: messageType,
+          message_type: msg.message_type,
+          store_id: msg.store_id,
+          // 🆕 가게 공유 메시지인 경우 storeInfo 설정
+          storeInfo: msg.message_type === 'store_share' && msg.store_id ? {
+            storeName: msg.store_name || '가게 이름',
+            rating: msg.store_rating || 0,
+            reviewCount: 0, // API에서 제공되지 않는 경우 기본값
+            imageUrl: msg.store_thumbnail || ''
+          } : undefined,
+          // 가게 관련 추가 필드들
+          store_name: msg.store_name,
+          store_address: msg.store_address,
+          store_rating: msg.store_rating,
+          store_thumbnail: msg.store_thumbnail
         };
       });
       
@@ -233,11 +261,65 @@ export default function ChatRoomScreen() {
     
     // 연결 상태 감지
     const handleConnectionChange = (connected: boolean) => {
+      console.log('🔌 [소켓 상태 변경]', {
+        previousState: isSocketConnected,
+        newState: connected,
+        timestamp: new Date().toISOString()
+      });
+      
       setIsSocketConnected(connected);
+      
+      // 연결이 끊어진 경우 3초 후 자동 재연결 시도
+      if (!connected) {
+        console.log('⚠️ [소켓 연결 끊어짐] 3초 후 자동 재연결 시도...');
+        setTimeout(() => {
+          if (!socketManager.isConnected() && !socketManager.isConnecting()) {
+            console.log('🔄 [자동 재연결] 시도 시작');
+            socketManager.connect();
+          } else {
+            console.log('ℹ️ [자동 재연결] 이미 연결됨 또는 연결 중 - 재연결 취소');
+          }
+        }, 3000);
+      } else {
+        console.log('✅ [소켓 연결] 정상 연결됨');
+      }
     };
     
     // 새 메시지 수신 핸들러
     const handleNewMessage = (data: NewMessageDTO) => {
+      console.log('📨 [새 메시지 수신 - 전체 데이터]', data);
+      console.log('🔍 [가게 공유 관련 필드 체크]', {
+        id: data.id,
+        sender_id: data.sender_id,
+        message: data.message,
+        message_type: data.message_type,
+        store_id: data.store_id,
+        store_name: data.store_name,
+        store_address: data.store_address,
+        store_rating: data.store_rating,
+        store_thumbnail: data.store_thumbnail,
+        is_store_share: data.message_type === 'store_share',
+        has_store_id: !!data.store_id
+      });
+      
+      // 메시지 타입 결정
+      let messageType: 'system' | 'text' | 'store' | 'store_share' = 'text';
+      if (data.sender_id === 'system') {
+        messageType = 'system';
+        console.log('✅ [메시지 타입] 시스템 메시지로 설정');
+      } else if (data.message_type === 'store_share' && data.store_id) {
+        messageType = 'store_share'; // 가게 공유 메시지
+        console.log('✅ [메시지 타입] 가게 공유 메시지로 설정', {
+          message_type: data.message_type,
+          store_id: data.store_id
+        });
+      } else {
+        console.log('⚠️ [메시지 타입] 일반 텍스트 메시지로 설정', {
+          message_type: data.message_type,
+          store_id: data.store_id,
+          sender_id: data.sender_id
+        });
+      }
       
       const newMessage: ChatMessage = {
         id: data.id.toString(),
@@ -246,11 +328,23 @@ export default function ChatRoomScreen() {
         senderAvatar: data.sender_id === currentUserId ? '나' : (data.user_name || data.sender_id)[0],
         message: data.message,
         timestamp: new Date(data.created_at),
-        type: data.sender_id === 'system' ? 'system' : 'text',
+        type: messageType,
         store_id: data.store_id,
         message_type: data.message_type,
         payment_id: data.payment_id,
-        payment_guide_data: data.payment_guide_data
+        payment_guide_data: data.payment_guide_data,
+        // 🆕 가게 공유 메시지인 경우 storeInfo 설정
+        storeInfo: data.message_type === 'store_share' && data.store_id ? {
+          storeName: data.store_name || '가게 이름',
+          rating: data.store_rating || 0,
+          reviewCount: 0, // 서버에서 제공되지 않는 경우 기본값
+          imageUrl: data.store_thumbnail || ''
+        } : undefined,
+        // 가게 관련 추가 필드들
+        store_name: data.store_name,
+        store_address: data.store_address,
+        store_rating: data.store_rating,
+        store_thumbnail: data.store_thumbnail
       };
       
       // 🆕 시스템 메시지에서 예약금 안내 데이터 처리
@@ -1051,28 +1145,19 @@ export default function ChatRoomScreen() {
       console.log(`🔄 [방장 권한] 매칭 모집 ${statusText}하기 시작`);
       console.log('현재 상태:', reservationStatus, '→ 새 상태:', newStatus);
       
-      // 서버에 상태 변경 요청 (직접 fetch 사용)
-      const token = useAuthStore.getState().token;
-      if (!token) {
-        throw new Error('인증 토큰이 없습니다');
-      }
-
-      const response = await fetch(`/api/v1/chats/${chatRoom.chat_room_id}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status: newStatus })
+      // 서버에 상태 변경 요청 (apiClient 사용)
+      console.log('🌐 [API 요청] 상태 변경 API 호출 시작');
+      
+      const response = await apiClient.patch(`/chats/${chatRoom.chat_room_id}/status`, {
+        status: newStatus
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `서버 오류 (${response.status})`);
-      }
-
-      const result = await response.json();
-      console.log(`✅ 매칭 모집 ${statusText} 완료:`, result);
+      console.log(`✅ 매칭 모집 ${statusText} 완료:`, response.data);
+      console.log('🌐 [API 응답] 상태 변경 응답:', {
+        status: response.status,
+        data: response.data,
+        newStatus: newStatus
+      });
       
       // 상태 즉시 업데이트 (소켓 이벤트가 오기 전에)
       setReservationStatus(newStatus);
@@ -1288,27 +1373,93 @@ export default function ChatRoomScreen() {
   }, [messages, currentUserId, user, useAuthStore.getState().isLoggedIn]); // 의존성 추가
 
   const handleSendMessage = () => {
-    console.log('🔥 === 메시지 전송 핸들러 시작 ===');
-    console.log('🧑 user 전체 객체:', user);
-    console.log('🆔 user?.id:', user?.id);
-    console.log('📋 useAuthStore.getState():', useAuthStore.getState());
-    console.log('🔑 currentUserId:', currentUserId);
-    console.log('✅ isUserLoaded:', isUserLoaded);
-    console.log('💬 message.trim():', message.trim());
-    console.log('🏠 chatRoom.chat_room_id:', chatRoom.chat_room_id);
-    console.log('🔌 소켓 연결 상태:', socketManager.isConnected());
+    const timestamp = new Date().toISOString();
+    console.log(`🔥 === 메시지 전송 핸들러 시작 [${timestamp}] ===`);
     
+    // 🔍 상세 상태 체크
+    const authState = useAuthStore.getState();
+    const socketConnected = socketManager.isConnected();
+    const socketConnecting = socketManager.isConnecting();
+    
+    console.log('📊 [상태 체크] 전체 상태:', {
+      user: {
+        exists: !!user,
+        id: user?.id,
+        hasId: !!user?.id
+      },
+      auth: {
+        isLoggedIn: authState.isLoggedIn,
+        token: authState.token ? '있음' : '없음'
+      },
+      socket: {
+        connected: socketConnected,
+        connecting: socketConnecting,
+        connectionState: socketManager.getDebugInfo?.() || 'debug info 없음'
+      },
+      message: {
+        length: message.length,
+        trimmedLength: message.trim().length,
+        content: message.substring(0, 20) + '...'
+      },
+      chatRoom: {
+        id: chatRoom.chat_room_id,
+        hasId: !!chatRoom.chat_room_id
+      },
+      computed: {
+        currentUserId,
+        isUserLoaded,
+        isSocketConnected
+      }
+    });
+    
+    // 🔍 조건별 상세 체크
     if (!isUserLoaded) {
-      console.error('❌ 사용자 정보가 제대로 로드되지 않았습니다.');
+      console.error('❌ [실패 원인 1] 사용자 정보 미로드:', {
+        user: user,
+        'user?.id': user?.id,
+        isLoggedIn: authState.isLoggedIn,
+        token: authState.token ? 'exists' : 'missing'
+      });
+      showError('사용자 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
       return;
     }
 
     if (!isSocketConnected) {
+      console.error('❌ [실패 원인 2] 소켓 연결 상태:', {
+        isSocketConnected,
+        socketConnected,
+        socketConnecting,
+        debugInfo: socketManager.getDebugInfo?.()
+      });
       Alert.alert('연결 오류', '서버와 연결이 끊어졌습니다. 잠시 후 다시 시도해주세요.');
       return;
     }
+
+    if (!message.trim()) {
+      console.error('❌ [실패 원인 3] 빈 메시지:', {
+        originalLength: message.length,
+        trimmedLength: message.trim().length,
+        messagePreview: message.substring(0, 50)
+      });
+      return;
+    }
+
+    if (!currentUserId) {
+      console.error('❌ [실패 원인 4] 사용자 ID 없음:', {
+        currentUserId,
+        'user?.id': user?.id,
+        userExists: !!user
+      });
+      showError('사용자 인증에 문제가 있습니다. 다시 로그인해주세요.');
+      return;
+    }
     
-    if (message.trim() && currentUserId) {
+    // ✅ 모든 조건 통과 - 메시지 전송 진행
+    console.log('✅ [전송 시작] 모든 조건 통과:', {
+      messageLength: message.trim().length,
+      currentUserId,
+      roomId: chatRoom.chat_room_id
+    });
       const roomId = chatRoom.chat_room_id || 1;
       const messageData = {
         room: roomId,
@@ -1376,13 +1527,6 @@ export default function ChatRoomScreen() {
             : msg
         ));
       }
-      
-    } else if (!currentUserId) {
-      console.error('❌ 사용자 ID가 없어서 메시지를 보낼 수 없습니다.');
-      console.log('사용자 상태:', { user, currentUserId, isUserLoaded });
-    } else if (!message.trim()) {
-      console.error('❌ 메시지가 비어있습니다.');
-    }
   };
 
   // 예약금 입금 처리 함수 (결제 모달 열기)
@@ -1421,24 +1565,77 @@ export default function ChatRoomScreen() {
     const sortedMessages = group.messages
       .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
       .map(msg => ({
-        ...msg,
-        avatar: msg.senderAvatar || (msg.senderId === user?.id ? '👤' : '🧑‍💼')
+        id: msg.id,
+        type: msg.type === 'store_share' ? 'store' : msg.type, // store_share -> store 변환
+        content: msg.message, // message -> content 변환
+        storeInfo: msg.storeInfo,
+        status: msg.status,
+        message_type: msg.message_type,
+        user_name: msg.user_name,
+        user_id: msg.user_id,
+        kicked_by: msg.kicked_by,
+        store_id: msg.store_id
       }));
 
     return (
-      <View key={`original-${group.senderId}-${group.timestamp.getTime()}`} className="mb-4">
+      <View key={`original-${group.senderId}-${group.id}`} className="mb-4">
         <ChatBubble 
           messages={sortedMessages}
-          isOwnMessage={group.senderId === user?.id}
+          isMyMessage={group.senderId === user?.id}
           senderName={group.senderName}
-          timestamp={group.timestamp}
-          avatar={group.avatar}
+          senderAvatar={group.senderAvatar}
+          chatRoom={chatRoom}
+          isHost={isCurrentUserHost}
         />
       </View>
     );
   };
 
   const renderMessageGroup = (group: MessageGroup, index: number) => {
+    // 🔍 모든 메시지 그룹 디버깅
+    console.log(`🔍 [메시지 그룹 ${index}] 렌더링 시작`, {
+      groupId: group.id,
+      groupType: group.type,
+      messagesCount: group.messages.length,
+      messageTypes: group.messages.map(msg => ({ id: msg.id, type: msg.type, message_type: msg.message_type }))
+    });
+    
+    // 🏪 가게 공유 메시지 그룹 처리
+    const storeShareMessages = group.messages.filter(msg => msg.type === 'store_share');
+    console.log('🏪 [가게 공유 메시지 필터링]', {
+      totalMessages: group.messages.length,
+      storeShareCount: storeShareMessages.length,
+      allMessageTypes: group.messages.map(msg => msg.type)
+    });
+    
+    if (storeShareMessages.length > 0) {
+      console.log('✅ [가게 공유 메시지 그룹 렌더링]', {
+        groupId: group.id,
+        messagesCount: storeShareMessages.length,
+        firstMessage: storeShareMessages[0],
+        firstMessageStoreInfo: storeShareMessages[0]?.storeInfo
+      });
+      
+      return storeShareMessages.map(msg => (
+        <View key={msg.id} className="mb-4">
+          <StoreShareMessage
+            isMyMessage={msg.senderId === user?.id}
+            senderName={msg.senderName}
+            senderAvatar={msg.senderAvatar}
+            storeInfo={msg.storeInfo || {
+              storeName: msg.store_name || '가게 이름',
+              rating: msg.store_rating || 0,
+              reviewCount: 0,
+              imageUrl: msg.store_thumbnail || ''
+            }}
+            storeId={msg.store_id}
+            chatRoom={chatRoom}
+            isHost={isCurrentUserHost}
+          />
+        </View>
+      ));
+    }
+    
     // 시스템 메시지 그룹
     if (group.type === 'system') {
       return group.messages.map((msg: ChatMessage) => {
@@ -1576,12 +1773,18 @@ export default function ChatRoomScreen() {
       }
     }
 
-    // 사용자 메시지 그룹 - 시간 순서대로 정렬된 메시지 배열 생성
-    const sortedMessages = group.messages
+    // 사용자 메시지 그룹 - 가게 공유 메시지 제외하고 처리
+    const nonStoreMessages = group.messages.filter(msg => msg.type !== 'store_share');
+    
+    if (nonStoreMessages.length === 0) {
+      return null; // 가게 공유 메시지만 있는 경우 null 반환 (이미 위에서 처리됨)
+    }
+    
+    const sortedMessages = nonStoreMessages
       .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
       .map(msg => ({
         id: msg.id,
-        type: msg.type as 'text' | 'store',
+        type: msg.type === 'store_share' ? 'store' : msg.type as 'text' | 'store',
         content: msg.message,
         storeInfo: msg.storeInfo,
         status: msg.status, // 🔥 메시지 상태 전달!
