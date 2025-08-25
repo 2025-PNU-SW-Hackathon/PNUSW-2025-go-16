@@ -31,22 +31,46 @@ module.exports = async function handleSocket(io) {
             timestamp: new Date().toISOString()
         });
         
+        // 🏪 사장님 전용: 가게 알림 room 참여
+        socket.on('joinStoreRoom', async (data) => {
+            try {
+                const { storeId } = data;
+                const user_type = socket.user?.user_type;
+                
+                // 사장님 계정만 참여 가능
+                if (user_type !== 'business') {
+                    socket.emit('error', { message: '사장님 계정으로만 접근 가능합니다.' });
+                    return;
+                }
+                
+                const storeRoom = `store_${storeId}`;
+                socket.join(storeRoom);
+                
+                console.log('🏪 [STORE ROOM] 사장님 가게 room 참여:', {
+                    socket_id: socket.id,
+                    user_id: socket.user.user_id,
+                    store_id: storeId,
+                    store_room: storeRoom
+                });
+                
+                socket.emit('storeRoomJoined', { 
+                    storeRoom,
+                    message: '가게 알림 수신 준비 완료' 
+                });
+                
+            } catch (error) {
+                console.error('❌ [STORE ROOM] 참여 실패:', error);
+                socket.emit('error', { message: '가게 room 참여 실패' });
+            }
+        });
+        
         // 클라이언트가 연결되면 socket이 필수
         // 채팅방에 참여
-        socket.on('joinRoom', async (data) => {
+        socket.on('joinRoom', async (room_id) => {
             try {
-                // 🐛 데이터 형태 확인 및 파싱
-                let room_id;
-                if (typeof data === 'object' && data !== null) {
-                    room_id = data.room_id || data.roomId || data.reservation_id;
-                } else {
-                    room_id = data;
-                }
-
                 console.log('🚪 채팅방 입장 요청:', {
                     user_id: socket.user.user_id,
-                    received_data: data,
-                    parsed_room_id: room_id
+                    room_id: room_id
                 });
 
                 // 입력 검증
@@ -127,8 +151,6 @@ module.exports = async function handleSocket(io) {
 
                 // 🔧 클라이언트가 보낸 sender_id 사용 (보안 검증 추가)
                 const actualSenderId = sender_id || tokenUserId;
-                // system 시 닉네임 설정.
-                const actualSenderName = (actualSenderId === 'system') ? '시스템' : userName;
 
                 console.log('📨 메시지 전송 요청:', {
                     token_user_id: tokenUserId,
@@ -239,10 +261,8 @@ module.exports = async function handleSocket(io) {
 
                 // 7. 읽음 상태 업데이트 (비동기)
                 Promise.all(
-                    socketsInRoom.map(s => {
-                        console.log(s.user.user_id, " is in socket");
-                        messageService.markAllMessagesAsRead(s.user.user_id, room);
-                        }
+                    socketsInRoom.map(s => 
+                        messageService.markAllMessagesAsRead(s.user.user_id, room)
                     )
                 ).catch(err => console.error('읽음 상태 업데이트 오류:', err));
 
@@ -256,7 +276,7 @@ module.exports = async function handleSocket(io) {
                                 targetUserIds: offlineUserIds,
                                 messageId,
                                 senderId: actualSenderId,
-                                senderName: actualSenderName,
+                                senderName: userName,
                                 text: message
                             });
                         }
@@ -340,16 +360,6 @@ module.exports = async function handleSocket(io) {
             socket.emit('pong', {
                 timestamp: new Date().toISOString(),
                 user_id: socket.user.user_id
-            });
-        });
-
-        // 🏪 가게 선택 이벤트 디버깅 (클라이언트에서 받은 이벤트 확인용)
-        socket.on('storeSelected', (data) => {
-            console.log('🏪 [SOCKET DEBUG] 클라이언트에서 storeSelected 이벤트 수신:', {
-                socket_id: socket.id,
-                user_id: socket.user?.user_id,
-                received_data: data,
-                timestamp: new Date().toISOString()
             });
         });
 

@@ -1869,15 +1869,19 @@ exports.completePayment = async (user_id, room_id, payment_method) => {
           [paymentId]
         );
 
-        // 정산 완료 시스템 메시지 추가
-        const completionMessage = `✅ 정산이 완료되었습니다!
+        // 🔴 정산 완료 시 가게에 예약 정보 전송
+        await this.sendReservationToStore(room_id, paymentId);
 
-💰 총 ${totalAmountInfo[0].total_amount.toLocaleString()}원이 모두 입금되었습니다.
-👥 모든 참여자(${totalParticipants}명)가 입금을 완료했습니다.
+        // 🔴 예약 등록 완료 시스템 메시지 추가
+        const completionMessage = `✅ 예약이 정상적으로 등록되었습니다.
 
-감사합니다! 🎉`;
+📅 예약 정보가 가게에 전달되었습니다.
+💰 입금 총액: ${totalAmountInfo[0].total_amount.toLocaleString()}원
+👥 참여자: ${totalParticipants}명
 
-        // 정산 완료 시스템 메시지 저장
+가게에서 예약 확인 후 연락드릴 예정입니다. 🎉`;
+
+        // 예약 등록 완료 시스템 메시지 저장
         const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages WHERE chat_room_id = ?', [room_id]);
         const nextMessageId = (maxIdResult[0]?.maxId || 0) + 1;
 
@@ -1894,23 +1898,23 @@ exports.completePayment = async (user_id, room_id, payment_method) => {
           sender_id: 'system',
           message: completionMessage,
           created_at: new Date(),
-          message_type: 'system_payment_completed',
+          message_type: 'system_reservation_registered',
           payment_id: paymentId
         };
 
         // 정산 완료 시스템 메시지 브로드캐스트
         io.to(room_id.toString()).emit('newMessage', completionSystemMessage);
 
-        // 전체 정산 완료 이벤트
-        io.to(room_id.toString()).emit('paymentFullyCompleted', {
+        // 🔴 예약 등록 완료 이벤트
+        io.to(room_id.toString()).emit('reservationRegistered', {
           room_id: room_id,
           payment_id: paymentId,
-          completed_at: paidAt.toISOString(),
+          registered_at: paidAt.toISOString(),
           total_amount: totalAmountInfo[0].total_amount,
           all_participants_paid: true
         });
 
-        console.log('🎉 [PAYMENT COMPLETE] 전체 정산 완료 처리:', {
+        console.log('🎉 [RESERVATION REGISTERED] 예약 등록 완료 처리:', {
           room_id: room_id,
           payment_id: paymentId,
           total_amount: totalAmountInfo[0].total_amount
@@ -2883,6 +2887,131 @@ exports.updatePaymentStatusBoard = async (room_id, updated_by_user_id = null) =>
     
   } catch (error) {
     console.error('❌ [PAYMENT BOARD] 현황판 업데이트 실패:', error);
+    throw error;
+  }
+};
+
+// 🔴 정산 완료 시 가게에 예약 정보 전송
+exports.sendReservationToStore = async (room_id, payment_id) => {
+  const conn = getConnection();
+  
+  try {
+    console.log('📤 [RESERVATION SEND] 가게 예약 전송 시작:', { room_id, payment_id });
+    
+    // 1. 예약 및 정산 정보 조회
+    const [reservationInfo] = await conn.query(
+      `SELECT r.*, ps.total_amount, ps.payment_per_person, ps.total_participants,
+              s.store_name, s.store_id
+       FROM reservation_table r
+       JOIN payment_sessions ps ON r.reservation_id = ps.chat_room_id
+       JOIN store_table s ON r.selected_store_id = s.store_id
+       WHERE r.reservation_id = ? AND ps.payment_id = ?`,
+      [room_id, payment_id]
+    );
+    
+    if (!reservationInfo.length) {
+      throw new Error('예약 정보를 찾을 수 없습니다.');
+    }
+    
+    const reservation = reservationInfo[0];
+    
+    // 2. 참여자 정보 조회
+    const [participants] = await conn.query(
+      `SELECT u.user_name, u.user_id
+       FROM chat_room_users cru
+       JOIN user_table u ON cru.user_id = u.user_id
+       WHERE cru.reservation_id = ? AND cru.is_kicked = 0`,
+      [room_id]
+    );
+    
+    const participantNames = participants.map(p => p.user_name).join(', ');
+    
+    // 3. 🔴 가게 예약 테이블에 정보 저장 또는 업데이트
+    // reservation_table의 reservation_status를 2(진행중)로 변경
+    await conn.query(
+      `UPDATE reservation_table 
+       SET reservation_status = 2,
+           reservation_participant_id = ?,
+           reservation_user_name = ?
+       WHERE reservation_id = ?`,
+      [participants.map(p => p.user_id).join(','), participantNames, room_id]
+    );
+    
+    console.log('📋 [RESERVATION SEND] 가게 예약 정보 업데이트 완료:', {
+      reservation_id: room_id,
+      store_id: reservation.store_id,
+      store_name: reservation.store_name,
+      total_amount: reservation.total_amount,
+      participants_count: reservation.total_participants,
+      participant_names: participantNames
+    });
+    
+    // 4. 🔔 가게 사장님에게 푸시 알림 전송
+    try {
+      const pushService = require('./push_service');
+      await pushService.sendReservationRequestedPush({
+        reservationId: room_id,
+        meta: {
+          store_name: reservation.store_name,
+          match_name: reservation.reservation_match,
+          reservation_title: reservation.reservation_bio,
+          total_amount: reservation.total_amount,
+          participants_count: reservation.total_participants,
+          participant_names: participantNames,
+          reservation_start_time: reservation.reservation_start_time
+        }
+      });
+      
+      console.log('🔔 [RESERVATION SEND] 가게 푸시 알림 전송 완료');
+    } catch (pushError) {
+      console.error('❌ [RESERVATION SEND] 푸시 알림 전송 실패:', pushError);
+    }
+    
+    // 🔥 6. 사장님 UI 실시간 업데이트를 위한 소켓 이벤트 발송
+    try {
+      const io = require('../config/socket_hub').getIO();
+      const storeRoom = `store_${reservation.selected_store_id}`;
+      
+      // 새 예약 데이터 구조 (프론트엔드 DTO 형식에 맞춤)
+      const newReservationData = {
+        reservation_id: room_id,
+        reservation_match: reservation.reservation_match,
+        reservation_title: reservation.reservation_bio,
+        reservation_start_time: reservation.reservation_start_time,
+        reservation_participant_cnt: reservation.total_participants,
+        reservation_max_participant_cnt: reservation.reservation_max_participant_cnt || reservation.total_participants,
+        reservation_status: 'PENDING_APPROVAL', // 사장님 승인 대기 상태
+        reservation_participant_info: participantNames,
+        reservation_table_info: '테이블 정보', // 기본값
+        reservation_ex2: reservation.reservation_ex2,
+        // 추가 정산 정보
+        total_amount: reservation.total_amount,
+        payment_per_person: Math.ceil(reservation.total_amount / reservation.total_participants),
+        payment_status: 'completed',
+        payment_completed_at: new Date().toISOString()
+      };
+      
+      // 사장님 전용 room에 새 예약 알림 전송
+      io.to(storeRoom).emit('newReservationReceived', {
+        type: 'NEW_RESERVATION',
+        data: newReservationData,
+        message: `새로운 예약이 접수되었습니다. (${reservation.reservation_match})`
+      });
+      
+      console.log('📡 [RESERVATION SEND] 사장님 소켓 알림 전송 완료:', storeRoom);
+    } catch (socketError) {
+      console.error('❌ [RESERVATION SEND] 사장님 소켓 알림 전송 실패:', socketError);
+    }
+    
+    return {
+      success: true,
+      message: '예약 정보가 가게에 전송되었습니다.',
+      store_name: reservation.store_name,
+      total_amount: reservation.total_amount
+    };
+    
+  } catch (error) {
+    console.error('❌ [RESERVATION SEND] 가게 예약 전송 실패:', error);
     throw error;
   }
 };
