@@ -428,6 +428,27 @@ exports.approveReservation = async (reservationId, store_id, action) => {
         message: `예약 ${reservationId}번이 ${action === 'APPROVE' ? '승인' : '거절'}되었습니다.`
       });
       
+      // 🗓️ 승인된 경우 사장님 달력 업데이트 알림 추가 전송
+      if (action === 'APPROVE') {
+        const reservationData = reservationCheck[0];
+        io.to(storeRoom).emit('calendarUpdated', {
+          type: 'CALENDAR_UPDATED',
+          reservationId,
+          eventData: {
+            reservation_id: reservationId,
+            reservation_match: reservationData.reservation_match || '경기 정보',
+            reservation_title: reservationData.reservation_bio || '예약',
+            match_start_time: reservationData.reservation_start_time,
+            match_end_time: reservationData.reservation_end_time,
+            current_participants: reservationData.reservation_participant_cnt,
+            status: 'APPROVED'
+          },
+          message: `달력에 새로운 일정이 추가되었습니다.`
+        });
+        
+        console.log(`📅 [CALENDAR UPDATE] 사장님 달력 업데이트 알림 전송 완료`);
+      }
+      
       console.log(`📢 [RESERVATION ${action}] 채팅방 ${reservationId}에 시스템 메시지 전송 완료`);
       console.log(`📡 [STORE NOTIFICATION] 사장님 room ${storeRoom}에 상태 변경 알림 전송 완료`);
     } catch (notificationError) {
@@ -459,13 +480,16 @@ exports.getMyStoreSchedules = async (store_id) => {
       `SELECT 
         r.reservation_id,
         r.reservation_match,
+        r.reservation_bio as reservation_title,
         r.reservation_start_time as match_start_time,
         r.reservation_end_time as match_end_time,
         r.reservation_participant_cnt as current_participants,
         r.reservation_max_participant_cnt as max_participants,
-        r.reservation_status as status
+        r.reservation_status as status,
+        r.reservation_user_name as participants
        FROM reservation_table r
-       WHERE r.store_id = ? 
+       WHERE r.selected_store_id = ? 
+       AND r.reservation_status = 1
        AND r.reservation_start_time >= NOW()
        AND r.reservation_start_time <= DATE_ADD(NOW(), INTERVAL 7 DAY)
        ORDER BY r.reservation_start_time ASC`,
@@ -475,11 +499,13 @@ exports.getMyStoreSchedules = async (store_id) => {
     return rows.map(row => ({
       reservation_id: row.reservation_id,
       reservation_match: row.reservation_match,
+      reservation_title: row.reservation_title,
       match_start_time: row.match_start_time,
       match_end_time: row.match_end_time,
       current_participants: row.current_participants,
       max_participants: row.max_participants,
-      status: row.status
+      participants: row.participants,
+      status: row.status === 1 ? 'APPROVED' : 'PENDING'
     }));
   } catch (error) {
     if (!error.statusCode) {
