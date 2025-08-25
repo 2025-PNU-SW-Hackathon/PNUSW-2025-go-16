@@ -76,8 +76,8 @@ exports.getStoreDetail = async (storeId) => {
   try {
     console.log('🔍 [DEBUG] 가게 상세 정보 조회 시작 - storeId:', storeId);
     
-    // storeId가 숫자인지 확인
-    if (typeof storeId !== 'number' || storeId <= 0) {
+    // storeId 유효성 확인
+    if (!storeId || storeId.toString().trim() === '') {
       const err = new Error('유효하지 않은 가게 ID입니다.');
       err.statusCode = 400;
       throw err;
@@ -147,8 +147,8 @@ exports.getStoreDetail = async (storeId) => {
 exports.getStorePaymentInfo = async (storeId) => {
   const conn = getConnection();
   try {
-    // storeId가 숫자인지 확인
-    if (typeof storeId !== 'number' || storeId <= 0) {
+    // storeId 유효성 확인
+    if (!storeId || storeId.toString().trim() === '') {
       const err = new Error('유효하지 않은 가게 ID입니다.');
       err.statusCode = 400;
       throw err;
@@ -208,8 +208,8 @@ exports.updateStorePaymentInfo = async (storeId, paymentData) => {
   const { bank_code, account_number, account_holder_name, business_number } = paymentData;
   
   try {
-    // storeId가 숫자인지 확인
-    if (typeof storeId !== 'number' || storeId <= 0) {
+    // storeId 유효성 확인
+    if (!storeId || storeId.toString().trim() === '') {
       const err = new Error('유효하지 않은 가게 ID입니다.');
       err.statusCode = 400;
       throw err;
