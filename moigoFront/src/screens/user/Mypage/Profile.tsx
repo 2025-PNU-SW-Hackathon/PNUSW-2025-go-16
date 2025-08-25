@@ -9,12 +9,12 @@ import GenderSelector from '@/components/profile/GenderSelector';
 import BioTextArea from '@/components/profile/BioTextArea';
 import PrimaryButton from '@/components/common/PrimaryButton';
 import CheckModal from '@/components/common/CheckModal';
-import { COLORS } from '@/constants/colors';
 
 export default function Profile() {
   const {
     profileData,
     formData,
+    image,
     isLoading,
     isEditing,
     isFormValid,
@@ -24,18 +24,12 @@ export default function Profile() {
     cancelEditing,
     updateFormData,
     handleSave,
-    handleImageChange,
     handleGenderChange,
     handleModalClick,
+    handleImagePress,
   } = useProfile();
 
-  const handleImagePress = () => {
-    // 이미지 선택 로직 (나중에 구현)
-    Alert.alert('이미지 선택', '이미지 선택 기능은 나중에 구현됩니다.');
-  };
-
   const handleBirthDatePress = () => {
-    // 날짜 선택 로직 (나중에 구현)
     Alert.alert('날짜 선택', '날짜 선택 기능은 나중에 구현됩니다.');
   };
 
@@ -57,7 +51,7 @@ export default function Profile() {
       </CheckModal>
       <ScrollView className="flex-1 pt-8">
         {/* 프로필 이미지 */}
-        <ProfileImage imageUri={profileData.profileImage} onImageChange={handleImagePress} />
+        <ProfileImage imageUri={image} onImageChange={handleImagePress} />
 
         {/* 기본 정보 */}
         <View className="mb-2">

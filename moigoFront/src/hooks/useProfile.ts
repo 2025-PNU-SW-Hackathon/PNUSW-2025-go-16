@@ -5,10 +5,12 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/types/RootStackParamList';
 import { useUpdateProfile } from '@/hooks/queries/useUserQueries';
+import { useImagePicker } from '@/hooks/useImagePicker';
 
 export function useProfile() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { userProfile, isLoading, updateUserProfile, updateProfileImage, setLoading } = useMyStore();
+  const { image, pickImage, setImage } = useImagePicker();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<ProfileFormData>({
     name: '',
@@ -19,7 +21,7 @@ export function useProfile() {
     bio: '',
   });
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-
+  
   // React Query mutation
   const updateProfileMutation = useUpdateProfile();
 
@@ -106,6 +108,8 @@ export function useProfile() {
   const handleImageChange = (imageUri: string) => {
     if (!userProfile) return;
     updateProfileImage(imageUri);
+    // 테스트용: 선택한 이미지를 즉시 표시
+    setImage(imageUri);
   };
 
   // 성별 변경
@@ -164,9 +168,12 @@ export function useProfile() {
   // 모달에서 확인 클릭
   function handleModalClick() {
     setIsModalOpen(false);
-    navigation.navigate('Main', { screen: 'My' });
+    (navigation as any).navigate('Main', { screen: 'My' });
   }
 
+  const handleImagePress = () => {
+    pickImage();
+  };
   return {
     // 상태
     profileData: userProfile || {
@@ -186,6 +193,7 @@ export function useProfile() {
       writtenReviews: 0,
       preferredSports: [],
     },
+    image,
     formData,
     isLoading,
     isEditing,
@@ -201,5 +209,6 @@ export function useProfile() {
     handleImageChange,
     handleGenderChange,
     handleModalClick,
+    handleImagePress,
   };
 }
