@@ -356,20 +356,18 @@ exports.selectStore = async (req, res, next) => {
   }
 };
 
-// 💰 채팅방 정산 시작 (방장 전용)
+// 💰 채팅방 정산 시작 (방장 전용) - 자동 가격 계산
 exports.startPayment = async (req, res, next) => {
   try {
     const user_id = req.user.user_id;
     const { roomId } = req.params;
-    const { payment_per_person } = req.body;
 
     console.log('💰 [API] 정산 시작 요청:', {
       user_id,
-      roomId,
-      payment_per_person
+      roomId
     });
 
-    const result = await chatService.startPayment(user_id, roomId, payment_per_person);
+    const result = await chatService.startPayment(user_id, roomId);
 
     res.status(200).json({
       success: true,
