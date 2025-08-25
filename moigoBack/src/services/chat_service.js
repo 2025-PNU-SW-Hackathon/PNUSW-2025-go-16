@@ -1369,10 +1369,36 @@ exports.selectStore = async (user_id, room_id, store_id) => {
 
       // 시스템 메시지도 함께 브로드캐스트 (기존 패턴과 동일하게)
       io.to(room_id.toString()).emit('newMessage', savedMessage);
+      
+      // 🔄 채팅 리스트 업데이트 이벤트 전송 (개별 사용자별로)
+      const chatListUpdateData = {
+        chat_room_id: parseInt(room_id),
+        last_message: storeMessage,
+        last_message_time: new Date().toISOString(),
+        last_message_sender_id: 'system',
+        last_message_sender_name: 'System'
+      };
+      
+      try {
+        const [participants] = await conn.query(
+          'SELECT user_id FROM chat_room_users WHERE reservation_id = ? AND is_kicked = 0',
+          [room_id]
+        );
+        
+        // 각 참여자에게 개별적으로 이벤트 전송
+        for (const participant of participants) {
+          const userSocketId = `user_${participant.user_id}`;
+          io.to(userSocketId).emit('chatListUpdate', chatListUpdateData);
+        }
+      } catch (error) {
+        console.error('❌ [STORE SELECT] 채팅 리스트 업데이트 전송 실패:', error);
+        // 실패 시 기존 방식으로 fallback
+        io.to(room_id.toString()).emit('chatListUpdate', chatListUpdateData);
+      }
 
       console.log('✅ [STORE SELECT] 소켓 이벤트 발송 완료:', {
         room_id: room_id,
-        events: ['storeSelected', 'newMessage'],
+        events: ['storeSelected', 'newMessage', 'chatListUpdate'],
         recipients_count: currentSockets.length
       });
 
@@ -1708,10 +1734,36 @@ exports.startPayment = async (user_id, room_id) => {
       
       // 🆕 정산 현황판 메시지 브로드캐스트
       io.to(room_id.toString()).emit('newMessage', paymentBoardMessage);
+      
+      // 🔄 채팅 리스트 업데이트 이벤트 전송 (정산 시작 메시지로) - 개별 사용자별로
+      const chatListUpdateData = {
+        chat_room_id: parseInt(room_id),
+        last_message: simpleMessage,
+        last_message_time: new Date().toISOString(),
+        last_message_sender_id: 'system',
+        last_message_sender_name: 'System'
+      };
+      
+      try {
+        const [chatParticipants] = await conn.query(
+          'SELECT user_id FROM chat_room_users WHERE reservation_id = ? AND is_kicked = 0',
+          [room_id]
+        );
+        
+        // 각 참여자에게 개별적으로 이벤트 전송
+        for (const participant of chatParticipants) {
+          const userSocketId = `user_${participant.user_id}`;
+          io.to(userSocketId).emit('chatListUpdate', chatListUpdateData);
+        }
+      } catch (error) {
+        console.error('❌ [PAYMENT START] 채팅 리스트 업데이트 전송 실패:', error);
+        // 실패 시 기존 방식으로 fallback
+        io.to(room_id.toString()).emit('chatListUpdate', chatListUpdateData);
+      }
 
       console.log('✅ [PAYMENT START] 소켓 이벤트 발송 완료:', {
         room_id: room_id,
-        events: ['paymentStarted', 'newMessage'],
+        events: ['paymentStarted', 'newMessage', 'chatListUpdate'],
         payment_id: paymentId
       });
 
@@ -1874,13 +1926,7 @@ exports.completePayment = async (user_id, room_id, payment_method) => {
         await this.sendReservationToStore(room_id, paymentId);
 
         // 🔴 예약 등록 완료 시스템 메시지 추가
-        const completionMessage = `✅ 예약이 정상적으로 등록되었습니다.
-
-📅 예약 정보가 가게에 전달되었습니다.
-💰 입금 총액: ${totalAmountInfo[0].total_amount.toLocaleString()}원
-👥 참여자: ${totalParticipants}명
-
-가게에서 예약 확인 후 연락드릴 예정입니다. 🎉`;
+        const completionMessage = `예약이 정상적으로 등록되었습니다.`;
 
         // 예약 등록 완료 시스템 메시지 저장
         const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages WHERE chat_room_id = ?', [room_id]);
@@ -1905,6 +1951,32 @@ exports.completePayment = async (user_id, room_id, payment_method) => {
 
         // 정산 완료 시스템 메시지 브로드캐스트
         io.to(room_id.toString()).emit('newMessage', completionSystemMessage);
+        
+        // 🔄 채팅 리스트 업데이트 이벤트 전송 - 개별 사용자별로
+        const chatListUpdateData = {
+          chat_room_id: parseInt(room_id),
+          last_message: '예약이 정상적으로 등록되었습니다.',
+          last_message_time: new Date().toISOString(),
+          last_message_sender_id: 'system',
+          last_message_sender_name: 'System'
+        };
+        
+        try {
+          const [completionParticipants] = await conn.query(
+            'SELECT user_id FROM chat_room_users WHERE reservation_id = ? AND is_kicked = 0',
+            [room_id]
+          );
+          
+          // 각 참여자에게 개별적으로 이벤트 전송
+          for (const participant of completionParticipants) {
+            const userSocketId = `user_${participant.user_id}`;
+            io.to(userSocketId).emit('chatListUpdate', chatListUpdateData);
+          }
+        } catch (error) {
+          console.error('❌ [PAYMENT COMPLETION] 채팅 리스트 업데이트 전송 실패:', error);
+          // 실패 시 기존 방식으로 fallback
+          io.to(room_id.toString()).emit('chatListUpdate', chatListUpdateData);
+        }
 
         // 🔴 예약 등록 완료 이벤트
         io.to(room_id.toString()).emit('reservationRegistered', {

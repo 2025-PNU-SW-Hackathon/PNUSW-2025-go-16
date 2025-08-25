@@ -48,7 +48,7 @@ async function migrateRejectedReservations() {
       
       // 3. 시스템 메시지 추가
       try {
-        const systemMessage = '❌ 사장님이 예약을 거절했습니다.';
+        const systemMessage = '예약이 거절되었습니다.';
         
         await messageService.saveNewMessage(
           'system',

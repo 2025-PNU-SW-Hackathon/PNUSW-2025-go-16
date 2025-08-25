@@ -31,6 +31,13 @@ module.exports = async function handleSocket(io) {
             timestamp: new Date().toISOString()
         });
         
+        // 🔄 사용자별 개인 room에 자동 참여 (채팅 리스트 업데이트용)
+        if (socket.user?.user_id) {
+            const personalRoom = `user_${socket.user.user_id}`;
+            socket.join(personalRoom);
+            console.log(`👤 [PERSONAL ROOM] 개인 room 참여: ${personalRoom}`);
+        }
+        
         // 🏪 사장님 전용: 가게 알림 room 참여
         socket.on('joinStoreRoom', async (data) => {
             try {
@@ -248,6 +255,39 @@ module.exports = async function handleSocket(io) {
                 // 전송자에게도 확인용 메시지 전송 (Optimistic UI 확정용)
                 console.log('📢 [DEBUG] 전송자에게도 확정 메시지 전송');
                 socket.emit('newMessage', broadcastMessage);
+                
+                // 🔄 7. 채팅 리스트 업데이트를 위한 이벤트 전송
+                const chatListUpdateData = {
+                    chat_room_id: parseInt(room),
+                    last_message: message,
+                    last_message_time: new Date().toISOString(),
+                    last_message_sender_id: socket.user.user_id,
+                    last_message_sender_name: userName
+                };
+                
+                console.log('📋 [DEBUG] 채팅 리스트 업데이트 이벤트 전송');
+                
+                // 🔄 채팅방 참여자들에게 개별적으로 채팅 리스트 업데이트 알림 전송
+                try {
+                    const conn = require('../config/db_config').getConnection();
+                    const [participants] = await conn.query(
+                        'SELECT user_id FROM chat_room_users WHERE reservation_id = ? AND is_kicked = 0',
+                        [room]
+                    );
+                    
+                    console.log('📋 [DEBUG] 채팅방 참여자들:', participants.map(p => p.user_id));
+                    
+                    // 각 참여자에게 개별적으로 이벤트 전송
+                    for (const participant of participants) {
+                        const userSocketId = `user_${participant.user_id}`;
+                        io.to(userSocketId).emit('chatListUpdate', chatListUpdateData);
+                        console.log(`📋 [DEBUG] 사용자 ${participant.user_id}에게 chatListUpdate 전송`);
+                    }
+                } catch (error) {
+                    console.error('❌ [DEBUG] 채팅 리스트 업데이트 전송 실패:', error);
+                    // 실패 시 기존 방식으로 fallback
+                    io.to(room).emit('chatListUpdate', chatListUpdateData);
+                }
                 
                 console.log('✅ [DEBUG] newMessage 브로드캐스트 완료');
                 

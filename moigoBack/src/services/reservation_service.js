@@ -404,8 +404,8 @@ exports.approveReservation = async (reservationId, store_id, action) => {
       const io = require('../config/socket_hub').getIO();
       
       const systemMessage = action === 'APPROVE' 
-        ? '🎉 사장님이 예약을 승인했습니다!' 
-        : '❌ 사장님이 예약을 거절했습니다.';
+        ? '예약이 정상적으로 완료되었습니다.' 
+        : '예약이 거절되었습니다.';
       
       // 채팅방에 시스템 메시지 저장
       const savedMessage = await messageService.saveNewMessage(
@@ -417,6 +417,33 @@ exports.approveReservation = async (reservationId, store_id, action) => {
       
       // 해당 채팅방에 실시간 알림 전송
       io.to(reservationId.toString()).emit('newMessage', savedMessage);
+      
+      // 🔄 채팅 리스트 업데이트 이벤트 전송 - 개별 사용자별로
+      const chatListUpdateData = {
+        chat_room_id: parseInt(reservationId),
+        last_message: systemMessage,
+        last_message_time: new Date().toISOString(),
+        last_message_sender_id: 'system',
+        last_message_sender_name: 'System'
+      };
+      
+      try {
+        const conn = require('../config/db_config').getConnection();
+        const [approvalParticipants] = await conn.query(
+          'SELECT user_id FROM chat_room_users WHERE reservation_id = ? AND is_kicked = 0',
+          [reservationId]
+        );
+        
+        // 각 참여자에게 개별적으로 이벤트 전송
+        for (const participant of approvalParticipants) {
+          const userSocketId = `user_${participant.user_id}`;
+          io.to(userSocketId).emit('chatListUpdate', chatListUpdateData);
+        }
+      } catch (error) {
+        console.error('❌ [RESERVATION APPROVAL] 채팅 리스트 업데이트 전송 실패:', error);
+        // 실패 시 기존 방식으로 fallback
+        io.to(reservationId.toString()).emit('chatListUpdate', chatListUpdateData);
+      }
       
       // 🏪 사장님에게도 예약 상태 변경 알림 전송
       const storeRoom = `store_${store_id}`;
