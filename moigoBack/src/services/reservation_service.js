@@ -404,8 +404,8 @@ exports.approveReservation = async (reservationId, store_id, action) => {
       const io = require('../config/socket_hub').getIO();
       
       const systemMessage = action === 'APPROVE' 
-        ? '🎉 사장님이 예약을 승인했습니다!' 
-        : '❌ 사장님이 예약을 거절했습니다.';
+        ? '예약이 정상적으로 완료되었습니다.' 
+        : '예약이 거절되었습니다.';
       
       // 채팅방에 시스템 메시지 저장
       const savedMessage = await messageService.saveNewMessage(
