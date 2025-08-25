@@ -689,12 +689,10 @@ exports.updateChatRoomStatus = async (user_id, room_id, status) => {
       const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages WHERE chat_room_id = ?', [room_id]);
       const nextMessageId = (maxIdResult[0]?.maxId || 0) + 1;
       
-      const messageType = status === 1 ? 'system_recruitment_closed' : 'system_recruitment_reopened';
-      
       await conn.query(
-        `INSERT INTO chat_messages (message_id, chat_room_id, sender_id, message, created_at, message_type) 
-         VALUES (?, ?, ?, ?, NOW(), ?)`,
-        [nextMessageId, room_id, 'system', systemMessage, messageType]
+        `INSERT INTO chat_messages (message_id, chat_room_id, sender_id, message, created_at) 
+         VALUES (?, ?, ?, ?, NOW())`,
+        [nextMessageId, room_id, 'system', systemMessage]
       );
       
       const savedMessage = {
@@ -702,8 +700,7 @@ exports.updateChatRoomStatus = async (user_id, room_id, status) => {
         chat_room_id: room_id,
         sender_id: 'system',
         message: systemMessage,
-        created_at: new Date(),
-        message_type: messageType
+        created_at: new Date()
       };
 
       // 시스템 메시지 브로드캐스트
