@@ -61,10 +61,10 @@ exports.getStoreList = async (filters) => {
 
   const [rows] = await conn.query(query, params);
   
-  // store_id를 숫자로 변환
+  // store_id는 문자열일 수도 있으므로 변환하지 않음
   const convertedRows = rows.map(row => ({
     ...row,
-    store_id: parseInt(row.store_id) || 0
+    store_id: row.store_id  // 원본 값 유지
   }));
   
   return convertedRows;
@@ -76,8 +76,8 @@ exports.getStoreDetail = async (storeId) => {
   try {
     console.log('🔍 [DEBUG] 가게 상세 정보 조회 시작 - storeId:', storeId);
     
-    // storeId가 숫자인지 확인
-    if (typeof storeId !== 'number' || storeId <= 0) {
+    // storeId 유효성 확인
+    if (!storeId || storeId.toString().trim() === '') {
       const err = new Error('유효하지 않은 가게 ID입니다.');
       err.statusCode = 400;
       throw err;
@@ -110,10 +110,10 @@ exports.getStoreDetail = async (storeId) => {
       throw err;
     }
     
-    // store_id를 숫자로 변환
+    // store_id는 문자열일 수도 있으므로 원본 값 유지
     const storeDetail = {
       ...rows[0],
-      store_id: parseInt(rows[0].store_id) || 0
+      store_id: rows[0].store_id
     };
     
     return storeDetail;
@@ -147,8 +147,8 @@ exports.getStoreDetail = async (storeId) => {
 exports.getStorePaymentInfo = async (storeId) => {
   const conn = getConnection();
   try {
-    // storeId가 숫자인지 확인
-    if (typeof storeId !== 'number' || storeId <= 0) {
+    // storeId 유효성 확인
+    if (!storeId || storeId.toString().trim() === '') {
       const err = new Error('유효하지 않은 가게 ID입니다.');
       err.statusCode = 400;
       throw err;
@@ -177,7 +177,7 @@ exports.getStorePaymentInfo = async (storeId) => {
       if (paymentRows.length > 0) {
         return {
           ...paymentRows[0],
-          store_id: parseInt(paymentRows[0].store_id) || 0
+          store_id: paymentRows[0].store_id
         };
       }
     } catch (tableError) {
@@ -187,7 +187,7 @@ exports.getStorePaymentInfo = async (storeId) => {
     
     // 기본값 반환
     return {
-      store_id: parseInt(storeId) || 0,
+      store_id: storeId,
       bank_code: '000',
       account_number: '미설정',
       account_holder_name: '미설정',
@@ -208,8 +208,8 @@ exports.updateStorePaymentInfo = async (storeId, paymentData) => {
   const { bank_code, account_number, account_holder_name, business_number } = paymentData;
   
   try {
-    // storeId가 숫자인지 확인
-    if (typeof storeId !== 'number' || storeId <= 0) {
+    // storeId 유효성 확인
+    if (!storeId || storeId.toString().trim() === '') {
       const err = new Error('유효하지 않은 가게 ID입니다.');
       err.statusCode = 400;
       throw err;
@@ -246,7 +246,7 @@ exports.updateStorePaymentInfo = async (storeId, paymentData) => {
     }
     
     return {
-      store_id: parseInt(storeId) || 0,
+      store_id: storeId,
       bank_code,
       account_number,
       account_holder_name,
@@ -284,6 +284,62 @@ exports.getBankCodes = async () => {
       { bank_code: '010', bank_name: '케이뱅크' },
       { bank_code: '011', bank_name: '카카오뱅크' }
     ];
+  }
+};
+
+// 🏪 사장님 아이디 중복 검사
+exports.checkStoreIdDuplicate = async (store_id) => {
+  const conn = getConnection();
+  
+  try {
+    // 기본 검증
+    if (!store_id || store_id.trim() === '') {
+      return {
+        success: false,
+        message: '가게 ID를 입력해주세요.'
+      };
+    }
+
+    // 아이디 길이 검증 (3-20자)
+    if (store_id.length < 3 || store_id.length > 20) {
+      return {
+        success: false,
+        message: '가게 ID는 3자 이상 20자 이하로 입력해주세요.'
+      };
+    }
+
+    // 영문, 숫자, 언더스코어만 허용
+    const idPattern = /^[a-zA-Z0-9_]+$/;
+    if (!idPattern.test(store_id)) {
+      return {
+        success: false,
+        message: '가게 ID는 영문, 숫자, 언더스코어(_)만 사용 가능합니다.'
+      };
+    }
+
+    // DB에서 중복 확인
+    const [existingStores] = await conn.query(
+      'SELECT store_id FROM store_table WHERE store_id = ?',
+      [store_id]
+    );
+
+    if (existingStores.length > 0) {
+      return {
+        success: false,
+        available: false,
+        message: '이미 사용 중인 가게 ID입니다.'
+      };
+    }
+
+    return {
+      success: true,
+      available: true,
+      message: '사용 가능한 가게 ID입니다.'
+    };
+
+  } catch (error) {
+    console.error('가게 ID 중복 확인 중 오류:', error);
+    throw new Error('가게 ID 중복 확인 중 오류가 발생했습니다.');
   }
 };
 
@@ -611,7 +667,7 @@ exports.getMyStoreInfo = async (store_id) => {
     }
     
     // 사진 정보 (기본값)
-    const photos = store.store_thumbnail ? [store.store_thumbnail] : [];
+    const photos = store.store_thumbnail ? store.store_thumbnail.split(',') : [];
     
     // 스포츠 카테고리 (기본값)
     const sports_categories = ['축구', '야구', '농구'];
@@ -795,9 +851,10 @@ exports.updateMyStoreDetails = async (store_id, details) => {
     
     // 사진 정보 업데이트
     if (photos && photos.length > 0) {
+      const photosString = photos.join(',');  // ✅ 모든 사진을 쉼표로 구분
       await conn.query(
         'UPDATE store_table SET store_thumbnail = ? WHERE store_id = ?',
-        [photos[0], store_id]
+        [photosString, store_id]
       );
     }
     
@@ -990,27 +1047,40 @@ exports.getMyStoreReservations = async (store_id) => {
         r.reservation_max_participant_cnt,
         r.reservation_status,
         r.reservation_ex2,
-        GROUP_CONCAT(u.user_name SEPARATOR ', ') as participant_names
+        r.reservation_user_name as participant_names,
+        r.selected_store_name,
+        ps.total_amount,
+        ps.payment_per_person,
+        ps.payment_status,
+        ps.started_at as payment_started_at,
+        ps.completed_at as payment_completed_at
        FROM reservation_table r
-       LEFT JOIN reservation_participant_table rp ON r.reservation_id = rp.reservation_id
-       LEFT JOIN user_table u ON rp.user_id = u.user_id
-       WHERE r.store_id = ?
-       GROUP BY r.reservation_id
+       LEFT JOIN payment_sessions ps ON r.reservation_id = ps.chat_room_id
+       WHERE r.selected_store_id = ?
        ORDER BY r.reservation_start_time DESC`,
       [store_id]
     );
     
     return rows.map(row => ({
       reservation_id: row.reservation_id,
-      match_name: row.match_name,
-      reservation_title: row.reservation_title,
+      reservation_match: row.match_name || row.reservation_match || '경기 정보 없음',  // 경기명 매핑 수정
+      reservation_title: row.reservation_title || '제목 없음',  // 예약 제목 추가
       reservation_start_time: row.reservation_start_time,
+      reservation_participant_cnt: row.reservation_participant_cnt,
+      reservation_max_participant_cnt: row.reservation_max_participant_cnt,
       reservation_participant_info: row.participant_names || '참가자 없음',
       reservation_table_info: '테이블 정보', // 실제 테이블 정보가 있다면 추가
       reservation_ex2: row.reservation_ex2,  // 🆕 ex2 정보 추가
+      // 정산 정보 추가
+      total_amount: row.total_amount,
+      payment_per_person: row.payment_per_person,
+      payment_status: row.payment_status,
+      payment_started_at: row.payment_started_at,
+      payment_completed_at: row.payment_completed_at,
       reservation_status: 
         row.reservation_status === 0 ? 'PENDING_APPROVAL' :
-        row.reservation_status === 1 ? 'APPROVED' : 'REJECTED'
+        row.reservation_status === 1 ? 'APPROVED' : 
+        row.reservation_status === 2 ? 'PENDING_APPROVAL' : 'REJECTED'
     }));
   } catch (error) {
     if (!error.statusCode) {
