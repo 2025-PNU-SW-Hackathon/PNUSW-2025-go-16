@@ -1634,6 +1634,42 @@ exports.startPayment = async (user_id, room_id) => {
         payment_id: paymentId
       });
 
+      // 🆕 정산 현황판 메시지 생성
+      const boardMessageId = nextMessageId + 1;
+      await conn.query(
+        `INSERT INTO chat_messages 
+         (message_id, chat_room_id, sender_id, message, created_at)
+         VALUES (?, ?, ?, ?, NOW())`,
+        [boardMessageId, room_id, 'system', '💰 정산 현황판']
+      );
+
+      const paymentBoardMessage = {
+        message_id: boardMessageId,
+        chat_room_id: room_id,
+        sender_id: 'system',
+        message: '💰 정산 현황판',
+        created_at: new Date(),
+        message_type: 'payment_status_board',
+        payment_data: {
+          payment_per_person: paymentPerPerson,
+          total_amount: totalAmount,
+          total_participants: totalParticipants,
+          store_account: {
+            bank_name: store.bank_name,
+            account_number: store.account_number,
+            account_holder: store.account_holder
+          },
+          participants: participants.map(p => ({
+            user_id: p.user_id,
+            user_name: p.user_name,
+            payment_status: 'pending',
+            paid_at: null
+          })),
+          completed_count: 0,
+          payment_deadline: paymentDeadline.toISOString()
+        }
+      };
+
       // 🆕 시스템 메시지 데이터 구성 (간단한 메시지 + 구조화된 데이터)
       const savedPaymentMessage = {
         message_id: nextMessageId,
@@ -1668,6 +1704,9 @@ exports.startPayment = async (user_id, room_id) => {
 
       // 🆕 시스템 메시지 브로드캐스트 (구조화된 데이터 포함)
       io.to(room_id.toString()).emit('newMessage', savedPaymentMessage);
+      
+      // 🆕 정산 현황판 메시지 브로드캐스트
+      io.to(room_id.toString()).emit('newMessage', paymentBoardMessage);
 
       console.log('✅ [PAYMENT START] 소켓 이벤트 발송 완료:', {
         room_id: room_id,
@@ -1789,6 +1828,9 @@ exports.completePayment = async (user_id, room_id, payment_method) => {
     const completedPayments = updatedSession[0].completed_payments;
     const remainingPending = totalParticipants - completedPayments;
     const isFullyCompleted = remainingPending === 0;
+
+    // 🆕 정산 현황판 실시간 업데이트
+    await this.updatePaymentStatusBoard(room_id, user_id);
 
     // 6. 전체 정산 완료 시 세션 상태 업데이트
     if (isFullyCompleted) {
@@ -2740,6 +2782,107 @@ exports.getChatRoomDetail = async (user_id, room_id) => {
       error.statusCode = 500;
       error.message = '채팅방 정보 조회 중 오류가 발생했습니다.';
     }
+    throw error;
+  }
+};
+
+// 🆕 정산 현황판 실시간 업데이트 함수
+exports.updatePaymentStatusBoard = async (room_id, updated_by_user_id = null) => {
+  const conn = getConnection();
+  
+  try {
+    console.log('🔄 [PAYMENT BOARD] 현황판 업데이트 시작 - room_id:', room_id);
+    
+    // 1. 현재 정산 세션 조회
+    const [paymentSession] = await conn.query(
+      `SELECT payment_id, payment_per_person, total_amount, total_participants, 
+              payment_deadline, completed_payments
+       FROM payment_sessions 
+       WHERE chat_room_id = ? AND payment_status = 'in_progress'`,
+      [room_id]
+    );
+    
+    if (!paymentSession.length) {
+      console.log('❌ [PAYMENT BOARD] 진행 중인 정산이 없습니다.');
+      return;
+    }
+    
+    const session = paymentSession[0];
+    const paymentId = session.payment_id;
+    
+    // 2. 참여자별 상태 조회
+    const [participants] = await conn.query(
+      `SELECT user_id, user_name, payment_status, payment_method, paid_at
+       FROM payment_records WHERE payment_id = ?
+       ORDER BY paid_at ASC, user_name ASC`,
+      [paymentId]
+    );
+    
+    // 3. 가게 계좌 정보 조회
+    const [storeInfo] = await conn.query(
+      `SELECT bank_name, account_number, account_holder
+       FROM store_table s
+       JOIN payment_sessions ps ON s.store_id = ps.store_id
+       WHERE ps.payment_id = ?`,
+      [paymentId]
+    );
+    
+    const store = storeInfo[0] || {};
+    const completedCount = participants.filter(p => p.payment_status === 'completed').length;
+    
+    // 4. 업데이트된 현황 데이터 구성
+    const updatedPaymentData = {
+      payment_per_person: session.payment_per_person,
+      total_amount: session.total_amount,
+      total_participants: session.total_participants,
+      store_account: {
+        bank_name: store.bank_name,
+        account_number: store.account_number,
+        account_holder: store.account_holder
+      },
+      participants: participants.map(p => ({
+        user_id: p.user_id,
+        user_name: p.user_name,
+        payment_status: p.payment_status,
+        payment_method: p.payment_method,
+        paid_at: p.paid_at ? new Date(p.paid_at).toISOString() : null
+      })),
+      completed_count: completedCount,
+      payment_deadline: session.payment_deadline ? new Date(session.payment_deadline).toISOString() : null,
+      last_updated: new Date().toISOString()
+    };
+    
+    console.log('💰 [PAYMENT BOARD] 현황 데이터:', {
+      room_id: room_id,
+      completed_count: completedCount,
+      total_participants: session.total_participants,
+      updated_by: updated_by_user_id
+    });
+    
+    // 5. 실시간 소켓 알림
+    try {
+      const { getIO } = require('../config/socket_hub');
+      const io = getIO();
+      
+      io.to(room_id.toString()).emit('paymentStatusUpdated', {
+        room_id: room_id,
+        payment_data: updatedPaymentData,
+        updated_by: updated_by_user_id,
+        updated_at: new Date().toISOString()
+      });
+      
+      console.log('✅ [PAYMENT BOARD] 소켓 이벤트 발송 완료:', {
+        room_id: room_id,
+        event: 'paymentStatusUpdated',
+        completed_count: completedCount
+      });
+      
+    } catch (socketError) {
+      console.error('❌ [PAYMENT BOARD] 소켓 전송 실패:', socketError);
+    }
+    
+  } catch (error) {
+    console.error('❌ [PAYMENT BOARD] 현황판 업데이트 실패:', error);
     throw error;
   }
 };
