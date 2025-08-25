@@ -1244,7 +1244,7 @@ facilities.wifi.available ? '활성화 (주황색)' : '비활성화 (회색)';
     "user_name": "홍길동",
     "thumbnail": {
       "image_id": 2001,
-      "url": "/api/v1/images/2001"   // 바이너리 조회 엔드포인트
+      "url": "/api/v1/users/:userId/thumbnail"   // 바이너리 조회 엔드포인트
     }
   }
 }
