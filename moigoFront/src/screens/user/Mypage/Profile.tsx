@@ -1,8 +1,9 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { useProfile } from '@/hooks/useProfile';
+import { useGetMyInfo } from '@/hooks/queries/useUserQueries';
 import ProfileImage from '@/components/profile/ProfileImage';
 import ProfileFormField from '@/components/profile/ProfileFormField';
 import GenderSelector from '@/components/profile/GenderSelector';
@@ -11,6 +12,8 @@ import PrimaryButton from '@/components/common/PrimaryButton';
 import CheckModal from '@/components/common/CheckModal';
 
 export default function Profile() {
+  const [refreshing, setRefreshing] = useState(false);
+  
   const {
     profileData,
     formData,
@@ -27,11 +30,39 @@ export default function Profile() {
     handleGenderChange,
     handleModalClick,
     handleImagePress,
+    myInfo,
+    refetchMyInfo,
   } = useProfile();
+
+  // API에서 최신 데이터를 가져와서 profileData 업데이트
+  useEffect(() => {
+    if (myInfo?.data) {
+      console.log('Profile - API에서 최신 데이터 받음:', myInfo.data);
+    }
+  }, [myInfo]);
+
+  // 디버깅: profileData 값 확인
+  console.log('Profile 화면 - profileData:', profileData);
+  console.log('Profile 화면 - profileData.profileImage:', profileData.profileImage);
+  console.log('Profile 화면 - API 데이터:', myInfo?.data);
 
   const handleBirthDatePress = () => {
     Alert.alert('날짜 선택', '날짜 선택 기능은 나중에 구현됩니다.');
   };
+
+  // 새로고침 처리 - API 직접 호출
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      console.log('Profile - 새로고침 시작');
+      await refetchMyInfo();
+      console.log('Profile - 새로고침 완료');
+    } catch (error) {
+      console.error('프로필 새로고침 실패:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchMyInfo]);
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['left', 'right', 'bottom']}>
@@ -49,9 +80,25 @@ export default function Profile() {
           disabled={isLoading || !isFormValid}
         />
       </CheckModal>
-      <ScrollView className="flex-1 pt-8">
+      <ScrollView 
+        className="flex-1 pt-8"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#FF6B35']} // 메인 오렌지 색상
+            tintColor="#FF6B35"
+            title="새로고침 중..."
+            titleColor="#FF6B35"
+          />
+        }
+      >
         {/* 프로필 이미지 */}
-        <ProfileImage imageUri={image} onImageChange={handleImagePress} />
+        <ProfileImage 
+          imageUri={image} 
+          onImageChange={handleImagePress}
+          thumbnailUrl={myInfo?.data?.user_thumbnail || profileData.profileImage}
+        />
 
         {/* 기본 정보 */}
         <View className="mb-2">

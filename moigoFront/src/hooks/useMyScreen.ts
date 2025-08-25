@@ -6,6 +6,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types/RootStackParamList';
 import { useGetMyInfo } from '@/hooks/queries/useUserQueries';
 import { useLogout } from '@/hooks/queries/useAuthQueries';
+import { useQueryClient } from '@tanstack/react-query';
 
 export function useMyScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -24,41 +25,30 @@ export function useMyScreen() {
   const logoutMutation = useLogout();
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // users/me API 호출
-  const { data: myInfo, isLoading: isMyInfoLoading, error: myInfoError, refetch } = useGetMyInfo();
+
+  const { data: myInfo, isLoading: isMyInfoLoading, error: myInfoError, refetch: refetchMyInfo } = useGetMyInfo();
   
-  // 🆕 상세한 디버깅 로그
-  console.log('🔍 [useMyScreen] 전체 상태:', {
-    '🔐 인증 상태': {
-      isLoggedIn,
-      hasToken: !!token,
-      authUserId: authUser?.id,
-      authUserType: authUser?.userType
-    },
-    '📡 API 상태': {
-      myInfo: myInfo ? '✅ 데이터 있음' : '❌ 데이터 없음',
-      isMyInfoLoading,
-      myInfoError: myInfoError ? myInfoError.message : null,
-      isRefreshing
-    },
-    '👤 사용자 프로필': {
-      hasUserProfile: !!userProfile,
-      userProfileId: userProfile?.id,
-      userProfileName: userProfile?.name
-    }
-  });
+  const queryClient = useQueryClient();
+
   
   // API 데이터가 있으면 store에 저장
   useEffect(() => {
     if (myInfo?.data) {
-      console.log('사용자 정보 저장:', myInfo.data);
+      // 이미지 URL에 캐시 방지 쿼리 파라미터 추가
+      let profileImageUrl = myInfo.data.user_thumbnail;
+      if (profileImageUrl && profileImageUrl.startsWith('/')) {
+        profileImageUrl = `http://spotple.kr:3001${profileImageUrl}?t=${Date.now()}`;
+      } else if (profileImageUrl) {
+        profileImageUrl = `${profileImageUrl}?t=${Date.now()}`;
+      }
+      
       const userProfile = {
         id: myInfo.data.user_id,
         name: myInfo.data.user_name,
         email: myInfo.data.user_email,
         phone: myInfo.data.user_phone_number || '',
         gender: (myInfo.data.user_gender === 1 ? 'male' : 'female') as 'male' | 'female',
-        profileImage: myInfo.data.user_thumbnail || undefined,
+        profileImage: profileImageUrl || undefined,
         grade: 'BRONZE' as const,
         progressToNextGrade: 0,
         coupons: 0,
@@ -66,12 +56,24 @@ export function useMyScreen() {
         writtenReviews: 0,
         preferredSports: [],
       };
-      console.log('완전한 userProfile:', userProfile);
       updateUserProfile(userProfile);
     }
   }, [myInfo, updateUserProfile]);
 
-  // 로그아웃 처리 - 완전한 데이터 초기화
+  // 프로필 새로고침
+  const refreshUserProfile = async () => {
+    try {
+      // 쿼리 캐시 완전 무효화
+      await queryClient.invalidateQueries({ queryKey: ['my-info'] });
+      await queryClient.invalidateQueries({ queryKey: ['user-profile'] });
+      
+      // 강제로 데이터 다시 불러오기
+      await refetchMyInfo();
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const handleLogout = () => {
     console.log('🚀 [MyScreen] 로그아웃 시작');
     setLoading(true);
@@ -89,31 +91,16 @@ export function useMyScreen() {
     });
   };
 
-  // 🆕 Pull-to-refresh 처리
-  const handleRefresh = async () => {
-    console.log('🔄 [useMyScreen] Pull-to-refresh 시작');
-    setIsRefreshing(true);
-    
-    try {
-      await refetch();
-      console.log('✅ [useMyScreen] Pull-to-refresh 완료');
-    } catch (error) {
-      console.error('❌ [useMyScreen] Pull-to-refresh 실패:', error);
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
+
 
   // 등급별 혜택 보기
   const handleViewGradeBenefits = () => {
     // 등급별 혜택 페이지로 이동
-    console.log('등급별 혜택 보기');
   };
 
   // 프로필 편집
   const handleEditProfile = () => {
     // 프로필 편집 페이지로 이동
-    console.log('프로필 편집');
     navigation.navigate('Profile');
   };
 
@@ -132,13 +119,11 @@ export function useMyScreen() {
   // 즐겨찾는 장소
   const handleViewFavoritePlaces = () => {
     // 즐겨찾는 장소 페이지로 이동
-    console.log('즐겨찾는 장소 보기');
   };
 
   // 고객센터
   const handleContactCustomerService = () => {
     // 고객센터 페이지로 이동
-    console.log('고객센터');
   };
 
   return {
@@ -153,12 +138,15 @@ export function useMyScreen() {
     // 액션
     toggleNotifications,
     handleLogout,
-    handleRefresh, // 🆕 Pull-to-refresh
     handleViewGradeBenefits,
     handleEditProfile,
     handleViewMatchHistory,
     handleViewFavoritePlaces,
     handleContactCustomerService,
     handleEditPassword,
+    refreshUserProfile,
+    
+    // 네비게이션
+    navigation,
   };
 }

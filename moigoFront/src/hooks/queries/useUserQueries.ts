@@ -157,7 +157,7 @@ export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: UpdateProfileRequestDTO) => updateProfile(data),
+    mutationFn: (data: UpdateProfileRequestDTO | FormData) => updateProfile(data),
     onSuccess: () => {
       // 프로필 수정 성공 시 관련된 모든 캐시 무효화
       queryClient.invalidateQueries({ queryKey: ['my-info'] });

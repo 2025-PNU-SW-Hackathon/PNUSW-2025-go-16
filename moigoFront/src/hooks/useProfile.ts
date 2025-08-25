@@ -6,6 +6,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/types/RootStackParamList';
 import { useUpdateProfile } from '@/hooks/queries/useUserQueries';
 import { useImagePicker } from '@/hooks/useImagePicker';
+import { useGetMyInfo } from '@/hooks/queries/useUserQueries';
+import { useQueryClient } from '@tanstack/react-query';
 
 export function useProfile() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -24,6 +26,12 @@ export function useProfile() {
   
   // React Query mutation
   const updateProfileMutation = useUpdateProfile();
+  
+  // 프로필 정보 조회 훅
+  const { refetch: refetchMyInfo, data: myInfo } = useGetMyInfo();
+  
+  // Query Client로 다른 쿼리들 무효화
+  const queryClient = useQueryClient();
 
   // userProfile 데이터가 변경될 때 formData 업데이트
   useEffect(() => {
@@ -38,6 +46,30 @@ export function useProfile() {
       });
     }
   }, [userProfile]);
+
+  // API에서 최신 데이터를 가져와서 profileData 업데이트
+  useEffect(() => {
+    if (myInfo?.data) {
+      // 새로운 썸네일이 있으면 즉시 교체
+      if (myInfo.data.user_thumbnail && myInfo.data.user_thumbnail !== userProfile?.profileImage) {
+        updateProfileImage(myInfo.data.user_thumbnail);
+        
+        // 로컬 선택 이미지도 초기화 (서버 이미지로 교체됨)
+        if (image && image !== myInfo.data.user_thumbnail) {
+          setImage(null);
+        }
+      }
+      
+      // formData도 최신 데이터로 업데이트
+      setFormData(prev => ({
+        ...prev,
+        name: myInfo.data.user_name || prev.name,
+        phone: myInfo.data.user_phone_number || prev.phone,
+        email: myInfo.data.user_email || prev.email,
+        gender: (myInfo.data.user_gender === 1 ? 'male' : 'female') as 'male' | 'female',
+      }));
+    }
+  }, [myInfo, userProfile?.profileImage, updateProfileImage, image]);
 
   // 편집 모드 시작
   const startEditing = () => {
@@ -67,24 +99,52 @@ export function useProfile() {
     }));
   };
 
+  // 프로필 새로고침
+  const refreshProfile = async () => {
+    try {
+      await refetchMyInfo();
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  // 프로필 이미지 변경
+  const handleImageChange = (imageUri: string) => {
+    if (!userProfile) return;
+    
+    // 즉시 로컬에 저장하고 myStore에 반영 (즉시 표시)
+    updateProfileImage(imageUri);
+    setImage(imageUri);
+  };
+
   // 프로필 저장
   const handleSave = async () => {
     if (!userProfile || !formData.name || !formData.phone || !formData.email || !formData.gender) return;
-
+  
     setLoading(true);
     try {
-      // API 호출 (React Query mutation 사용)
-      const updateData = {
-        user_name: formData.name,
-        user_region: userProfile.region || '서울',
-        user_phone_number: formData.phone,
-        user_thumbnail: userProfile.profileImage || undefined,
-      };
-
-      console.log('프로필 업데이트 요청:', updateData);
-      await updateProfileMutation.mutateAsync(updateData);
-
-      // myStore 업데이트
+      const form = new FormData();
+  
+      form.append('user_name', formData.name);
+      form.append('user_phone_number', formData.phone);
+      form.append('user_region', userProfile.region || '서울');
+      form.append('user_email', formData.email);
+  
+      if (image) {
+        const filename = image.split('/').pop() ?? 'photo.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : 'image/jpeg';
+  
+        form.append('thumbnail', {
+          uri: image,
+          name: filename,
+          type,
+        } as any);
+      }
+  
+      await updateProfileMutation.mutateAsync(form);
+  
+      // myStore 업데이트 (로컬 이미지 유지)
       updateUserProfile({
         name: formData.name,
         phone: formData.phone,
@@ -92,25 +152,43 @@ export function useProfile() {
         birthDate: formData.birthDate,
         gender: formData.gender,
         bio: formData.bio,
+        profileImage: image || userProfile.profileImage,
       });
-
-      console.log('프로필 저장 완료');
+      
+      // 관련된 모든 쿼리 무효화 (마이 탭 데이터도 새로고침)
+      await queryClient.invalidateQueries({ queryKey: ['my-info'] });
+      await queryClient.invalidateQueries({ queryKey: ['user-profile'] });
+      await queryClient.invalidateQueries({ queryKey: ['matching-history'] });
+      
+      // 현재 프로필 데이터도 새로고침
+      await refetchMyInfo();
+      
+      // 서버 응답이 오면 로컬 이미지를 서버 이미지로 교체
+      if (myInfo?.data?.user_thumbnail && myInfo.data.user_thumbnail !== image) {
+        // 서버 이미지 URL에 캐시 방지 쿼리 파라미터 추가
+        let serverImageUrl = myInfo.data.user_thumbnail;
+        if (serverImageUrl.startsWith('/')) {
+          serverImageUrl = `http://spotple.kr:3001${serverImageUrl}?t=${Date.now()}`;
+        } else {
+          serverImageUrl = `${serverImageUrl}?t=${Date.now()}`;
+        }
+        
+        updateProfileImage(serverImageUrl);
+        setImage(null); // 선택된 이미지 초기화
+      }
+  
       setIsModalOpen(true);
       setIsEditing(false);
     } catch (error) {
-      console.error('프로필 저장 실패:', error);
+      // 실패 시 로컬 이미지도 롤백
+      if (image) {
+        updateProfileImage(userProfile.profileImage || '');
+        setImage(null);
+      }
     } finally {
       setLoading(false);
     }
-  };
-
-  // 프로필 이미지 변경
-  const handleImageChange = (imageUri: string) => {
-    if (!userProfile) return;
-    updateProfileImage(imageUri);
-    // 테스트용: 선택한 이미지를 즉시 표시
-    setImage(imageUri);
-  };
+  };  
 
   // 성별 변경
   const handleGenderChange = (gender: 'male' | 'female') => {
@@ -168,12 +246,18 @@ export function useProfile() {
   // 모달에서 확인 클릭
   function handleModalClick() {
     setIsModalOpen(false);
+    
+    // My 탭으로 이동하기 전에 쿼리 캐시 무효화
+    queryClient.invalidateQueries({ queryKey: ['my-info'] });
+    queryClient.invalidateQueries({ queryKey: ['user-profile'] });
+    
     (navigation as any).navigate('Main', { screen: 'My' });
   }
 
   const handleImagePress = () => {
     pickImage();
   };
+  
   return {
     // 상태
     profileData: userProfile || {
@@ -210,5 +294,10 @@ export function useProfile() {
     handleGenderChange,
     handleModalClick,
     handleImagePress,
+    refreshProfile,
+    
+    // API 데이터
+    myInfo,
+    refetchMyInfo,
   };
 }

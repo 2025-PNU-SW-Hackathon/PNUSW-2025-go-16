@@ -60,9 +60,13 @@ export const getMyInfo = async (): Promise<GetUserInfoResponseDTO> => {
 
 // PUT /users/me - 프로필 수정
 export const updateProfile = async (
-  data: UpdateProfileRequestDTO
+  data: UpdateProfileRequestDTO | FormData
 ): Promise<UpdateProfileResponseDTO> => {
-  const response = await apiClient.put<UpdateProfileResponseDTO>('/users/me', data);
+  const headers = data instanceof FormData 
+    ? { 'Content-Type': 'multipart/form-data' }
+    : { 'Content-Type': 'application/json' };
+    
+  const response = await apiClient.put<UpdateProfileResponseDTO>('/users/me', data, { headers });
   return response.data;
 };
 
