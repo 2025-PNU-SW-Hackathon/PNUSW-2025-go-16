@@ -1,3 +1,4 @@
+/*
 const path = require('path');
 const fs = require('fs');
 const fsp = fs.promises;
@@ -9,8 +10,9 @@ const LOCAL_BASE_DIR = 'images';                              // ./uploads/image
 const IMAGE_DIR = path.join(UPLOAD_ROOT, LOCAL_BASE_DIR);
 
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
-
+*/
 /* ============== 내부 유틸 ============== */
+/*
 async function q(sql, params = []) {
   const conn = getConnection();
   try {
@@ -39,7 +41,7 @@ function randomFileName(ext) {
   const id = crypto.randomBytes(8).toString('hex');
   return `${Date.now()}-${id}.${ext}`;
 }
-
+*/
 /* ============== 서비스 API ============== */
 
 /**
@@ -47,6 +49,7 @@ function randomFileName(ext) {
  * - multer memoryStorage: req.file.buffer 사용
  * - multer diskStorage  : req.file.path 를 목적지로 move
  */
+/*
 exports.saveImageLocal = async ({ ownerType, ownerId, file, isPublic = 1 }) => {
   if (!file) {
     const e = new Error('파일이 없습니다.'); e.statusCode = 400; throw e;
@@ -95,6 +98,7 @@ exports.saveImageLocal = async ({ ownerType, ownerId, file, isPublic = 1 }) => {
 /**
  * 단건 메타 조회
  */
+/*
 exports.getImageMetaById = async (imageId) => {
   const rows = await q(
     `SELECT id AS image_id,
@@ -118,6 +122,7 @@ exports.getImageMetaById = async (imageId) => {
  * 이미지 ReadStream 반환 (API에서 직접 스트리밍 응답할 때)
  * - 컨트롤러에서 res.setHeader('Content-Type', mime) 후 stream.pipe(res)
  */
+/*
 exports.openImageStreamById = async (imageId) => {
   const meta = await exports.getImageMetaById(imageId);
   if (!meta) return { meta: null, stream: null };
@@ -140,6 +145,7 @@ exports.openImageStreamById = async (imageId) => {
  * 편의 함수: Express res로 직접 전송
  * - 컨트롤러에서 await imageService.sendImageById(res, imageId)
  */
+/*
 exports.sendImageById = async (res, imageId) => {
   const { meta, stream } = await exports.openImageStreamById(imageId);
   if (!meta || !stream) {
@@ -155,6 +161,7 @@ exports.sendImageById = async (res, imageId) => {
 /**
  * 오너별 목록
  */
+/*
 exports.listImagesByOwner = async ({ ownerType, ownerId }) => {
   const rows = await q(
     `SELECT id AS image_id,
@@ -170,13 +177,15 @@ exports.listImagesByOwner = async ({ ownerType, ownerId }) => {
 /**
  * 삭제 (파일 & DB)
  */
+/*
 exports.deleteImage = async (imageId) => {
   const meta = await exports.getImageMetaById(imageId);
   if (!meta) return { ok: false, reason: 'not_found' };
 
   if (meta.storage_type === 'local' && meta.absPath) {
-    try { await fsp.unlink(meta.absPath); } catch (_) { /* 파일 없으면 무시 */ }
+    try { await fsp.unlink(meta.absPath); } catch (_) {  }
   }
   await q(`DELETE FROM images WHERE id = ?`, [imageId]);
   return { ok: true };
 };
+*/

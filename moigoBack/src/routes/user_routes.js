@@ -42,6 +42,6 @@ router.post('/store/:storeId/business-registration', storeController.completeBus
 router.get('/store/:storeId/business-registration/status', storeController.checkBusinessRegistrationStatus);
 
 // 사용자 이미지 등록 라우팅, (현재 테스트용)
-router.post('/thumbnail');
+//router.post('/thumbnail', userController.uploadThumbnail);
 
 module.exports = router;

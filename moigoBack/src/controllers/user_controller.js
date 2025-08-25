@@ -199,6 +199,7 @@ exports.deleteUser = async (req, res, next) => {
  * POST /api/v1/users/me/thumbnail
  * form-data: { thumbnail: <file> }
  */
+/*
 exports.uploadThumbnail = [
   upload.single('thumbnail'),
   async (req, res, next) => {
@@ -248,3 +249,4 @@ exports.uploadThumbnail = [
     }
   }
 ];
+*/
