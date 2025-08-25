@@ -37,6 +37,32 @@ async function saveUserExpoToken(account_id, expo_token) {
     }
 }
 
+// 🏪 사장님 Expo 토큰 저장/업데이트
+async function saveStoreExpoToken(store_id, expo_token) {
+    const conn = getConnection();
+    try {
+        await conn.query(
+            `INSERT INTO store_push_tokens
+        (account_id, expo_token, updated_at, is_active, failure_count)
+       VALUES (?, ?, NOW(), 1, 0)
+       ON DUPLICATE KEY UPDATE
+        updated_at = NOW(),
+        is_active = 1,
+        last_error_code = NULL,
+        failure_count = 0`,
+            [store_id, expo_token]
+        );
+        console.log(`✅ 사장님 Expo token 저장 성공: ${store_id} - ${expo_token}`);
+    } catch (err) {
+        if (err.code === 'ER_NO_SUCH_TABLE') {
+            console.log('⚠️ [Push] store_push_tokens 테이블이 존재하지 않습니다. 토큰 저장을 건너뜁니다.');
+            return;
+        }
+        console.error('❌ 사장님 Expo token 저장 오류:', err);
+        throw err;
+    }
+}
+
 
 /* ============================================================
  * 공통 DB 헬퍼
@@ -648,6 +674,7 @@ async function sendUserLeftPush({ reservationId, leftUserId, leftUserName }) {
 module.exports = {
     // 타입별 API (컨트롤러/서비스에서 바로 import)
     saveUserExpoToken,
+    saveStoreExpoToken,
     getUserIdsByReservation,
     sendChatMessagePushToUserIds,
     sendPaymentRequestPush,
