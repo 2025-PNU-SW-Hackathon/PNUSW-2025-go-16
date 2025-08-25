@@ -1587,7 +1587,7 @@ exports.startPayment = async (user_id, room_id) => {
           address: null // 필요시 추가
         },
         payment: {
-          per_person: finalPaymentAmount,
+          per_person: paymentPerPerson,
           total_amount: totalAmount,
           participants_count: totalParticipants
         },
@@ -1616,7 +1616,7 @@ exports.startPayment = async (user_id, room_id) => {
       };
 
       // 시스템 메시지로 저장 (간단한 텍스트 + 구조화된 데이터)
-      const simpleMessage = `💰 정산이 시작되었습니다 (${finalPaymentAmount.toLocaleString()}원)`;
+      const simpleMessage = `💰 정산이 시작되었습니다 (${paymentPerPerson.toLocaleString()}원)`;
 
       const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages WHERE chat_room_id = ?', [room_id]);
       const nextMessageId = (maxIdResult[0]?.maxId || 0) + 1;
@@ -1691,7 +1691,7 @@ exports.startPayment = async (user_id, room_id) => {
         payment_id: paymentId,
         started_by: user_id,
         started_by_name: userName,
-        payment_per_person: finalPaymentAmount,
+        payment_per_person: paymentPerPerson,
         total_amount: totalAmount,
         payment_deadline: paymentDeadline.toISOString(),
         store_account: {
