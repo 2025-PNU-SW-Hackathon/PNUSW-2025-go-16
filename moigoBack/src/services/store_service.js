@@ -1062,14 +1062,24 @@ exports.getMyStoreReservations = async (store_id) => {
     
     return rows.map(row => ({
       reservation_id: row.reservation_id,
-      reservation_match: row.reservation_match,
+      reservation_match: row.match_name || row.reservation_match || '경기 정보 없음',  // 경기명 매핑 수정
+      reservation_title: row.reservation_title || '제목 없음',  // 예약 제목 추가
       reservation_start_time: row.reservation_start_time,
+      reservation_participant_cnt: row.reservation_participant_cnt,
+      reservation_max_participant_cnt: row.reservation_max_participant_cnt,
       reservation_participant_info: row.participant_names || '참가자 없음',
       reservation_table_info: '테이블 정보', // 실제 테이블 정보가 있다면 추가
       reservation_ex2: row.reservation_ex2,  // 🆕 ex2 정보 추가
+      // 정산 정보 추가
+      total_amount: row.total_amount,
+      payment_per_person: row.payment_per_person,
+      payment_status: row.payment_status,
+      payment_started_at: row.payment_started_at,
+      payment_completed_at: row.payment_completed_at,
       reservation_status: 
         row.reservation_status === 0 ? 'PENDING_APPROVAL' :
-        row.reservation_status === 1 ? 'APPROVED' : 'REJECTED'
+        row.reservation_status === 1 ? 'APPROVED' : 
+        row.reservation_status === 2 ? 'PENDING_APPROVAL' : 'REJECTED'
     }));
   } catch (error) {
     if (!error.statusCode) {

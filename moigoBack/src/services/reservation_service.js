@@ -383,6 +383,43 @@ exports.approveReservation = async (reservationId, store_id, action) => {
       ? '예약이 성공적으로 승인되었습니다.' 
       : '예약이 거절되었습니다.';
     
+    // 🔔 채팅방에 시스템 메시지 전송
+    try {
+      const messageService = require('./message_service');
+      const io = require('../config/socket_hub').getIO();
+      
+      const systemMessage = action === 'APPROVE' 
+        ? '🎉 사장님이 예약을 승인했습니다!' 
+        : '❌ 사장님이 예약을 거절했습니다.';
+      
+      // 채팅방에 시스템 메시지 저장
+      const savedMessage = await messageService.saveNewMessage(
+        'system', 
+        reservationId, 
+        systemMessage, 
+        action === 'APPROVE' ? 'system_reservation_approved' : 'system_reservation_rejected'
+      );
+      
+      // 해당 채팅방에 실시간 알림 전송
+      io.to(reservationId.toString()).emit('newMessage', savedMessage);
+      
+      // 🏪 사장님에게도 예약 상태 변경 알림 전송
+      const storeRoom = `store_${store_id}`;
+      io.to(storeRoom).emit('reservationStatusChanged', {
+        type: 'RESERVATION_STATUS_CHANGED',
+        reservationId,
+        newStatus: newStatus === 1 ? 'APPROVED' : 'REJECTED',
+        action: action,
+        message: `예약 ${reservationId}번이 ${action === 'APPROVE' ? '승인' : '거절'}되었습니다.`
+      });
+      
+      console.log(`📢 [RESERVATION ${action}] 채팅방 ${reservationId}에 시스템 메시지 전송 완료`);
+      console.log(`📡 [STORE NOTIFICATION] 사장님 room ${storeRoom}에 상태 변경 알림 전송 완료`);
+    } catch (notificationError) {
+      console.error('❌ [RESERVATION NOTIFICATION] 채팅방 알림 전송 실패:', notificationError);
+      // 알림 실패해도 예약 처리는 성공으로 간주
+    }
+    
     return {
       message,
       data: {
