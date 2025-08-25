@@ -61,10 +61,10 @@ exports.getStoreList = async (filters) => {
 
   const [rows] = await conn.query(query, params);
   
-  // store_id를 숫자로 변환
+  // store_id는 문자열일 수도 있으므로 변환하지 않음
   const convertedRows = rows.map(row => ({
     ...row,
-    store_id: parseInt(row.store_id) || 0
+    store_id: row.store_id  // 원본 값 유지
   }));
   
   return convertedRows;
@@ -110,10 +110,10 @@ exports.getStoreDetail = async (storeId) => {
       throw err;
     }
     
-    // store_id를 숫자로 변환
+    // store_id는 문자열일 수도 있으므로 원본 값 유지
     const storeDetail = {
       ...rows[0],
-      store_id: parseInt(rows[0].store_id) || 0
+      store_id: rows[0].store_id
     };
     
     return storeDetail;
@@ -177,7 +177,7 @@ exports.getStorePaymentInfo = async (storeId) => {
       if (paymentRows.length > 0) {
         return {
           ...paymentRows[0],
-          store_id: parseInt(paymentRows[0].store_id) || 0
+          store_id: paymentRows[0].store_id
         };
       }
     } catch (tableError) {
@@ -187,7 +187,7 @@ exports.getStorePaymentInfo = async (storeId) => {
     
     // 기본값 반환
     return {
-      store_id: parseInt(storeId) || 0,
+      store_id: storeId,
       bank_code: '000',
       account_number: '미설정',
       account_holder_name: '미설정',
@@ -246,7 +246,7 @@ exports.updateStorePaymentInfo = async (storeId, paymentData) => {
     }
     
     return {
-      store_id: parseInt(storeId) || 0,
+      store_id: storeId,
       bank_code,
       account_number,
       account_holder_name,

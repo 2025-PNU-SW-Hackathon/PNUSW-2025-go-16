@@ -97,9 +97,9 @@ exports.saveNewMessage = async (user_id, room_id, message) => {
             
             // 가게 공유 메시지에서 추가 정보 추출
             try {
-                const storeIdMatch = messageData.message.match(/store_id:\s*(\d+)/);
+                const storeIdMatch = messageData.message.match(/store_id:\s*([^\s\n]+)/);
                 if (storeIdMatch) {
-                    messageData.store_id = parseInt(storeIdMatch[1]);
+                    messageData.store_id = storeIdMatch[1];  // 문자열 그대로 유지
                 }
                 
                 const storeNameMatch = messageData.message.match(/🏪\s*([^\n]+)/);
