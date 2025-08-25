@@ -115,7 +115,7 @@ exports.storeLogin = async (store_id, store_pwd, expo_token) => {
 
     // 3) (중요) Expo 토큰 업서트 — 다중 기기 지원
     //    같은 계정의 다른 기기 토큰은 새 행으로 저장, 같은 토큰이면 updated_at만 갱신
-    await saveStoreExpoToken(user_id, expo_token).catch(console.error);
+    await saveStoreExpoToken(store_id, expo_token).catch(console.error);
 
     // JWT 토큰 생성
     const payload = {
