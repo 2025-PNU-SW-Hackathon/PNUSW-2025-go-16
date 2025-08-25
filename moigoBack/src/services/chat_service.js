@@ -653,11 +653,105 @@ exports.updateChatRoomStatus = async (user_id, room_id, status) => {
     throw err;
   }
 
+  // 🔍 현재 상태 조회 (시스템 메시지 생성용)
+  const [currentStatus] = await conn.query(
+    'SELECT reservation_status FROM reservation_table WHERE reservation_id = ?',
+    [room_id]
+  );
+  const previousStatus = currentStatus[0]?.reservation_status;
+
   // 모임 상태 변경
   await conn.query(
     `UPDATE reservation_table SET reservation_status = ? WHERE reservation_id = ?`,
     [status, room_id]
   );
+
+  // 📝 시스템 메시지 생성 및 저장
+  let systemMessage = null;
+  
+  // 모집 상태 변경에 대한 시스템 메시지만 생성
+  if (previousStatus === 0 && status === 1) {
+    // 모집 중 → 모집 마감
+    systemMessage = '매칭 모집이 마감되었습니다.';
+  } else if (previousStatus === 1 && status === 0) {
+    // 모집 마감 → 모집 중
+    systemMessage = '매칭 모집이 재개되었습니다.';
+  }
+
+  // 시스템 메시지가 있으면 저장 및 전송
+  if (systemMessage) {
+    try {
+      const messageService = require('./message_service');
+      const { getIO } = require('../config/socket_hub');
+      const io = getIO();
+
+      // 시스템 메시지 저장
+      const [maxIdResult] = await conn.query('SELECT MAX(message_id) as maxId FROM chat_messages WHERE chat_room_id = ?', [room_id]);
+      const nextMessageId = (maxIdResult[0]?.maxId || 0) + 1;
+      
+      const messageType = status === 1 ? 'system_recruitment_closed' : 'system_recruitment_reopened';
+      
+      await conn.query(
+        `INSERT INTO chat_messages (message_id, chat_room_id, sender_id, message, created_at, message_type) 
+         VALUES (?, ?, ?, ?, NOW(), ?)`,
+        [nextMessageId, room_id, 'system', systemMessage, messageType]
+      );
+      
+      const savedMessage = {
+        message_id: nextMessageId,
+        chat_room_id: room_id,
+        sender_id: 'system',
+        message: systemMessage,
+        created_at: new Date(),
+        message_type: messageType
+      };
+
+      // 시스템 메시지 브로드캐스트
+      const messageData = {
+        ...savedMessage,
+        user_name: 'System',
+        created_at: new Date().toISOString()
+      };
+      
+      io.to(room_id.toString()).emit('newMessage', messageData);
+
+      // 🔄 채팅 리스트 업데이트 이벤트 전송 - 개별 사용자별로
+      const chatListUpdateData = {
+        chat_room_id: parseInt(room_id),
+        last_message: systemMessage,
+        last_message_time: new Date().toISOString(),
+        last_message_sender_id: 'system',
+        last_message_sender_name: 'System'
+      };
+      
+      try {
+        const [participants] = await conn.query(
+          'SELECT user_id FROM chat_room_users WHERE reservation_id = ? AND is_kicked = 0',
+          [room_id]
+        );
+        
+        // 각 참여자에게 개별적으로 이벤트 전송
+        for (const participant of participants) {
+          const userSocketId = `user_${participant.user_id}`;
+          io.to(userSocketId).emit('chatListUpdate', chatListUpdateData);
+        }
+      } catch (error) {
+        console.error('❌ [STATUS CHANGE] 채팅 리스트 업데이트 전송 실패:', error);
+        // 실패 시 기존 방식으로 fallback
+        io.to(room_id.toString()).emit('chatListUpdate', chatListUpdateData);
+      }
+
+      console.log('✅ [STATUS CHANGE] 시스템 메시지 및 채팅 리스트 업데이트 완료:', {
+        room_id: room_id,
+        previous_status: previousStatus,
+        new_status: status,
+        system_message: systemMessage
+      });
+
+    } catch (messageError) {
+      console.error('❌ [STATUS CHANGE] 시스템 메시지 저장 실패:', messageError);
+    }
+  }
 
   // 🆕 실시간 상태 변경 알림
   try {
