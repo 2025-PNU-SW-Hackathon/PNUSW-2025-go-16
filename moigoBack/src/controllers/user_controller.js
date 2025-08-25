@@ -148,7 +148,7 @@ exports.getMyMatchings = async (req, res, next) => {
     // 각 매칭 데이터에 user_thumbnail 필드 추가
     const enrichedData = data.map(item => ({
       ...item,
-      user_thumbnail: `/api/v1/users/${item.user_id}/thumbnail`
+      user_thumbnail: `/api/v1/users/${user_id}/thumbnail`
     }));
 
     res.status(200).json({ success: true, data: enrichedData });
