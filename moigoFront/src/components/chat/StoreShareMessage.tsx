@@ -15,7 +15,7 @@ interface StoreShareMessageProps {
     reviewCount: number;
     imageUrl: string;
   };
-  storeId?: number; // 가게 ID 추가
+  storeId?: string; // 가게 ID 추가
   chatRoom?: any; // 채팅방 정보 (선택사항)
   isHost?: boolean; // 방장 여부 (선택사항)
 }

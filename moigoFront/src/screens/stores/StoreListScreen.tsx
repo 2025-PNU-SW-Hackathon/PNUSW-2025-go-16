@@ -35,18 +35,18 @@ export default function StoreListScreen() {
 
   // 가게 카드 클릭 핸들러
   const handleStorePress = (store: StoreListItemDTO) => {
-    // storeId를 숫자로 변환 (안전하게)
-    const numericStoreId = Number(store?.store_id || 0);
+    // storeId를 가져옴 (이제 string 타입)
+    const storeId = store?.store_id;
     
     // 유효한 storeId인지 확인
-    if (numericStoreId > 0) {
+    if (storeId) {
       navigation.navigate('StoreDetail', { 
-        storeId: numericStoreId,
+        storeId: storeId,
         chatRoom: chatRoom || undefined,
         isHost: isHost || false
       });
     } else {
-      console.error('❌ 유효하지 않은 storeId:', numericStoreId);
+      console.error('❌ 유효하지 않은 storeId:', storeId);
     }
   };
 

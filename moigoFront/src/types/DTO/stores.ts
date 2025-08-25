@@ -15,7 +15,7 @@ export interface StoreListResponseDTO {
 
 // 가게 목록 아이템
 export interface StoreListItemDTO {
-  store_id: number;
+  store_id: string;
   store_name: string;
   store_address: string;
   store_phonenumber: string;
@@ -32,7 +32,7 @@ export interface StoreDetailResponseDTO {
 
 // 가게 상세 정보
 export interface StoreDetailDTO {
-  store_id: number;
+  store_id: string;
   store_name: string;
   store_address: string;
   store_bio: string;
@@ -68,7 +68,7 @@ export interface ChatStoreListResponseDTO {
 
 // 채팅용 가게 목록 아이템
 export interface ChatStoreListItemDTO {
-  store_id: number;
+  store_id: string;
   store_name: string;
   store_address: string;
   store_rating: number;
@@ -77,7 +77,7 @@ export interface ChatStoreListItemDTO {
 
 // 가게 공유 요청
 export interface ShareStoreRequestDTO {
-  store_id: number;
+  store_id: string;
 }
 
 // 가게 공유 응답

@@ -22,8 +22,8 @@ export default function StoreDetailScreen() {
   // 실제 방장 여부 사용
   const actualIsHost = isHost || false;
 
-  // storeId 유효성 검사
-  const isValidStoreId = !isNaN(storeId) && storeId > 0;
+  // storeId 유효성 검사 (string 타입)
+  const isValidStoreId = storeId && storeId.trim().length > 0;
 
   // 가게 상세 정보 조회 (유효한 storeId일 때만)
   const { data: storeDetailData, isLoading, error, refetch } = useStoreDetail(storeId);
@@ -147,7 +147,7 @@ export default function StoreDetailScreen() {
       return;
     }
 
-    if (!storeId || storeId <= 0) {
+    if (!storeId || storeId.trim().length === 0) {
       Alert.alert('오류', '가게 정보가 올바르지 않습니다.');
       return;
     }
@@ -181,7 +181,7 @@ export default function StoreDetailScreen() {
       return;
     }
 
-    if (!storeId || storeId <= 0) {
+    if (!storeId || storeId.trim().length === 0) {
       Alert.alert('오류', '가게 정보가 올바르지 않습니다.');
       return;
     }

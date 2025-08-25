@@ -22,6 +22,6 @@ export type RootStackParamList = {
   ChangePassword: undefined;
   Favorite: undefined;
   StoreList: { chatRoom?: ChatRoom; isHost?: boolean };
-  StoreDetail: { storeId: number; chatRoom?: ChatRoom; isHost?: boolean };
+  StoreDetail: { storeId: string; chatRoom?: ChatRoom; isHost?: boolean };
   Notification: undefined;
 };

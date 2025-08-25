@@ -220,11 +220,38 @@ export default function BusinessHomeScreen() {
           {/* 예약 카드들 */}
           {reservations.length > 0 ? (
             <View className="gap-4">
-              {reservations.map((reservation) => (
+              {reservations.map((reservation) => {
+                // 예약 제목 생성 로직 개선
+                const getReservationTitle = () => {
+                  if (reservation.reservation_title) return reservation.reservation_title;
+                  if (reservation.match_name) return reservation.match_name;
+                  if (reservation.reservation_match) return reservation.reservation_match;
+                  
+                  // 경기 코드를 기반으로 제목 생성
+                  if (reservation.reservation_ex2) {
+                    const competitionMap: Record<string, string> = {
+                      'PD': 'K리그1',
+                      'EPL': '프리미어리그',
+                      'LALIGA': '라리가',
+                      'BUNDESLIGA': '분데스리가',
+                      'MLB': 'MLB',
+                      'KBO': 'KBO',
+                      'NBA': 'NBA',
+                      'KBL': 'KBL'
+                    };
+                    return competitionMap[reservation.reservation_ex2] || `${reservation.reservation_ex2} 경기 관람`;
+                  }
+                  
+                  return '경기 관람 모임';
+                };
+                
+                const reservationTitle = getReservationTitle();
+                
+                return (
                 <ReservationCard
                   key={reservation.reservation_id}
-                  eventType={reservation.reservation_title || reservation.match_name || reservation.reservation_match}
-                  eventTitle={reservation.reservation_title || reservation.match_name || reservation.reservation_match}
+                  eventType={reservationTitle}
+                  eventTitle={reservationTitle}
                   time={new Date(reservation.reservation_start_time).toLocaleTimeString('ko-KR', {
                     hour: '2-digit',
                     minute: '2-digit'
@@ -237,7 +264,8 @@ export default function BusinessHomeScreen() {
                   onReject={() => handleReservationAction('reject', reservation)}
                   disabled={reservation.reservation_status !== 'PENDING_APPROVAL'} // 대기중이 아니면 버튼 비활성화
                 />
-              ))}
+                );
+              })}
             </View>
           ) : (
             <View className="items-center p-8 bg-gray-50 rounded-xl">

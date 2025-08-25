@@ -32,28 +32,28 @@ export default function StoreCard({ store, onPress }: StoreCardProps) {
   };
 
   // 스크린 정보 (임시 데이터)
-  const getScreenInfo = (storeId: number) => {
+  const getScreenInfo = (storeId: string) => {
     const screenInfo = {
-      1: '대형 스크린 4개',
-      2: '프로젝터 스크린 2개',
-      3: '스크린 골프 시설',
-      4: 'TV 8대',
+      '1': '대형 스크린 4개',
+      '2': '프로젝터 스크린 2개',
+      '3': '스크린 골프 시설',
+      '4': 'TV 8대',
     };
     return screenInfo[storeId as keyof typeof screenInfo] || 'TV 4대';
   };
 
   // 오늘 경기 여부 (임시 데이터)
-  const hasGameToday = (storeId: number) => {
-    return [1, 2, 4].includes(storeId);
+  const hasGameToday = (storeId: string) => {
+    return ['1', '2', '4'].includes(storeId);
   };
 
   // 스포츠 종목 (임시 데이터)
-  const getSportType = (storeId: number) => {
+  const getSportType = (storeId: string) => {
     const sportTypes = {
-      1: '축구',
-      2: '야구',
-      3: '야구',
-      4: '농구',
+      '1': '축구',
+      '2': '야구',
+      '3': '야구',
+      '4': '농구',
     };
     return sportTypes[storeId as keyof typeof sportTypes] || '축구';
   };
@@ -105,13 +105,13 @@ export default function StoreCard({ store, onPress }: StoreCardProps) {
 
         {/* 스크린 정보 */}
         <Text className="text-sm text-gray-600 mb-3">
-          📺 {getScreenInfo(store.store_id || 0)}
+          📺 {getScreenInfo(store.store_id || '1')}
         </Text>
 
         {/* 상태 태그 */}
         <View className="flex-row items-center justify-between">
           <View className="flex-row">
-            {hasGameToday(store.store_id || 0) ? (
+            {hasGameToday(store.store_id || '1') ? (
               <View className="px-3 py-1 bg-green-100 rounded-full mr-2">
                 <Text className="text-green-700 text-xs font-medium">
                   오늘 경기 있음
@@ -120,7 +120,7 @@ export default function StoreCard({ store, onPress }: StoreCardProps) {
             ) : (
               <View className="px-3 py-1 bg-yellow-100 rounded-full mr-2">
                 <Text className="text-yellow-700 text-xs font-medium">
-                  {getSportType(store.store_id || 0)} 전문
+                  {getSportType(store.store_id || '1')} 전문
                 </Text>
               </View>
             )}

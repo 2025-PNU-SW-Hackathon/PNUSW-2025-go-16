@@ -80,7 +80,7 @@ export interface ChatMessageDTO {
   user_id?: string;
   kicked_by?: string;
   // 가게 공유 메시지 관련 필드
-  store_id?: number;
+  store_id?: string;
   store_name?: string;
   store_address?: string;
   store_rating?: number;
@@ -124,7 +124,7 @@ export interface NewMessageDTO {
   user_id?: string;
   kicked_by?: string;
   // 가게 공유 메시지 관련 필드
-  store_id?: number;
+  store_id?: string;
   store_name?: string;
   store_address?: string;
   store_rating?: number;

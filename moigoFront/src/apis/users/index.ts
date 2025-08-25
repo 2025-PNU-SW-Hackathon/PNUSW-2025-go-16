@@ -116,32 +116,73 @@ export const getStoreReservations = async (): Promise<StoreReservationsResponseD
   return response.data;
 };
 
-// POST /api/v1/reservations/{reservationId}/approval - 예약 승인/거절 (올바른 API)
+// POST /api/v1/reservations/{reservationId}/approval - 예약 승인
 export const acceptReservation = async (
   reservationId: number
 ): Promise<ReservationActionResponseDTO> => {
-  const response = await apiClient.post<ReservationActionResponseDTO>(
-    `/reservations/${reservationId}/approval`,
-    { action: 'APPROVE' }
-  );
-  
-  return response.data;
+  try {
+    const requestData: ReservationActionRequestDTO = {
+      action: 'APPROVE'
+    };
+    
+    console.log('✅ [예약 승인] API 요청 시작:', {
+      reservationId,
+      endpoint: `/reservations/${reservationId}/approval`,
+      data: requestData
+    });
+    
+    const response = await apiClient.post<ReservationActionResponseDTO>(
+      `/reservations/${reservationId}/approval`,
+      requestData
+    );
+    
+    console.log('✅ [예약 승인] API 응답 성공:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ [예약 승인] API 오류:', {
+      reservationId,
+      error: error.message,
+      status: error.response?.status,
+      data: error.response?.data
+    });
+    throw error;
+  }
 };
 
-// POST /api/v1/reservations/{reservationId}/approval - 예약 승인/거절 (올바른 API)
+// POST /api/v1/reservations/{reservationId}/approval - 예약 거절
 export const rejectReservation = async (
   reservationId: number,
   reason?: string
-): Promise<ReservationActionResponseDTO> => {  
-  const response = await apiClient.post<ReservationActionResponseDTO>(
-    `/reservations/${reservationId}/approval`,
-    { 
+): Promise<ReservationActionResponseDTO> => {
+  try {
+    const requestData: ReservationActionRequestDTO = {
       action: 'REJECT',
       reason: reason || '사유 없음'
-    }
-  );
-  
-  return response.data;
+    };
+    
+    console.log('❌ [예약 거절] API 요청 시작:', {
+      reservationId,
+      endpoint: `/reservations/${reservationId}/approval`,
+      data: requestData
+    });
+    
+    const response = await apiClient.post<ReservationActionResponseDTO>(
+      `/reservations/${reservationId}/approval`,
+      requestData
+    );
+    
+    console.log('❌ [예약 거절] API 응답 성공:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ [예약 거절] API 오류:', {
+      reservationId,
+      reason,
+      error: error.message,
+      status: error.response?.status,
+      data: error.response?.data
+    });
+    throw error;
+  }
 };
 
 // 일정 관련 API (명세서 기반)

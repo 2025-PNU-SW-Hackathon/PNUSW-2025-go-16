@@ -19,7 +19,7 @@ interface ChatBubbleProps {
     user_id?: string;
     kicked_by?: string;
     // 가게 공유 메시지 관련 필드
-    store_id?: number;
+    store_id?: string;
   }>; // 메시지 배열 (타입과 내용 포함)
   isMyMessage: boolean;
   senderName?: string;

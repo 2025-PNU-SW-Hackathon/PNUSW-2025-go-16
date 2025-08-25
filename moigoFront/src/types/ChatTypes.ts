@@ -41,7 +41,7 @@ export interface ChatMessage {
   user_id?: string; // 관련 사용자 ID
   kicked_by?: string; // 강퇴한 사용자 ID
   // 가게 공유 메시지 관련 필드
-  store_id?: number; // 가게 ID
+  store_id?: string; // 가게 ID
   store_name?: string; // 가게 이름
   store_address?: string; // 가게 주소
   store_rating?: number; // 가게 평점

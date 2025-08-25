@@ -48,9 +48,9 @@ export const getStoreList = async (params?: StoreListRequestDTO): Promise<StoreL
 };
 
 // 가게 상세 정보 조회
-export const getStoreDetail = async (storeId: number): Promise<StoreDetailResponseDTO> => {
+export const getStoreDetail = async (storeId: string): Promise<StoreDetailResponseDTO> => {
   // storeId 유효성 검사
-  if (!storeId || isNaN(storeId) || storeId <= 0) {
+  if (!storeId || storeId.trim().length === 0) {
     console.log('=== 가게 상세 정보 조회 API 에러 ===');
     console.log('유효하지 않은 storeId:', storeId, '타입:', typeof storeId);
     throw new Error('유효하지 않은 가게 ID입니다.');
@@ -129,7 +129,7 @@ export const getChatStoreList = async (params?: ChatStoreListRequestDTO): Promis
 };
 
 // 가게 공유 기능
-export const shareStore = async (roomId: number, storeId: number): Promise<ShareStoreResponseDTO> => {
+export const shareStore = async (roomId: number, storeId: string): Promise<ShareStoreResponseDTO> => {
   const url = `/chats/${roomId}/share-store`;
   
   console.log('=== 가게 공유 API 요청 ===');

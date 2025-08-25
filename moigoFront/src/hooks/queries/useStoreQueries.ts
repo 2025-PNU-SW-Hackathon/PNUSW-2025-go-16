@@ -15,7 +15,7 @@ export const useStoreList = (params?: StoreListRequestDTO) => {
 };
 
 // 가게 상세 정보 조회 훅
-export const useStoreDetail = (storeId: number) => {
+export const useStoreDetail = (storeId: string) => {
   return useQuery({
     queryKey: ['stores', 'detail', storeId],
     queryFn: () => getStoreDetail(storeId),
@@ -44,7 +44,7 @@ export const useShareStore = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ roomId, storeId }: { roomId: number; storeId: number }) => 
+    mutationFn: ({ roomId, storeId }: { roomId: number; storeId: string }) => 
       shareStore(roomId, storeId),
     onSuccess: (data, variables) => {
       console.log('가게 공유 성공:', data);
