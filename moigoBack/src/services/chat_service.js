@@ -2194,8 +2194,8 @@ exports.requestPayment = async (roomId, userId, paymentData) => {
   }
 };
 
-// 결제 상태 확인
-exports.getPaymentStatus = async (roomId, userId) => {
+// 구 결제 상태 확인 (별도 이름으로 변경)
+exports.getOldPaymentStatus = async (roomId, userId) => {
   const conn = getConnection();
 
   try {
