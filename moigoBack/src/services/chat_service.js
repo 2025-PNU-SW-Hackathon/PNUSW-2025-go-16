@@ -855,9 +855,9 @@ exports.getAllMessages = async (user_id, room_id) => {
       messageData.message_type = 'store_share';
 
       // 가게 공유 메시지에서 store_id 추출
-      const storeIdMatch = message.message.match(/store_id:\s*(\d+)/);
+      const storeIdMatch = message.message.match(/store_id:\s*([^\s\n]+)/);
       if (storeIdMatch) {
-        messageData.store_id = parseInt(storeIdMatch[1]);
+        messageData.store_id = storeIdMatch[1];  // 문자열 그대로 유지
       }
 
       // 가게명 추출
@@ -2426,8 +2426,8 @@ const extractStoreIdFromMessage = (message) => {
   // 메시지에서 store_id를 추출하는 로직
   // 현재는 메시지 내용에서 추출하는 방식이지만,
   // 실제로는 별도 테이블이나 메타데이터에서 가져와야 함
-  const storeIdMatch = message.match(/store_id:\s*(\d+)/);
-  return storeIdMatch ? parseInt(storeIdMatch[1]) : null;
+  const storeIdMatch = message.match(/store_id:\s*([^\s\n]+)/);
+  return storeIdMatch ? storeIdMatch[1] : null;  // 문자열 그대로 반환
 };
 
 // 🏪 가게 공유 메시지 전송
@@ -2479,7 +2479,7 @@ exports.shareStore = async (user_id, room_id, store_id) => {
     // 현재는 메시지에 store_id를 포함하는 방식으로 처리
     const storeShareData = {
       message_id: nextMessageId,
-      store_id: parseInt(store.store_id) || 0,
+      store_id: store.store_id,  // 문자열 그대로 유지
       store_name: store.store_name,
       store_address: store.store_address,
       store_rating: store.store_rating,

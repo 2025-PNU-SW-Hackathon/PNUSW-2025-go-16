@@ -55,17 +55,15 @@ exports.getStorePaymentInfo = async (req, res, next) => {
   try {
     const { storeId } = req.params;
     
-    // storeId를 숫자로 변환
-    const numericStoreId = parseInt(storeId, 10);
-    
-    if (isNaN(numericStoreId) || numericStoreId <= 0) {
+    // storeId는 문자열일 수도 있으므로 원본 값 사용
+    if (!storeId) {
       return res.status(400).json({
         success: false,
-        message: '유효하지 않은 가게 ID입니다.'
+        message: '가게 ID가 필요합니다.'
       });
     }
     
-    const paymentInfo = await storeService.getStorePaymentInfo(numericStoreId);
+    const paymentInfo = await storeService.getStorePaymentInfo(storeId);
     res.json({ success: true, data: paymentInfo });
   } catch (err) {
     next(err);
@@ -78,13 +76,11 @@ exports.updateStorePaymentInfo = async (req, res, next) => {
     const { storeId } = req.params;
     const { bank_code, account_number, account_holder_name, business_number } = req.body;
     
-    // storeId를 숫자로 변환
-    const numericStoreId = parseInt(storeId, 10);
-    
-    if (isNaN(numericStoreId) || numericStoreId <= 0) {
+    // storeId 유효성 검사
+    if (!storeId) {
       return res.status(400).json({
         success: false,
-        message: '유효하지 않은 가게 ID입니다.'
+        message: '가게 ID가 필요합니다.'
       });
     }
     
@@ -96,7 +92,7 @@ exports.updateStorePaymentInfo = async (req, res, next) => {
       });
     }
 
-    const result = await storeService.updateStorePaymentInfo(numericStoreId, {
+    const result = await storeService.updateStorePaymentInfo(storeId, {
       bank_code,
       account_number,
       account_holder_name,
