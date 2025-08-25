@@ -1174,6 +1174,102 @@ facilities.wifi.available ? '활성화 (주황색)' : '비활성화 (회색)';
 }
 ```
 
+
+# 6.2 프로필 수정 (이미지 포함)
+
+## `PUT /api/v1/users/me`
+
+현재 사용자의 프로필 정보를 수정합니다. **텍스트 필드 + 갤러리에서 선택한 이미지(썸네일)를 함께 전송**할 수 있도록 `multipart/form-data` 형식을 사용합니다.
+
+---
+
+### Headers
+- `Authorization: Bearer <JWT>` ✅ **필수**
+
+---
+
+### Request
+
+- **Content-Type**: `multipart/form-data`
+
+#### Form-data Parameters
+
+| Key                 | Type   | Required | Description                              |
+|---------------------|--------|----------|------------------------------------------|
+| `user_name`         | text   | ❌       | 사용자 이름                               |
+| `user_email`        | text   | ❌       | 이메일                                    |
+| `user_phone_number` | text   | ❌       | 전화번호                                  |
+| `user_region`       | text   | ❌       | 지역                                      |
+| `thumbnail`         | file   | ❌       | 새 프로필 이미지 파일 (갤러리에서 선택)   |
+
+> 모든 텍스트 필드는 선택(Partial Update)이며, `thumbnail` 파일을 포함하면 기존 프로필 이미지를 새 이미지로 교체합니다.
+
+---
+
+### Postman 예시 (form-data)
+
+| Key                 | Value                         | Type |
+|---------------------|-------------------------------|------|
+| user_name           | 홍길동                          | Text |
+| user_email          | newemail@example.com          | Text |
+| user_phone_number   | 010-9876-5432                 | Text |
+| user_region         | 부산                           | Text |
+| thumbnail           | <파일 선택: my_profile.jpg>   | File |
+
+---
+
+### Response (200 OK)
+
+**썸네일 미포함 시 (텍스트만 수정한 경우)**
+
+```json
+{
+  "success": true,
+  "message": "프로필이 수정되었습니다.",
+  "data": {
+    "user_id": "testuser123",
+    "user_name": "홍길동"
+  }
+}
+```
+
+**썸네일 포함 시 (이미지도 변경된 경우, 선택적으로 이미지 정보 포함 가능)**
+
+```json
+{
+  "success": true,
+  "message": "프로필이 수정되었습니다.",
+  "data": {
+    "user_id": "testuser123",
+    "user_name": "홍길동",
+    "thumbnail": {
+      "image_id": 2001,
+      "url": "/api/v1/images/2001"   // 바이너리 조회 엔드포인트
+    }
+  }
+}
+```
+
+> 서버 구현에 따라 `thumbnail` 객체 포함 여부는 선택입니다. (이미지 변경이 발생한 경우에만 포함하도록 권장)
+
+---
+
+### 참고: JSON 전송 유지(이미지 없이)
+이미지를 변경하지 않을 때는 기존처럼 `application/json`으로도 요청 가능합니다.
+
+```
+Content-Type: application/json
+{
+  "user_name": "홍길동",
+  "user_email": "newemail@example.com",
+  "user_phone_number": "010-9876-5432",
+  "user_region": "부산"
+}
+```
+
+이미지를 함께 보낼 때만 `multipart/form-data`를 사용하십시오.
+
+
 ### 6.2 프로필 수정
 - **URL**: `PUT /api/v1/users/me`
 - **설명**: 현재 사용자의 프로필 정보를 수정합니다.
