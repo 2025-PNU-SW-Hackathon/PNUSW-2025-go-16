@@ -47,42 +47,32 @@ class SocketManager {
 
   // Socket 연결
   connect() {
-    const { token, user } = useAuthStore.getState();
+    const { token, user, isLoggedIn } = useAuthStore.getState();
     
-    // console.log('=== 소켓 연결 시도 ===');
-    // console.log('토큰 존재 여부:', !!token);
-    // console.log('사용자 정보:', user);
-    // console.log('사용자 ID:', user?.id);
-    // console.log('로그인 상태:', useAuthStore.getState().isLoggedIn);
-    
-    if (!token) {
-      console.error('토큰이 없어서 소켓 연결을 할 수 없습니다.');
+    // 로그인 상태가 아닌 경우 연결하지 않음
+    if (!isLoggedIn) {
+      console.log('🚫 [SocketManager] 로그인 상태가 아니어서 소켓 연결하지 않습니다.');
       return;
     }
 
-    if (!user?.id) {
-      console.error('사용자 ID가 없어서 소켓 연결을 할 수 없습니다.');
-      return;
-    }
-
-    if (!useAuthStore.getState().isLoggedIn) {
-      console.error('로그인 상태가 아니어서 소켓 연결을 할 수 없습니다.');
+    if (!token || !user?.id) {
+      console.error('❌ [SocketManager] 토큰 또는 사용자 ID가 없어서 소켓 연결을 할 수 없습니다.');
       return;
     }
 
     // 연결 중인 경우 기다리기
     if (this.socket && this.socket.connecting) {
-      console.log('⏳ 소켓 연결 중입니다. 잠시 기다려주세요.');
+      console.log('⏳ [SocketManager] 소켓 연결 중입니다. 잠시 기다려주세요.');
       return;
     }
 
     // 🆕 이미 연결된 경우 재연결하지 않고 기존 연결 사용
     if (this.socket?.connected) {
-      console.log('✅ 이미 소켓이 연결되어 있습니다. 기존 연결을 재사용합니다.');
+      console.log('✅ [SocketManager] 이미 소켓이 연결되어 있습니다. 기존 연결을 재사용합니다.');
       return;
     }
 
-    console.log('🔌 새로운 소켓 연결 시도 - 사용자 ID:', user.id);
+    console.log('🔌 [SocketManager] 새로운 소켓 연결 시도 - 사용자 ID:', user.id);
 
     this.socket = io(SOCKET_URL, {
       auth: {
@@ -253,33 +243,48 @@ class SocketManager {
 
   // 재연결 시도
   private attemptReconnect() {
+    // 🆕 로그인 상태가 아니면 재연결하지 않음
+    const { isLoggedIn } = useAuthStore.getState();
+    if (!isLoggedIn) {
+      console.log('🚫 [SocketManager] 로그인 상태가 아니어서 재연결하지 않습니다.');
+      return;
+    }
+
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('🚫 최대 재연결 시도 횟수 도달. 재연결을 중단합니다.');
+      console.error('🚫 [SocketManager] 최대 재연결 시도 횟수 도달. 재연결을 중단합니다.');
       return;
     }
 
     if (this.reconnectInterval) {
-      console.log('⏳ 이미 재연결 시도 중입니다.');
+      console.log('⏳ [SocketManager] 이미 재연결 시도 중입니다.');
       return; // 이미 재연결 시도 중
     }
 
     // 🆕 이미 연결된 경우 재연결하지 않음
     if (this.socket?.connected) {
-      console.log('✅ 이미 연결되어 있어서 재연결하지 않습니다.');
+      console.log('✅ [SocketManager] 이미 연결되어 있어서 재연결하지 않습니다.');
       this.reconnectAttempts = 0; // 카운터 리셋
       return;
     }
 
     this.reconnectAttempts++;
-    console.log(`🔄 소켓 재연결 시도 ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
+    console.log(`🔄 [SocketManager] 소켓 재연결 시도 ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
 
     this.reconnectInterval = setTimeout(() => {
       this.reconnectInterval = null;
-      // 🆕 재연결 시도 전에 다시 한번 연결 상태 확인
+      
+      // 🆕 재연결 시도 전에 다시 한번 로그인 상태와 연결 상태 확인
+      const { isLoggedIn: currentLoginState } = useAuthStore.getState();
+      if (!currentLoginState) {
+        console.log('🚫 [SocketManager] 재연결 시도 중 로그아웃 감지. 재연결 중단.');
+        this.reconnectAttempts = 0;
+        return;
+      }
+      
       if (!this.socket?.connected) {
         this.connect();
       } else {
-        console.log('✅ 재연결 시도 중 이미 연결됨');
+        console.log('✅ [SocketManager] 재연결 시도 중 이미 연결됨');
         this.reconnectAttempts = 0; // 카운터 리셋
       }
     }, 2000 * this.reconnectAttempts); // 지수적 백오프
@@ -558,18 +563,60 @@ class SocketManager {
 
   // 소켓 연결 해제
   disconnect() {
-    console.log('=== 소켓 연결 해제 ===');
+    console.log('🔌 [SocketManager] === 소켓 연결 해제 시작 ===');
+    
+    // 재연결 타이머 정리
+    if (this.reconnectInterval) {
+      clearTimeout(this.reconnectInterval);
+      this.reconnectInterval = null;
+      console.log('🧹 [SocketManager] 재연결 타이머 정리 완료');
+    }
+    
+    // 소켓 연결 해제
     if (this.socket) {
-      console.log('기존 소켓 연결 해제 중...');
+      console.log('🔌 [SocketManager] 기존 소켓 연결 해제 중...');
+      
+      // 수동 해제 표시를 위해 disconnect 이벤트에서 재연결하지 않도록 함
       this.socket.disconnect();
       this.socket = null;
-      this.messageCallbacks = [];
-      this.errorCallbacks = [];
-      this.currentRoomId = null; // 방 ID 초기화
-      console.log('소켓 연결 해제 완료');
+      
+      console.log('✅ [SocketManager] 소켓 연결 해제 완료');
     } else {
-      console.log('연결된 소켓이 없습니다.');
+      console.log('ℹ️ [SocketManager] 연결된 소켓이 없습니다.');
     }
+    
+    // 모든 콜백 정리
+    this.clearAllCallbacks();
+    
+    // 상태 초기화
+    this.currentRoomId = null;
+    this.reconnectAttempts = 0;
+    
+    console.log('🧹 [SocketManager] === 소켓 연결 해제 및 정리 완료 ===');
+  }
+  
+  // 🆕 모든 콜백 정리 메서드
+  private clearAllCallbacks() {
+    console.log('🧹 [SocketManager] 모든 콜백 정리 시작');
+    
+    this.messageCallbacks = [];
+    this.messageUpdatedCallbacks = [];
+    this.errorCallbacks = [];
+    this.connectionStatusCallbacks = [];
+    this.messageAckCallbacks = [];
+    this.messageErrorCallbacks = [];
+    this.reservationStatusCallbacks = [];
+    this.userLeftRoomCallbacks = [];
+    this.hostTransferredCallbacks = [];
+    this.participantKickedCallbacks = [];
+    this.storeSelectedCallbacks = [];
+    this.paymentStartedCallbacks = [];
+    this.paymentCompletedCallbacks = [];
+    this.paymentFullyCompletedCallbacks = [];
+    this.paymentGuideUpdatedCallbacks = [];
+    this.paymentStatusUpdatedCallbacks = [];
+    
+    console.log('✅ [SocketManager] 모든 콜백 정리 완료');
   }
 
   // 연결 상태 확인

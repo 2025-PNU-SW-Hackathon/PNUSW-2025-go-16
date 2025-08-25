@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { PasswordChangeForm, PasswordValidation } from '@/types/reservation';
+import { socketManager } from '@/utils/socketUtils';
 
 // 로그인 사용자 타입 정의 - 서버 응답에 맞게 수정
 interface AuthUser {
@@ -56,14 +57,26 @@ export const useAuthStore = create<AuthState>()(
       
       // 로그아웃 액션
       logout: () => {
+        console.log('🚪 [AuthStore] 로그아웃 시작 - 소켓 연결 정리');
+        
+        // 소켓 연결 해제 및 정리
+        try {
+          socketManager.disconnect();
+          console.log('✅ [AuthStore] 소켓 연결 해제 완료');
+        } catch (error) {
+          console.error('❌ [AuthStore] 소켓 연결 해제 중 오류:', error);
+        }
+        
         set({
           isLoggedIn: false,
           user: null,
           token: null,
           isLoading: false,
         });
+        
         // AsyncStorage에서도 제거
         AsyncStorage.removeItem('auth-storage');
+        console.log('✅ [AuthStore] 로그아웃 완료');
       },
       
       // 로딩 상태 설정

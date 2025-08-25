@@ -335,14 +335,40 @@ export default function ChatRoomScreen() {
       return;
     }
     
-    // 🆕 이미 연결되어 있으면 재연결하지 않음
-    if (!socketManager.isConnected()) {
-      socketManager.connect();
-    }
+    // 🔄 채팅방 입장 시 무조건 새로고침부터 실행
+    console.log('🔄 [ChatRoomScreen] 채팅방 입장 - 새로고침 시작');
+    const performInitialRefresh = async () => {
+      try {
+        // 메시지 새로고침
+        await refetch();
+        
+        // 정산 상태 새로고침
+        await refetchPaymentStatus();
+        
+        console.log('✅ [ChatRoomScreen] 초기 새로고침 완료');
+      } catch (error) {
+        console.error('❌ [ChatRoomScreen] 초기 새로고침 실패:', error);
+      }
+    };
     
-    // 🆕 채팅방 입장 시 정산 상태 즉시 확인
-    console.log('💰 [ChatRoomScreen] 채팅방 입장 시 정산 상태 확인');
-    refetchPaymentStatus();
+    // 새로고침 실행
+    performInitialRefresh();
+    
+    // 🆕 스마트한 소켓 연결 관리 (새로고침 후)
+    const isSocketConnected = socketManager.isConnected();
+    console.log('📡 [ChatRoomScreen] 소켓 연결 상태 확인:', {
+      isConnected: isSocketConnected,
+      isConnecting: socketManager.isConnecting()
+    });
+    
+    if (!isSocketConnected && !socketManager.isConnecting()) {
+      console.log('🔌 [ChatRoomScreen] 소켓 연결 시도');
+      socketManager.connect();
+    } else if (isSocketConnected) {
+      console.log('✅ [ChatRoomScreen] 소켓이 이미 연결됨. 채팅방만 변경합니다.');
+    } else {
+      console.log('⏳ [ChatRoomScreen] 소켓 연결 중. 대기합니다.');
+    }
     
     // 연결 상태 감지
     const handleConnectionChange = (connected: boolean) => {
