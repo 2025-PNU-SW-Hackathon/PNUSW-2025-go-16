@@ -312,7 +312,11 @@ export default function ChatRoomScreen() {
             storeName: msg.store_name || '가게 이름',
             rating: msg.store_rating || 0,
             reviewCount: 0, // API에서 제공되지 않는 경우 기본값
-            imageUrl: msg.store_thumbnail || ''
+            imageUrl: msg.store_thumbnail ? 
+              (msg.store_thumbnail.startsWith('/') ? 
+                `http://spotple.kr:3001${msg.store_thumbnail}` : 
+                msg.store_thumbnail
+              ) : ''
           } : undefined,
           // 가게 관련 추가 필드들
           store_name: msg.store_name,
@@ -1718,30 +1722,35 @@ export default function ChatRoomScreen() {
     //   messageTypes: group.messages.map(msg => ({ id: msg.id, type: msg.type, message_type: msg.message_type }))
     // });
     
-    // 🏪 일반 메시지 그룹 처리 (텍스트 + 가게 공유 포함)
-    if (group.type === 'user') {
-      // ChatMessage를 ChatBubble이 기대하는 형태로 변환
-      const chatBubbleMessages = group.messages.map(msg => ({
-        id: msg.id,
-        type: msg.type,
-        content: msg.message,
-        storeInfo: msg.storeInfo || (msg.type === 'store_share' ? {
-          storeName: msg.store_name || '가게 이름',
-          rating: msg.store_rating || 0,
-          reviewCount: 0,
-          imageUrl: msg.store_thumbnail || ''
-        } : undefined),
-        status: msg.status,
-        store_id: msg.store_id
-      }));
+    // 🏪 가게 공유 메시지 그룹 처리
+    const storeShareMessages = group.messages.filter(msg => msg.type === 'store_share');
+    // console.log('🏪 [가게 공유 메시지 필터링]', {
+    //   totalMessages: group.messages.length,
+    //   storeShareCount: storeShareMessages.length,
+    //   allMessageTypes: group.messages.map(msg => msg.type)
+    // });
+    
+    if (storeShareMessages.length > 0) {
+      // console.log('✅ [가게 공유 메시지 그룹 렌더링]', {
+      //   groupId: group.id,
+      //   messagesCount: storeShareMessages.length,
+      //   firstMessage: storeShareMessages[0],
+      //   firstMessageStoreInfo: storeShareMessages[0]?.storeInfo
+      // });
       
-      return (
-        <View key={group.id}>
-          <ChatBubble
-            messages={chatBubbleMessages}
-            isMyMessage={group.isMyMessage}
-            senderName={group.senderName}
-            senderAvatar={group.senderAvatar}
+      return storeShareMessages.map(msg => (
+        <View key={msg.id} className="mb-4">
+          <StoreShareMessage
+            isMyMessage={msg.senderId === user?.id}
+            senderName={msg.senderName}
+            senderAvatar={msg.senderAvatar}
+            storeInfo={msg.storeInfo || {
+              storeName: msg.store_name || '가게 이름',
+              rating: msg.store_rating || 0,
+              reviewCount: 0,
+              imageUrl: msg.store_thumbnail || '/api/v1/images/53' // 기본 이미지 URL 추가
+            }}
+            storeId={msg.store_id}
             chatRoom={chatRoom}
             isHost={isCurrentUserHost}
           />

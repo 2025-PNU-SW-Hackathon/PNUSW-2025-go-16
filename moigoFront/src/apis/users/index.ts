@@ -392,4 +392,39 @@ export const deleteStore = async (): Promise<{ success: boolean; message: string
   return response.data;
 };
 
+// POST /api/v1/stores/me/images - 매장 이미지 업로드
+export const uploadStoreImages = async (images: File[]): Promise<any> => {
+  const formData = new FormData();
+  images.forEach((image, index) => {
+    formData.append('images', image);
+  });
+  
+  const response = await apiClient.post('/stores/me/images', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+// GET /api/v1/stores/me/images - 매장 이미지 조회
+export const getStoreImages = async (): Promise<any> => {
+  const response = await apiClient.get('/stores/me/images');
+  return response.data;
+};
+
+// PUT /api/v1/stores/me/images/reorder - 이미지 순서 변경
+export const reorderStoreImages = async (imageIds: string[]): Promise<any> => {
+  const response = await apiClient.put('/stores/me/images/reorder', {
+    image_ids: imageIds
+  });
+  return response.data;
+};
+
+// PUT /api/v1/stores/me/images/{imageId}/main - 메인 이미지 설정
+export const setMainStoreImage = async (imageId: string): Promise<any> => {
+  const response = await apiClient.put(`/stores/me/images/${imageId}/main`);
+  return response.data;
+};
+
 

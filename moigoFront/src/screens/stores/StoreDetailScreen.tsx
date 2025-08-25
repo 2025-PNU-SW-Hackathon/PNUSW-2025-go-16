@@ -61,6 +61,21 @@ export default function StoreDetailScreen() {
     business_number: '',
   };
 
+  // 가게 썸네일 URL 처리 (포트 3001 포함)
+  const getThumbnailUrl = (thumbnailUrl: string | null | undefined) => {
+    if (!thumbnailUrl) return null;
+    
+    // 상대경로인 경우 포트 3001을 포함한 절대 URL로 변환
+    if (thumbnailUrl.startsWith('/')) {
+      return `http://spotple.kr:3001${thumbnailUrl}`;
+    }
+    
+    // 절대 URL인 경우 그대로 사용
+    return thumbnailUrl;
+  };
+
+  const thumbnailUrl = getThumbnailUrl(storeDetail?.store_thumbnail);
+
   // 평점을 별점으로 변환
   const renderStars = (rating: number) => {
     const safeRating = rating || 0;
@@ -267,23 +282,23 @@ export default function StoreDetailScreen() {
           <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
             {/* 가게 이미지 */}
             <View className="w-full h-64 bg-gray-200">
-              {storeDetail.store_thumbnail ? (
+              {thumbnailUrl ? (
                 <Image
-                  source={{ uri: storeDetail.store_thumbnail }}
+                  source={{ uri: thumbnailUrl }}
                   className="w-full h-full"
                   resizeMode="cover"
                   onLoad={() => {
                     console.log('✅ [StoreDetail] 이미지 로드 성공:', {
                       storeId: storeDetail.store_id,
                       storeName: storeDetail.store_name,
-                      thumbnailUrl: storeDetail.store_thumbnail
+                      thumbnailUrl: thumbnailUrl
                     });
                   }}
                   onError={(error) => {
                     console.log('❌ [StoreDetail] 이미지 로드 실패:', {
                       storeId: storeDetail.store_id,
                       storeName: storeDetail.store_name,
-                      thumbnailUrl: storeDetail.store_thumbnail,
+                      thumbnailUrl: thumbnailUrl,
                       error: error.nativeEvent
                     });
                   }}

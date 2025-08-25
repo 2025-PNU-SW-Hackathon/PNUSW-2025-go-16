@@ -24,6 +24,10 @@ import {
   updateStoreFacility,
   deleteStoreFacility,
   toggleStoreFacility,
+  uploadStoreImages,
+  getStoreImages,
+  reorderStoreImages,
+  setMainStoreImage,
 } from '../../apis/users';
 import { deleteUser, deleteStore } from '../../apis/users';
 import type {
@@ -533,6 +537,90 @@ export const useDeleteAccount = () => {
     },
     onError: (error) => {
       console.error('❌ [useDeleteAccount] 회원 탈퇴 실패:', error);
+    },
+  });
+}; 
+
+// 매장 이미지 업로드
+export const useUploadStoreImages = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  
+  return useMutation({
+    mutationFn: (images: File[]) => {
+      if (user?.userType !== 'business') {
+        throw new Error('사장님 계정으로만 접근 가능합니다.');
+      }
+      return uploadStoreImages(images);
+    },
+    onSuccess: (data) => {
+      console.log('✅ 매장 이미지 업로드 성공:', data);
+      // 매장 정보와 이미지 쿼리 무효화
+      queryClient.invalidateQueries({ queryKey: ['storeInfo'] });
+      queryClient.invalidateQueries({ queryKey: ['storeImages'] });
+    },
+    onError: (error) => {
+      console.error('❌ 매장 이미지 업로드 실패:', error);
+    },
+  });
+};
+
+// 매장 이미지 조회
+export const useStoreImages = () => {
+  const { user } = useAuthStore();
+  
+  return useQuery({
+    queryKey: ['storeImages'],
+    queryFn: getStoreImages,
+    enabled: user?.userType === 'business',
+    staleTime: 5 * 60 * 1000, // 5분
+  });
+};
+
+// 매장 이미지 순서 변경
+export const useReorderStoreImages = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  
+  return useMutation({
+    mutationFn: (imageIds: string[]) => {
+      if (user?.userType !== 'business') {
+        throw new Error('사장님 계정으로만 접근 가능합니다.');
+      }
+      return reorderStoreImages(imageIds);
+    },
+    onSuccess: (data) => {
+      console.log('✅ 매장 이미지 순서 변경 성공:', data);
+      // 매장 정보와 이미지 쿼리 무효화
+      queryClient.invalidateQueries({ queryKey: ['storeInfo'] });
+      queryClient.invalidateQueries({ queryKey: ['storeImages'] });
+    },
+    onError: (error) => {
+      console.error('❌ 매장 이미지 순서 변경 실패:', error);
+    },
+  });
+};
+
+// 매장 메인 이미지 설정
+export const useSetMainStoreImage = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  
+  return useMutation({
+    mutationFn: (imageId: string) => {
+      if (user?.userType !== 'business') {
+        throw new Error('사장님 계정으로만 접근 가능합니다.');
+      }
+      return setMainStoreImage(imageId);
+    },
+    onSuccess: (data) => {
+      console.log('✅ 매장 메인 이미지 설정 성공:', data);
+      // 매장 정보와 이미지 쿼리 무효화
+      queryClient.invalidateQueries({ queryKey: ['storeInfo'] });
+      queryClient.invalidateQueries({ queryKey: ['storeImages'] });
+    },
+    onError: (error) => {
+      console.error('❌ 매장 메인 이미지 설정 실패:', error);
     },
   });
 }; 
