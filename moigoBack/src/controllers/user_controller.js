@@ -139,11 +139,19 @@ exports.getMyProfile = async (req, res, next) => {
   }
 };
 
+//내 프로필 조회
 exports.getMyMatchings = async (req, res, next) => {
   try {
     const user_id = req.user.user_id;
     const data = await userService.getMyMatchings(user_id);
-    res.status(200).json({ success: true, data });
+
+    // 각 매칭 데이터에 user_thumbnail 필드 추가
+    const enrichedData = data.map(item => ({
+      ...item,
+      user_thumbnail: `/api/v1/users/${item.user_id}/thumbnail`
+    }));
+
+    res.status(200).json({ success: true, data: enrichedData });
   } catch (err) {
     next(err);
   }
