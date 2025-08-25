@@ -667,7 +667,7 @@ exports.getMyStoreInfo = async (store_id) => {
     }
     
     // 사진 정보 (기본값)
-    const photos = store.store_thumbnail ? [store.store_thumbnail] : [];
+    const photos = store.store_thumbnail ? store.store_thumbnail.split(',') : [];
     
     // 스포츠 카테고리 (기본값)
     const sports_categories = ['축구', '야구', '농구'];
@@ -851,9 +851,10 @@ exports.updateMyStoreDetails = async (store_id, details) => {
     
     // 사진 정보 업데이트
     if (photos && photos.length > 0) {
+      const photosString = photos.join(',');  // ✅ 모든 사진을 쉼표로 구분
       await conn.query(
         'UPDATE store_table SET store_thumbnail = ? WHERE store_id = ?',
-        [photos[0], store_id]
+        [photosString, store_id]
       );
     }
     
