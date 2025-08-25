@@ -1484,11 +1484,15 @@ exports.startPayment = async (user_id, room_id) => {
     }
 
     // 4. 가게 정보 및 예약금 정보 조회
+    console.log('🔍 [PAYMENT] 가게 정보 조회 시작 - store_id:', reservation.selected_store_id);
+    
     const [storeInfo] = await conn.query(
-      `SELECT store_name, bank_name, account_number, account_holder, deposit_amount
+      `SELECT store_id, store_name, bank_name, account_number, account_holder, deposit_amount
        FROM store_table WHERE store_id = ?`,
       [reservation.selected_store_id]
     );
+
+    console.log('🔍 [PAYMENT] 가게 정보 조회 결과:', storeInfo);
 
     if (!storeInfo.length) {
       const err = new Error("가게 정보를 찾을 수 없습니다.");
@@ -1498,13 +1502,21 @@ exports.startPayment = async (user_id, room_id) => {
     }
 
     const store = storeInfo[0];
+    const totalParticipants = reservation.reservation_participant_cnt;
     
     // 🔴 가게에서 설정한 예약금을 참가자 수로 나누어 1인당 금액 계산 (n빵)
-    const totalParticipants = reservation.reservation_participant_cnt;
-    const storeDepositAmount = store.deposit_amount || 0;
+    const storeDepositAmount = parseInt(store.deposit_amount) || 0;
+    
+    console.log('💰 [PAYMENT] 예약금 계산 정보:', {
+      store_id: store.store_id,
+      store_name: store.store_name,
+      original_deposit_amount: store.deposit_amount,
+      parsed_deposit_amount: storeDepositAmount,
+      total_participants: totalParticipants
+    });
     
     if (storeDepositAmount <= 0) {
-      const err = new Error("가게에서 예약금이 설정되지 않았습니다. 가게에 문의해주세요.");
+      const err = new Error(`가게에서 예약금이 설정되지 않았습니다. (현재: ${storeDepositAmount}원) 가게에 문의해주세요.`);
       err.statusCode = 400;
       err.errorCode = "NO_DEPOSIT_AMOUNT";
       throw err;
@@ -1512,6 +1524,13 @@ exports.startPayment = async (user_id, room_id) => {
     
     const paymentPerPerson = Math.ceil(storeDepositAmount / totalParticipants); // 올림 처리로 n빵
     const totalAmount = paymentPerPerson * totalParticipants;
+    
+    console.log('💰 [PAYMENT] 최종 계산 결과:', {
+      store_deposit_amount: storeDepositAmount,
+      payment_per_person: paymentPerPerson,
+      total_amount: totalAmount,
+      calculation: `${storeDepositAmount} ÷ ${totalParticipants} = ${paymentPerPerson} (올림)`
+    });
 
     // 5. 정산 세션 생성
     const paymentId = `payment_${room_id}_${Date.now()}`;
