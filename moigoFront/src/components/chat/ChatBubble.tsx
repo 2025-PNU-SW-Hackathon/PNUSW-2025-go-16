@@ -137,10 +137,6 @@ export default function ChatBubble({
                 <Text className="text-sm font-semibold text-gray-800 mr-2">
                   {senderName}
                 </Text>
-                {/* 🆕 방장 배지 추가 */}
-                {isHost && (
-                  <HostBadge size="small" style="crown" showText={false} />
-                )}
               </View>
             )}
             

@@ -214,7 +214,6 @@ export default function BusinessHomeScreen() {
         <View className="mb-8">
           <View className="flex-row justify-between items-center mb-3">
             <Text className="text-xl font-bold text-gray-800">예약 관리</Text>
-            <Text className="text-lg font-semibold text-orange-500">전체보기</Text>
           </View>
           
           {/* 예약 카드들 */}
@@ -276,23 +275,6 @@ export default function BusinessHomeScreen() {
           )}
         </View>
 
-        {/* 프로모션 관리 섹션 */}
-        <View className="mb-6">
-          <View className="flex-row justify-between items-center mb-3">
-            <Text className="text-lg font-medium text-gray-800">프로모션 관리</Text>
-            <TouchableOpacity>
-              <Text className="text-sm font-medium text-orange-500">추가하기</Text>
-            </TouchableOpacity>
-          </View>
-          
-          {/* 프로모션 카드 */}
-          <PromotionCard
-            status="진행중"
-            title="월드컵 기념 맥주 1+1"
-            period="7월 10일 ~ 7월 15일"
-            description="축구 경기 시청 고객 한정 생맥주 1+1 이벤트"
-          />
-        </View>
       </ScrollView>
 
       {/* 분리된 모달들 */}
