@@ -83,7 +83,7 @@ exports.saveImageLocal = async ({ ownerType, ownerId, file, isPublic = 1 }) => {
     `UPDATE images
         SET is_public = 0
       WHERE owner_type = ? AND owner_id = ?`,
-    [ownerType, String(ownerId)]
+    ['user', String(ownerId)]
   );
 
   // DB insert (storage_type='local', bucket=NULL, object_key='images/<fileName>')
@@ -114,9 +114,10 @@ exports.getImageMetaById = async (imageId) => {
             storage_type, bucket, object_key,
             mime_type, byte_size, is_public, created_at
        FROM images
-      WHERE owner_id = ? AND is_public = 1`,
+      WHERE id = ? AND is_public = 1`,
     [imageId]
   );
+  console.log(rows);
   if (!rows.length) return null;
 
   const meta = rows[0];

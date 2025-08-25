@@ -3,7 +3,6 @@ const userService = require('../services/user_service');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() }); // req.file.buffer 사용
 const imageService = require('../services/image_service');
-const { getConnection } = require('../config/db_config');
 
 // 👤 아이디 중복 검사 컨트롤러
 exports.checkUserIdDuplicate = async (req, res, next) => {
@@ -93,11 +92,38 @@ exports.getUserProfile = async (req, res, next) => {
   }
 };
 
+
 exports.getMyReviews = async (req, res, next) => {
   try {
     const user_id = req.user.user_id;
-    const data = await userService.getMyReviews(user_id);
-    res.status(200).json({ success: true, data });
+
+    // 기존 서비스 호출 (리뷰 목록)
+    const reviews = await userService.getMyReviews(user_id);
+    // reviews 예시 요소:
+    // {
+    //   review_id, store_id, store_name,
+    //   review_text, review_rating, review_created_time
+    // }
+
+    // 각 리뷰에 images 배열 붙이기
+    const enriched = await Promise.all(
+      reviews.map(async (r) => {
+        const imgs = await imageService.listImagesByOwner({
+          ownerType: 'review',
+          ownerId: r.review_id,
+        });
+
+        const images = imgs.map(img => ({
+          image_id: img.image_id,
+          url: `/api/v1/images/${img.image_id}`, // 바이너리 스트리밍 API
+          mime_type: img.mime_type,
+        }));
+
+        return { ...r, images };
+      })
+    );
+
+    res.status(200).json({ success: true, data: enriched });
   } catch (err) {
     next(err);
   }
@@ -134,16 +160,64 @@ exports.getMyReservations = async (req, res, next) => {
   }
 };
 
-exports.updateProfile = async (req, res, next) => {
-  try {
-    const user_id = req.user.user_id;
-    const profileData = req.body;
-    await userService.updateProfile(user_id, profileData);
-    res.status(200).json({ success: true, message: '프로필이 수정되었습니다.' });
-  } catch (err) {
-    next(err);
-  }
-};
+/**
+ * PUT /api/v1/users/me
+ * Content-Type:
+ *  - application/json (이미지 없이 텍스트만 수정)
+ *  - multipart/form-data (텍스트 + thumbnail 파일 함께 수정)
+ *
+ * form-data keys:
+ *  - user_name, user_email, user_phone_number, user_region (텍스트)
+ *  - thumbnail (file, 선택)
+ */
+exports.updateProfile = [
+  upload.single('thumbnail'), // 파일 없으면 그냥 무시됨
+  async (req, res, next) => {
+    try {
+      const user_id = req.user.user_id;
+      const profileData = req.body;
+
+      // 1) 텍스트 필드 업데이트 (기존 로직 사용)
+      await userService.updateProfile(user_id, profileData);
+
+      // 2) 썸네일 파일이 있으면 이미지 저장 + user_table.user_thumbnail 매핑
+      let thumbnailPayload = null;
+      if (req.file) {
+        // 2-1) 이미지 저장 (images 테이블 insert + 파일 저장)
+        const saved = await imageService.saveImageLocal({
+          ownerType: 'user',
+          ownerId:   user_id,
+          file:      req.file,
+          isPublic:  1, // 공개 정책에 맞게 설정
+        });
+
+        // (선택) 이전 파일/레코드 삭제
+        // if (prevImageId && Number(prevImageId) !== Number(saved.image_id)) {
+        //   try { await imageService.deleteImage(prevImageId); } catch (_) {}
+        // }
+
+        // 응답에 노출할 썸네일 정보
+        thumbnailPayload = {
+          image_id: saved.image_id,
+          url: `/api/v1/users/${user_id}/thumbnail`,
+        };
+      }
+
+      // 3) 응답
+      res.status(200).json({
+        success: true,
+        message: '프로필이 수정되었습니다.',
+        data: {
+          user_id,
+          ...(profileData.user_name ? { user_name: profileData.user_name } : {}),
+          ...(thumbnailPayload ? { thumbnail: thumbnailPayload } : {}),
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+];
 
 exports.updatePassword = async (req, res, next) => {
   try {
