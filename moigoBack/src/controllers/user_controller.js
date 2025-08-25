@@ -133,25 +133,21 @@ exports.getMyProfile = async (req, res, next) => {
   try {
     const user_id = req.user.user_id;
     const data = await userService.getMyProfile(user_id);
-    res.status(200).json({ success: true, data });
+    const enrichedData = data.map(item => ({
+      ...item,
+      user_thumbnail: `/api/v1/users/${user_id}/thumbnail`
+    }));
+    res.status(200).json({ success: true, data : enrichedData });
   } catch (err) {
     next(err);
   }
 };
 
-//내 프로필 조회
 exports.getMyMatchings = async (req, res, next) => {
   try {
     const user_id = req.user.user_id;
     const data = await userService.getMyMatchings(user_id);
-
-    // 각 매칭 데이터에 user_thumbnail 필드 추가
-    const enrichedData = data.map(item => ({
-      ...item,
-      user_thumbnail: `/api/v1/users/${user_id}/thumbnail`
-    }));
-
-    res.status(200).json({ success: true, data: enrichedData });
+    res.status(200).json({ success: true, data });
   } catch (err) {
     next(err);
   }
