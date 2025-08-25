@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Image } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Image, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/types/RootStackParamList';
 import { Feather } from '@expo/vector-icons';
 import Toast from '@/components/common/Toast';
+import { useImagePicker } from '@/hooks/useImagePicker';
 import { 
   useStoreInfo, 
   useUpdateStoreDetailInfo,
@@ -33,6 +34,9 @@ interface Facility {
 
 export default function StoreDetailInfoScreen() {
   const navigation = useNavigation<NavigationProp>();
+  
+  // 이미지 선택 훅
+  const { pickImage, pickMultipleImages, images: selectedImages, setImages: setSelectedImages } = useImagePicker();
   
   // API 훅 사용
   const { data: storeInfoData, isLoading: isStoreInfoLoading } = useStoreInfo();
@@ -77,9 +81,19 @@ export default function StoreDetailInfoScreen() {
 
   const [facilities, setFacilities] = useState<Facility[] | null>(null);
 
-  const [photos, setPhotos] = useState<string[]>([
-    'photo1', 'photo2', 'photo3', 'photo4'
-  ]);
+  // 실제 이미지 URI 배열로 변경
+  const [photos, setPhotos] = useState<string[]>([]);
+
+  // 선택된 이미지들이 있으면 photos에 추가
+  useEffect(() => {
+    if (selectedImages.length > 0) {
+      const newImages = selectedImages.filter(img => !photos.includes(img));
+      if (newImages.length > 0) {
+        setPhotos(prev => [...prev, ...newImages]);
+        setSelectedImages([]); // 선택된 이미지들 초기화
+      }
+    }
+  }, [selectedImages, photos, setSelectedImages]);
 
   // API 데이터로 초기화
   useEffect(() => {
@@ -89,6 +103,7 @@ export default function StoreDetailInfoScreen() {
       console.log('🏪 [화면] 전체 storeInfoData:', storeInfoData);
       console.log('🏪 [화면] store_info:', info);
       console.log('🏪 [화면] facilities 필드:', info.facilities);
+      console.log('🏪 [화면] photos 필드:', info.photos); // 사진 필드 로깅 추가
       
       // 매장 소개
       if (info.bio) {
@@ -109,9 +124,28 @@ export default function StoreDetailInfoScreen() {
       // 편의시설은 별도 API에서 조회하므로 여기서는 설정하지 않음
       console.log('🏪 [화면] 편의시설은 별도 API에서 조회됨');
       
-      // 사진
-      if (info.photos && Array.isArray(info.photos)) {
-        setPhotos(info.photos);
+      // 사진 - 더 자세한 로깅 추가
+      if (info.photos && Array.isArray(info.photos) && info.photos.length > 0) {
+        console.log('🏪 [화면] 사진 데이터 로드됨:', info.photos);
+        
+        // 잘린 URL 필터링 (file://로 시작하고 .png, .jpg, .jpeg로 끝나는 완전한 URL만 허용)
+        const validPhotos = info.photos.filter(photo => {
+          const isValid = photo.startsWith('file://') && 
+                         (photo.endsWith('.png') || photo.endsWith('.jpg') || photo.endsWith('.jpeg')) &&
+                         photo.length > 50; // 최소 길이 체크 (잘린 URL 방지)
+          
+          if (!isValid) {
+            console.warn('🏪 [화면] 잘린 이미지 URL 감지됨:', photo);
+          }
+          
+          return isValid;
+        });
+        
+        console.log('🏪 [화면] 유효한 사진 개수:', validPhotos.length, '전체:', info.photos.length);
+        setPhotos(validPhotos);
+      } else {
+        console.log('🏪 [화면] 사진 데이터가 없거나 빈 배열:', info.photos);
+        setPhotos([]); // 사진이 없으면 빈 배열로 설정
       }
     }
   }, [storeInfoData]);
@@ -152,6 +186,11 @@ export default function StoreDetailInfoScreen() {
       console.log('✅ [화면] 편의시설 상태 업데이트 완료');
     }
   }, [facilitiesData]); // facilities 의존성 제거
+
+  // photos 상태 변화 추적
+  useEffect(() => {
+    console.log('🏪 [화면] photos 상태 변화:', photos);
+  }, [photos]);
 
   // 토스트 표시 함수들
   const showSuccessMessage = (message: string) => {
@@ -330,13 +369,35 @@ export default function StoreDetailInfoScreen() {
   };
 
   const removePhoto = (index: number) => {
-    setPhotos(prev => prev.filter((_, i) => i !== index));
+    Alert.alert(
+      '사진 삭제',
+      '이 사진을 삭제하시겠습니까?',
+      [
+        { text: '취소', style: 'cancel' },
+        { 
+          text: '삭제', 
+          style: 'destructive',
+          onPress: () => setPhotos(prev => prev.filter((_, i) => i !== index))
+        }
+      ]
+    );
   };
 
-  const addPhoto = () => {
-    if (photos.length < 10) {
-      setPhotos(prev => [...prev, `photo${Date.now()}`]);
+  const addPhoto = async () => {
+    if (photos.length >= 10) {
+      Alert.alert('알림', '최대 10장까지만 추가할 수 있습니다.');
+      return;
     }
+    await pickImage();
+  };
+
+  const addMultiplePhotos = async () => {
+    const remainingSlots = 10 - photos.length;
+    if (remainingSlots <= 0) {
+      Alert.alert('알림', '최대 10장까지만 추가할 수 있습니다.');
+      return;
+    }
+    await pickMultipleImages();
   };
 
   const handleSave = () => {
@@ -447,9 +508,9 @@ export default function StoreDetailInfoScreen() {
               {Array.from({ length: 9 }).map((_, index) => (
                 <View
                   key={index}
-                  className="flex-row items-center px-3 py-2 rounded-full border border-gray-300 bg-gray-100"
+                  className="flex-row items-center px-3 py-2 bg-gray-100 rounded-full border border-gray-300"
                 >
-                  <View className="w-5 h-5 rounded-full bg-gray-300 mr-2" />
+                  <View className="mr-2 w-5 h-5 bg-gray-300 rounded-full" />
                   <Text className="text-sm font-medium text-gray-400">
                     {['WiFi', '화장실', 'TV/스크린', '콘센트', '주차장', '금연구역', '단체석', '흡연구역', '무선충전'][index]}
                   </Text>
@@ -491,32 +552,79 @@ export default function StoreDetailInfoScreen() {
           <Text className="mb-3 text-lg font-bold text-gray-800">매장 사진</Text>
           <Text className="mb-3 text-sm text-gray-500">최대 10장</Text>
           
-          {/* 사진 추가 버튼 */}
-          <TouchableOpacity 
-            className="justify-center items-center mb-4 w-full h-32 rounded-xl border-2 border-gray-300 border-dashed"
-            onPress={addPhoto}
-            disabled={photos.length >= 10}
-          >
-            <Feather name="camera" size={32} color="#9CA3AF" />
-            <Text className="mt-2 text-gray-500">사진 추가하기</Text>
-          </TouchableOpacity>
+          {/* 사진 추가 버튼들 */}
+          {photos.length < 10 && (
+            <View className="flex-row gap-3 mb-4">
+              <TouchableOpacity 
+                className="flex-1 justify-center items-center h-32 rounded-xl border-2 border-gray-300 border-dashed"
+                onPress={addPhoto}
+              >
+                <Feather name="camera" size={24} color="#9CA3AF" />
+                <Text className="mt-2 text-sm text-gray-500">사진 1장 추가</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                className="flex-1 justify-center items-center h-32 rounded-xl border-2 border-gray-300 border-dashed"
+                onPress={addMultiplePhotos}
+              >
+                <Feather name="image" size={24} color="#9CA3AF" />
+                <Text className="mt-2 text-sm text-gray-500">사진 여러장 추가</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* 기존 사진들 */}
-          <View className="flex-row flex-wrap gap-3">
-            {photos.map((photo, index) => (
-              <View key={index} className="relative">
-                <View className="justify-center items-center w-20 h-20 bg-gray-200 rounded-lg">
-                  <Text className="text-xs text-gray-500">사진 {index + 1}</Text>
-                </View>
-                <TouchableOpacity 
-                  className="absolute -top-2 -right-2 justify-center items-center w-6 h-6 bg-red-500 rounded-full"
-                  onPress={() => removePhoto(index)}
-                >
-                  <Feather name="x" size={14} color="white" />
-                </TouchableOpacity>
-              </View>
-            ))}
-          </View>
+          {photos.length > 0 && (
+            <View className="flex-row flex-wrap gap-3">
+              {photos.map((photo, index) => {
+                // 잘린 URL 체크
+                const isTruncated = !photo.startsWith('file://') || 
+                                   !(photo.endsWith('.png') || photo.endsWith('.jpg') || photo.endsWith('.jpeg')) ||
+                                   photo.length < 50;
+                
+                return (
+                  <View key={index} className="relative">
+                    {isTruncated ? (
+                      // 잘린 URL인 경우 에러 표시
+                      <View className="justify-center items-center w-20 h-20 bg-red-100 rounded-lg border border-red-300">
+                        <Feather name="alert-triangle" size={20} color="#EF4444" />
+                        <Text className="mt-1 text-xs text-red-600 text-center">잘린 이미지</Text>
+                      </View>
+                    ) : (
+                      // 정상 이미지 표시
+                      <Image 
+                        source={{ uri: photo }} 
+                        style={{ width: 80, height: 80, borderRadius: 8 }}
+                        resizeMode="cover"
+                        onLoadStart={() => console.log(`🏪 [화면] 이미지 ${index} 로딩 시작:`, photo)}
+                        onLoad={() => console.log(`🏪 [화면] 이미지 ${index} 로딩 완료:`, photo)}
+                        onError={(error) => console.error(`🏪 [화면] 이미지 ${index} 로딩 실패:`, error.nativeEvent, photo)}
+                      />
+                    )}
+                    <TouchableOpacity 
+                      className="absolute -top-2 -right-2 justify-center items-center w-6 h-6 bg-red-500 rounded-full"
+                      onPress={() => removePhoto(index)}
+                    >
+                      <Feather name="x" size={14} color="white" />
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          {/* 사진이 없을 때 안내 메시지 */}
+          {photos.length === 0 && (
+            <View className="justify-center items-center py-8 bg-gray-50 rounded-xl border border-gray-200">
+              <Feather name="image" size={48} color="#9CA3AF" />
+              <Text className="mt-2 text-gray-500">아직 추가된 사진이 없습니다</Text>
+              <Text className="text-sm text-gray-400">사진을 추가하여 매장을 더 매력적으로 보이게 하세요</Text>
+              {/* 디버깅 정보 추가 */}
+              <Text className="mt-2 text-xs text-gray-300">
+                photos 배열 길이: {photos.length}
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
 
