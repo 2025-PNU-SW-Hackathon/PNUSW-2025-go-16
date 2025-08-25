@@ -108,7 +108,7 @@ const test_token = jwt.sign(
 */
   const test_token = jwt.sign(
     {
-      user_id : 'yejun'
+      user_id : 'ipiya'
     },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '2h' }
