@@ -15,15 +15,42 @@ exports.getChatRooms = async (req, res, next) => {
   }
 };
 
-// 👋 채팅방 나가기
+// 🆕 채팅방 상세 정보 조회
+exports.getChatRoomDetail = async (req, res, next) => {
+  try {
+    const user_id = req.user.user_id;
+    const { roomId } = req.params;
+
+    console.log('🔍 [API] 채팅방 상세 정보 조회 요청:', { user_id, roomId, timestamp: new Date().toISOString() });
+
+    const data = await chatService.getChatRoomDetail(user_id, roomId);
+
+    res.status(200).json({ 
+      success: true, 
+      message: '채팅방 정보 조회 성공',
+      data 
+    });
+  } catch (err) {
+    console.error('❌ [API] 채팅방 상세 정보 조회 에러:', err);
+    next(err);
+  }
+};
+
+// 👋 채팅방 나가기 = 모임 완전 탈퇴
 exports.leaveChatRoom = async (req, res, next) => {
   try {
     const user_id = req.user.user_id;
     const { roomId } = req.params;
 
-    await chatService.leaveChatRoom(user_id, roomId);
+    const result = await chatService.leaveChatRoom(user_id, roomId);
 
-    res.status(200).json({ success: true, message: '채팅방을 나갔습니다' });
+    res.status(200).json({ 
+      success: true, 
+      message: result.is_host_left 
+        ? (result.new_host_id ? '모임을 나가고 방장 권한이 이양되었습니다.' : '모임을 나가고 모임이 해산되었습니다.')
+        : '모임을 나갔습니다.',
+      data: result
+    });
   } catch (err) {
     next(err);
   }
@@ -219,6 +246,50 @@ exports.kickUnpaidParticipant = async (req, res, next) => {
   }
 };
 
+// 👥 채팅방 참여자 목록 조회
+exports.getChatParticipants = async (req, res, next) => {
+  try {
+    const user_id = req.user.user_id;
+    const { roomId } = req.params;
+
+    const data = await chatService.getChatParticipants(user_id, roomId);
+
+    res.status(200).json({
+      success: true,
+      message: '참여자 목록 조회 성공',
+      data: data
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 🚫 참여자 강퇴 (방장 전용) - 새로운 엔드포인트
+exports.kickParticipant = async (req, res, next) => {
+  try {
+    const requester_id = req.user.user_id;
+    const { roomId, userId } = req.params;
+    const { reason } = req.body || {};
+
+    // 기존 kickUser 함수 재사용하되 응답 형태 개선
+    const result = await chatService.kickUser(roomId, userId, requester_id);
+
+    res.status(200).json({
+      success: true,
+      message: '참여자가 강퇴되었습니다',
+      data: {
+        kicked_user_id: result.kicked_user_id,
+        kicked_user_name: result.kicked_user_name || '알 수 없는 사용자',
+        remaining_participants: result.remaining_participants || 0,
+        kicked_at: new Date().toISOString(),
+        reason: reason || '관리자 권한으로 강퇴'
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // 🧹 전체 시스템 중복 데이터 정리 (관리자용)
 exports.cleanupDuplicateData = async (req, res, next) => {
   try {
@@ -233,6 +304,165 @@ exports.cleanupDuplicateData = async (req, res, next) => {
     });
   } catch (err) {
     console.error('❌ [API] 중복 데이터 정리 중 오류:', err);
+    next(err);
+  }
+};
+
+// 🏪 채팅방 가게 선택 (방장 전용)
+exports.selectStore = async (req, res, next) => {
+  try {
+    const user_id = req.user.user_id;
+    const { roomId } = req.params;
+    const { store_id } = req.body;
+
+    console.log('🏪 [API] 가게 선택 요청 시작:', {
+      user_id,
+      roomId,
+      store_id: store_id || 'null (선택 해제)',
+      timestamp: new Date().toISOString()
+    });
+
+    const result = await chatService.selectStore(user_id, roomId, store_id);
+
+    console.log('✅ [API] 가게 선택 성공:', {
+      user_id,
+      roomId,
+      result: {
+        chat_room_id: result.chat_room_id,
+        selected_store_id: result.selected_store?.store_id || null,
+        selected_store_name: result.selected_store?.store_name || null,
+        message: result.message
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: {
+        chat_room_id: result.chat_room_id,
+        selected_store_id: result.selected_store?.store_id || null,
+        selected_store_name: result.selected_store?.store_name || null,
+        selected_store_address: result.selected_store?.store_address || null,
+        selected_store_rating: result.selected_store?.store_rating || null,
+        selected_store_thumbnail: result.selected_store?.store_thumbnail || null,
+        selected_at: result.selected_store?.selected_at || null,
+        selected_by: result.selected_store?.selected_by || null
+      }
+    });
+  } catch (err) {
+    console.error('❌ [API] 가게 선택 중 오류:', err);
+    console.error('에러 상세:', err.stack);
+    next(err);
+  }
+};
+
+// 💰 채팅방 정산 시작 (방장 전용)
+exports.startPayment = async (req, res, next) => {
+  try {
+    const user_id = req.user.user_id;
+    const { roomId } = req.params;
+    const { payment_per_person } = req.body;
+
+    console.log('💰 [API] 정산 시작 요청:', {
+      user_id,
+      roomId,
+      payment_per_person
+    });
+
+    const result = await chatService.startPayment(user_id, roomId, payment_per_person);
+
+    res.status(200).json({
+      success: true,
+      message: '정산이 시작되었습니다.',
+      data: result
+    });
+  } catch (err) {
+    console.error('❌ [API] 정산 시작 중 오류:', err);
+    
+    // 이미 정산이 진행 중인 경우 상세 정보 제공
+    if (err.errorCode === 'PAYMENT_ALREADY_STARTED' && err.existingSession) {
+      return res.status(err.statusCode).json({
+        success: false,
+        message: err.message,
+        error_code: err.errorCode,
+        existing_session: err.existingSession,
+        suggestion: "기존 정산을 초기화하거나 계속 진행하세요."
+      });
+    }
+    
+    next(err);
+  }
+};
+
+// 💰 개별 입금 완료 처리
+exports.completePayment = async (req, res, next) => {
+  try {
+    const user_id = req.user.user_id;
+    const { roomId } = req.params;
+    const { payment_method } = req.body;
+
+    console.log('💰 [API] 입금 완료 요청:', {
+      user_id,
+      roomId,
+      payment_method
+    });
+
+    const result = await chatService.completePayment(user_id, roomId, payment_method);
+
+    res.status(200).json({
+      success: true,
+      message: '입금이 완료되었습니다.',
+      data: result
+    });
+  } catch (err) {
+    console.error('❌ [API] 입금 완료 중 오류:', err);
+    next(err);
+  }
+};
+
+// 💰 정산 상태 조회
+exports.getPaymentStatus = async (req, res, next) => {
+  try {
+    const user_id = req.user.user_id;
+    const { roomId } = req.params;
+
+    console.log('💰 [API] 정산 상태 조회 요청:', {
+      user_id,
+      roomId
+    });
+
+    const result = await chatService.getPaymentStatus(user_id, roomId);
+
+    res.status(200).json({
+      success: true,
+      data: result
+    });
+  } catch (err) {
+    console.error('❌ [API] 정산 상태 조회 중 오류:', err);
+    next(err);
+  }
+};
+
+// 💰 정산 세션 초기화 (방장 전용)
+exports.resetPaymentSession = async (req, res, next) => {
+  try {
+    const user_id = req.user.user_id;
+    const { roomId } = req.params;
+
+    console.log('🔄 [API] 정산 세션 초기화 요청:', {
+      user_id,
+      roomId
+    });
+
+    const result = await chatService.resetPaymentSession(roomId, user_id);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: result
+    });
+  } catch (err) {
+    console.error('❌ [API] 정산 세션 초기화 중 오류:', err);
     next(err);
   }
 };

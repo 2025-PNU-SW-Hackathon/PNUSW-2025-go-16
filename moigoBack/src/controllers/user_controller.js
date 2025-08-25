@@ -1,5 +1,9 @@
 // src/controllers/user_controller.js
 const userService = require('../services/user_service');
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() }); // req.file.buffer 사용
+const imageService = require('../services/image_service');
+const { getConnection } = require('../config/db_config');
 
 // 👤 아이디 중복 검사 컨트롤러
 exports.checkUserIdDuplicate = async (req, res, next) => {
@@ -184,6 +188,50 @@ exports.deleteUser = async (req, res, next) => {
       success: true,
       message: '회원 탈퇴가 완료되었습니다.'
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * 프로필 이미지 업로드
+ * POST /api/v1/users/me/thumbnail
+ * form-data: { userId, thumbnail }
+ */
+exports.uploadThumbnail = [
+  upload.single('thumbnail'),
+  async (req, res, next) => {
+    try {
+      const userId = req.user.user_id;
+      if (!req.file) return res.status(400).json({ error: '파일이 필요합니다.' });
+
+      // 이미지 저장
+      const saved = await imageService.saveImageLocal({
+        ownerType: 'user',
+        ownerId: userId,
+        file: req.file,
+        isPublic: 1,
+      });
+
+      return res.json({
+        ok: true,
+        image_id: saved.image_id,
+        object_key: saved.object_key,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+];
+
+/**
+ * 프로필 이미지 조회
+ * GET /api/v1/users/:userId/thumbnail
+ */
+exports.getThumbnail = async (req, res, next) => {
+  try {
+    const userId = req.params.userId;
+    await imageService.sendImageByOwner(res , {ownerId : userId, ownerType : 'user' ,index : 0});
   } catch (err) {
     next(err);
   }

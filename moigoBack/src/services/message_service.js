@@ -10,11 +10,20 @@ exports.joinRoom = async (user_id, room_id) => {
 
 // 메시지 room 권한 확인
 exports.authRoom = async (room_id) => {
-
     const conn = getConnection();
-    const [result] = await conn.query('SELECT user_id FROM chat_room_users WHERE reservation_id = ?'
-        , [room_id]
-    );
+    
+    // 🐛 입력 검증 추가
+    if (!room_id || (typeof room_id !== 'string' && typeof room_id !== 'number')) {
+        console.error('❌ authRoom: 잘못된 room_id 형식:', typeof room_id, room_id);
+        throw new Error('유효하지 않은 채팅방 ID입니다.');
+    }
+    
+    console.log('🔍 [authRoom] 권한 확인 요청:', { room_id, type: typeof room_id });
+    
+    const [result] = await conn.query('SELECT user_id FROM chat_room_users WHERE reservation_id = ?', [room_id]);
+    
+    console.log('🔍 [authRoom] 권한 확인 결과:', { room_id, userCount: result.length });
+    
     return result;
 };
 

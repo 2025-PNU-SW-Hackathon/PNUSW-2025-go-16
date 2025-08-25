@@ -33,11 +33,20 @@ module.exports = async function handleSocket(io) {
         
         // 클라이언트가 연결되면 socket이 필수
         // 채팅방에 참여
-        socket.on('joinRoom', async (room_id) => {
+        socket.on('joinRoom', async (data) => {
             try {
+                // 🐛 데이터 형태 확인 및 파싱
+                let room_id;
+                if (typeof data === 'object' && data !== null) {
+                    room_id = data.room_id || data.roomId || data.reservation_id;
+                } else {
+                    room_id = data;
+                }
+
                 console.log('🚪 채팅방 입장 요청:', {
                     user_id: socket.user.user_id,
-                    room_id: room_id
+                    received_data: data,
+                    parsed_room_id: room_id
                 });
 
                 // 입력 검증
@@ -118,6 +127,8 @@ module.exports = async function handleSocket(io) {
 
                 // 🔧 클라이언트가 보낸 sender_id 사용 (보안 검증 추가)
                 const actualSenderId = sender_id || tokenUserId;
+                // system 시 닉네임 설정.
+                const actualSenderName = (actualSenderId === 'system') ? '시스템' : userName;
 
                 console.log('📨 메시지 전송 요청:', {
                     token_user_id: tokenUserId,
@@ -228,8 +239,10 @@ module.exports = async function handleSocket(io) {
 
                 // 7. 읽음 상태 업데이트 (비동기)
                 Promise.all(
-                    socketsInRoom.map(s => 
-                        messageService.markAllMessagesAsRead(s.user.user_id, room)
+                    socketsInRoom.map(s => {
+                        console.log(s.user.user_id, " is in socket");
+                        messageService.markAllMessagesAsRead(s.user.user_id, room);
+                        }
                     )
                 ).catch(err => console.error('읽음 상태 업데이트 오류:', err));
 
@@ -243,7 +256,7 @@ module.exports = async function handleSocket(io) {
                                 targetUserIds: offlineUserIds,
                                 messageId,
                                 senderId: actualSenderId,
-                                senderName: userName,
+                                senderName: actualSenderName,
                                 text: message
                             });
                         }
@@ -327,6 +340,16 @@ module.exports = async function handleSocket(io) {
             socket.emit('pong', {
                 timestamp: new Date().toISOString(),
                 user_id: socket.user.user_id
+            });
+        });
+
+        // 🏪 가게 선택 이벤트 디버깅 (클라이언트에서 받은 이벤트 확인용)
+        socket.on('storeSelected', (data) => {
+            console.log('🏪 [SOCKET DEBUG] 클라이언트에서 storeSelected 이벤트 수신:', {
+                socket_id: socket.id,
+                user_id: socket.user?.user_id,
+                received_data: data,
+                timestamp: new Date().toISOString()
             });
         });
 

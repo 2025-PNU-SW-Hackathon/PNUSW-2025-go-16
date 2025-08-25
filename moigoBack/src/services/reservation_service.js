@@ -3,7 +3,7 @@
 
 const { getConnection } = require('../config/db_config');
 const chatService = require('../services/chat_service');
-
+const pushService = require('./push_service');
 // 🧾 1. 모임 생성 서비스
 exports.createReservation = async (user_id, data) => {
   const conn = getConnection();
@@ -26,7 +26,7 @@ exports.createReservation = async (user_id, data) => {
     reservation_date,  // 🆕 추가
   } = data;
   
-  let finalStartTime, finalEndTime, finalMatch, finalCategory, finalEx2;
+  let finalStartTime, finalEndTime, finalMatchName, finalReservationTitle, finalCategory, finalEx2;
   
   // 경기 ID가 있으면 경기 정보에서 가져오기
   if (match_id) {
@@ -46,8 +46,9 @@ exports.createReservation = async (user_id, data) => {
     const match = matchRows[0];
     finalStartTime = match.match_date;  // 경기 시작 시간
     finalEndTime = new Date(new Date(match.match_date).getTime() + 2 * 60 * 60 * 1000); // 2시간 후
-    finalMatch = `${match.home_team} vs ${match.away_team}`;
-    finalEx2 = match.competition_code; // 🆕 competition_code를 ex2에 저장
+    finalMatchName = `${match.home_team} vs ${match.away_team}`;  // 🆕 경기명 (match_name)
+    finalReservationTitle = reservation_title || '함께 시청해요';  // 🆕 방 제목 (reservation_title)
+    finalEx2 = match.competition_code; // competition_code를 ex2에 저장
     // competition_code를 정수로 매핑
     const categoryMap = {
       'PD': 1,     // 프리미어리그
@@ -57,7 +58,7 @@ exports.createReservation = async (user_id, data) => {
     };
     finalCategory = categoryMap[match.competition_code] || 0;  // 정수값으로 변환
     
-    console.log(`🔍 [DEBUG] 경기 정보로 설정 - 시작: ${finalStartTime}, 종료: ${finalEndTime}, ex2: ${finalEx2}`);
+    console.log(`🔍 [DEBUG] 경기 기반 - 경기명: ${finalMatchName}, 방제목: ${finalReservationTitle}`);
   } else {
     // 기존 수동 입력 방식
     console.log(`🔍 [DEBUG] 수동 입력 방식`);
@@ -71,22 +72,25 @@ exports.createReservation = async (user_id, data) => {
       const dateStr = reservation_date; // YYYY-MM-DD
       finalStartTime = `${dateStr} ${reservation_start_time}`;
       finalEndTime = `${dateStr} ${reservation_end_time}`;
-      finalMatch = reservation_title || '모임';  // NULL 방지
+      finalMatchName = null;  // 🆕 수동 모임은 경기명 없음
+      finalReservationTitle = reservation_title || '모임';  // 🆕 방 제목
       finalCategory = parseInt(reservation_match_category) || 0;  // 정수형으로 변환, NULL 방지
-      console.log(`🔍 [DEBUG] 새로운 형식 - 제목: ${finalMatch}, 시간: ${finalStartTime} - ${finalEndTime}`);
+      console.log(`🔍 [DEBUG] 수동 모임 - 방제목: ${finalReservationTitle}, 시간: ${finalStartTime} - ${finalEndTime}`);
     } else if (reservation_start_time && /^\d{2}:\d{2}:\d{2}$/.test(reservation_start_time)) {
       // 기존 방식: 시간만 들어온 경우 오늘 날짜와 합치기
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       finalStartTime = `${today} ${reservation_start_time}`;
       finalEndTime = `${today} ${reservation_end_time}`;
-      finalMatch = reservation_match || '모임';  // NULL 방지
+      finalMatchName = reservation_match || null;  // 🆕 경기명 (있으면)
+      finalReservationTitle = reservation_title || '모임';  // 🆕 방 제목
       finalCategory = parseInt(reservation_match_category) || 0;  // 정수형으로 변환, NULL 방지
-      console.log(`🔍 [DEBUG] 시간 형식 변환됨 - 시작: ${finalStartTime}, 종료: ${finalEndTime}`);
+      console.log(`🔍 [DEBUG] 기존 방식 - 경기명: ${finalMatchName}, 방제목: ${finalReservationTitle}`);
     } else {
       // 완전한 datetime이 들어온 경우
       finalStartTime = reservation_start_time;
       finalEndTime = reservation_end_time;
-      finalMatch = reservation_match || reservation_title || '모임';  // NULL 방지
+      finalMatchName = reservation_match || null;  // 🆕 경기명 (있으면)
+      finalReservationTitle = reservation_title || '모임';  // 🆕 방 제목
       finalCategory = parseInt(reservation_match_category) || 0;  // 정수형으로 변환, NULL 방지
     }
   }
@@ -109,8 +113,8 @@ exports.createReservation = async (user_id, data) => {
       store_id,
       finalStartTime,  // 🆕 경기 날짜 또는 수동 입력 날짜
       finalEndTime,    // 🆕 경기 날짜 + 2시간 또는 수동 입력 날짜
-      finalMatch,      // 🆕 "팀A vs 팀B" 또는 수동 입력 매치명
-      reservation_bio || reservation_description || '',  // NULL 방지
+      finalMatchName,      // 🆕 경기명 (match_name) - 경기 기반만
+      finalReservationTitle,  // 🆕 방 제목 (reservation_title)
       reservation_max_participant_cnt,
       finalCategory,   // 🆕 경기 카테고리 또는 수동 입력 카테고리
       createdAt,
@@ -128,12 +132,14 @@ exports.createReservation = async (user_id, data) => {
 };
 
 // 🙋 2. 모임 참여 서비스
-exports.joinReservation = async (user_id, reservation_id) => {
+exports.joinReservation = async (user_id, reservation_id, user_name) => {
   const conn = getConnection();
 
-  // 이미 참여했는지 확인
+  // 1) 이미 참여했는지 확인
   const [exists] = await conn.query(
-    `SELECT * FROM chat_room_users WHERE user_id = ? AND reservation_id = ?`,
+    `SELECT user_id, is_kicked
+       FROM chat_room_users
+      WHERE user_id = ? AND reservation_id = ?`,
     [user_id, reservation_id]
   );
   if (exists.length > 0) {
@@ -142,8 +148,7 @@ exports.joinReservation = async (user_id, reservation_id) => {
       err.statusCode = 401;
       err.errorCode = "KICKED";
       throw err;
-    }
-    else {
+    } else {
       const err = new Error("이미 참여 중입니다.");
       err.statusCode = 409;
       err.errorCode = "ALREADY_JOINED";
@@ -151,43 +156,75 @@ exports.joinReservation = async (user_id, reservation_id) => {
     }
   }
 
-  // 모임 유효성 검사
+  // 2) 모임 유효성 검사(모집중인지)
   const [reservation] = await conn.query(
-    `SELECT reservation_status FROM reservation_table WHERE reservation_id = ?`,
+    `SELECT reservation_status,
+            reservation_participant_cnt,
+            reservation_max_participant_cnt
+       FROM reservation_table
+      WHERE reservation_id = ?`,
     [reservation_id]
   );
-  if (reservation.length == 0 || reservation[0].reservation_status !== 0) {
+  if (reservation.length === 0 || reservation[0].reservation_status !== 0) {
     const err = new Error("참여할 수 없는 모임입니다.");
     err.statusCode = 400;
     err.errorCode = "INVALID_ACTION";
     throw err;
   }
 
-  // 참여 등록
-  // 참여자 목록에 추가
-  // 채팅방에 참여자로 추가
-  const create_chatRoom = await chatService.enterChatRoom(user_id, reservation_id);
+  // 3) 채팅방 입장(참가자 등록)
+  try {
+    await chatService.enterChatRoom(user_id, reservation_id);
+  } catch (err) {
+    console.log("[JOIN] enterChatRoom error:", err);
+    // 계속 진행은 가능(알림/카운트 업데이트는 독립)
+  }
 
-  // 참여자 수 증가 (reservation_table에 기록된 수치 업데이트)
-  // 모임 정보 업데이트
-  var reservation_status_value = reservation[0].reservation_participant_cnt + 1 >= reservation[0].reservation_max_participant_cnt ? 1 : 0;
-  await conn.query(
-    `UPDATE reservation_table
-    SET reservation_participant_cnt = reservation_participant_cnt + 1,
-    reservation_status = ?
-    WHERE reservation_id = ?`,
-    [reservation_status_value, reservation_id]
-  );
+  // 4) 인원 수 증가 + 상태 업데이트 (원자적 업데이트)
+  const updateSql = `
+    UPDATE reservation_table
+       SET reservation_participant_cnt = reservation_participant_cnt + 1,
+           reservation_status = CASE
+             WHEN reservation_participant_cnt + 1 >= reservation_max_participant_cnt THEN 1
+             ELSE 0
+           END
+     WHERE reservation_id = ?
+       AND reservation_status = 0
+       AND reservation_participant_cnt < reservation_max_participant_cnt
+  `;
+  const [upd] = await conn.query(updateSql, [reservation_id]);
+  if (upd.affectedRows === 0) {
+    const err = new Error("참여할 수 없는 모임입니다.");
+    err.statusCode = 400;
+    err.errorCode = "INVALID_ACTION";
+    throw err;
+  }
 
-  // 현재 참여자 수 반환 (return 용)
-  const [cnt] = await conn.query(
-    `SELECT reservation_participant_cnt FROM reservation_table WHERE reservation_id = ?`,
+  // 5) 현재 인원 수 조회
+  const [cntRows] = await conn.query(
+    `SELECT reservation_participant_cnt
+       FROM reservation_table
+      WHERE reservation_id = ?`,
     [reservation_id]
   );
+  const participantCnt = cntRows?.[0]?.reservation_participant_cnt ?? null;
 
+  // 6) 푸시 알림 (본인 제외하여 참가자들에게)
+  try {
+    await pushService.sendUserJoinedPush({
+      reservationId: reservation_id,
+      joinedUserId: user_id,
+      joinedUserName: user_name
+    });
+    console.log("[JOIN] push sent");
+  } catch (err) {
+    console.log("[JOIN] push error:", err);
+  }
+
+  // 7) 응답
   return {
     message: "모임에 참여하였습니다.",
-    participant_cnt: cnt[0].reservation_participant_cnt,
+    participant_cnt: participantCnt,
   };
 };
 
@@ -199,7 +236,7 @@ exports.getReservationList = async (filters) => {
   let query = `
     SELECT r.reservation_id, r.store_id, r.reservation_store_name,
            r.reservation_start_time, r.reservation_end_time,
-           r.reservation_bio, r.reservation_match, r.reservation_status,
+           r.reservation_bio as reservation_title, r.reservation_match as match_name, r.reservation_status,
            r.reservation_participant_cnt,
            r.reservation_max_participant_cnt,
            r.reservation_ex2

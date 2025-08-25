@@ -42,6 +42,8 @@ exports.createReservation = async (req, res, next) => {
       success: true,
       data: {
         reservation_id: result.reservation_id,
+        host_id: user_id,  // 🆕 방장 ID 추가
+        chat_room_id: result.reservation_id,  // 🆕 채팅방 ID 추가 (reservation_id와 동일)
         created_at: result.created_at
       }
     });
@@ -54,9 +56,10 @@ exports.createReservation = async (req, res, next) => {
 exports.joinReservation = async (req, res, next) => {
   try {
     const user_id = req.user.user_id;
+    const user_name = req.user.user_name;
     const reservation_id = req.params.reservation_id;
 
-    const result = await reservationService.joinReservation(user_id, reservation_id);
+    const result = await reservationService.joinReservation(user_id, reservation_id, user_name);
 
     res.json({
       success: true,
@@ -82,8 +85,8 @@ exports.getReservationList = async (req, res, next) => {
         store_name: item.store_name,
         reservation_start_time: item.reservation_start_time,
         reservation_end_time: item.reservation_end_time,
-        reservation_bio: item.reservation_bio,
-        reservation_match: item.reservation_match,
+        reservation_title: item.reservation_title,
+        match_name: item.match_name,
         reservation_status: item.reservation_status,
         reservation_participant_cnt: item.reservation_participant_cnt,
         reservation_max_participant_cnt: item.reservation_max_participant_cnt,

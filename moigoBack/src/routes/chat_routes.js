@@ -9,13 +9,22 @@ const authMiddleware = require('../middlewares/authMiddleware');
 // 채팅방 목록 조회 (GET /chats)
 router.get('/', authMiddleware, chatController.getChatRooms);
 
+// 🆕 채팅방 상세 정보 조회 (GET /chats/:roomId)
+router.get('/:roomId', authMiddleware, chatController.getChatRoomDetail);
+
 // 채팅방 나가기 (DELETE /chats/:roomId/leave)
 router.delete('/:roomId/leave', authMiddleware, chatController.leaveChatRoom);
 
 // 채팅방 상태 변경 (PATCH /chats/:roomId/status)
 router.patch('/:roomId/status', authMiddleware, chatController.updateChatRoomStatus);
 
-// 채팅방 유저 강퇴 (DELETE /chats/:roomId/kick/:userId)
+// 👥 채팅방 참여자 목록 조회 (GET /chats/:roomId/participants)
+router.get('/:roomId/participants', authMiddleware, chatController.getChatParticipants);
+
+// 🚫 참여자 강퇴 - 새로운 엔드포인트 (DELETE /chats/:roomId/participants/:userId)
+router.delete('/:roomId/participants/:userId', authMiddleware, chatController.kickParticipant);
+
+// 채팅방 유저 강퇴 (DELETE /chats/:roomId/kick/:userId) - 기존 호환성 유지
 router.delete('/:roomId/kick/:userId', authMiddleware, chatController.kickUserFromRoom);
 
 // 채팅방 전체 메시지 조회 (GET /chats/:roomId/all-messages)
@@ -32,6 +41,21 @@ router.post('/:roomId/share-store', authMiddleware, chatController.shareStore);
 
 // 🧹 중복 데이터 정리 (POST /chats/cleanup)
 router.post('/cleanup', authMiddleware, chatController.cleanupDuplicateData);
+
+// 🏪 채팅방 가게 선택 (PATCH /chats/:roomId/store)
+router.patch('/:roomId/store', authMiddleware, chatController.selectStore);
+
+// 💰 채팅방 정산 시작 (POST /chats/:roomId/payment/start)
+router.post('/:roomId/payment/start', authMiddleware, chatController.startPayment);
+
+// 💰 개별 입금 완료 (POST /chats/:roomId/payment/complete)
+router.post('/:roomId/payment/complete', authMiddleware, chatController.completePayment);
+
+// 💰 정산 상태 조회 (GET /chats/:roomId/payment)
+router.get('/:roomId/payment', authMiddleware, chatController.getPaymentStatus);
+
+// 💰 정산 세션 초기화 (DELETE /chats/:roomId/payment/reset)
+router.delete('/:roomId/payment/reset', authMiddleware, chatController.resetPaymentSession);
 
 /*
 // 💰 결제 관련 라우터
