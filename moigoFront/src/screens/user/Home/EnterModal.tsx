@@ -33,7 +33,7 @@ function EnterModal({ visible, onClose, event, showSuccessToast, showErrorToast 
           {/* 이벤트 정보 */}
           <View className="mb-6">
             <Text className="mb-4 text-lg font-semibold text-gray-800">
-              {event.title || event.reservation_match || event.reservation_bio}
+              {event.title || event.reservation_title || event.match_name || event.reservation_match || event.reservation_bio}
             </Text>
             <View>
               <Text className="mb-2 text-gray-600">
@@ -67,12 +67,12 @@ function EnterModal({ visible, onClose, event, showSuccessToast, showErrorToast 
           </View>
 
           {/* 버튼들 */}
-          <View className="flex-row">
+          <View className="flex-row gap-3">
             <PrimaryButton
               title={isLoading ? "참여 중..." : "참여 확정"}
               onPress={() => handleConfirm(event, onClose, showSuccessToast, showErrorToast)}
               color={COLORS.mainOrange}
-              className="flex-1 mr-3"
+              className="flex-1"
               disabled={isLoading}
             />
             <PrimaryButton

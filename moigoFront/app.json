@@ -6,7 +6,11 @@
     "orientation": "portrait",
     "icon": "./assets/spotple-icon.png",
     "userInterfaceStyle": "light",
-
+    "extra": {
+      "eas": {
+        "projectId": "3ddd0517-7ac9-447f-85f3-60927f4aff61"
+      }
+    },
     "scheme": "moigo",
     "splash": {
       "image": "./assets/spotple-icon.png",

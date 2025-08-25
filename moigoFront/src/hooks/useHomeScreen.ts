@@ -161,7 +161,7 @@ export const useUserHomeScreen = () => {
     if (event.reservation_status === 1) {
       console.log('🔒 모집 마감된 모임 제외:', {
         id: event.reservation_id,
-        title: event.reservation_match,
+        title: event.reservation_title || event.match_name || event.reservation_match,
         status: event.reservation_status
       });
       return false;
@@ -180,7 +180,7 @@ export const useUserHomeScreen = () => {
       console.log('필터링 디버깅:', {
         selectedFilter,
         eventId: event.reservation_id,
-        eventTitle: event.reservation_match,
+        eventTitle: event.reservation_title || event.match_name || event.reservation_match,
         eventCompetitionCode,
         reservationStatus: event.reservation_status,
         matches: selectedFilter === eventCompetitionCode

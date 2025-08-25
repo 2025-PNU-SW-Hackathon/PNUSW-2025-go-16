@@ -23,6 +23,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { usePushNotifications } from '../usePushNotifications';
 import { socketManager } from '../../utils/socketUtils';
+import { registerPushToken } from '../../apis/users';
 
 // POST /auth/signup - 회원가입 훅
 export const useSignup = () => {
@@ -73,18 +74,23 @@ export const useStoreLogin = () => {
   
   return useMutation({
     mutationFn: async (data: Omit<StoreLoginRequestDTO, 'expo_token'>) => {
-      // expo token 가져오기 (선택적)
-      const expoToken = await registerForPushNotificationsAsync();
-      
-      // expo token을 포함한 로그인 요청 (토큰이 없어도 진행)
-      const loginData: StoreLoginRequestDTO = {
-        ...data,
-        ...(expoToken && { expo_token: expoToken }),
-      };
-      
-      return storeLogin(loginData);
+              // expo token 가져오기 (선택적)
+        let expoToken = null;
+        try {
+          expoToken = await registerForPushNotificationsAsync();
+        } catch (error) {
+          console.log('⚠️ 푸시 토큰 등록 실패 (시뮬레이터에서는 정상):', error instanceof Error ? error.message : String(error));
+        }
+        
+        // expo token을 포함한 로그인 요청 (토큰이 없어도 진행)
+        const loginData: StoreLoginRequestDTO = {
+          ...data,
+          ...(expoToken && { expo_token: expoToken }),
+        };
+        
+        return storeLogin(loginData);
     },
-    onSuccess: (data: StoreLoginResponseDTO) => {
+    onSuccess: async (data: StoreLoginResponseDTO) => {
       // 로그인 성공 시 액세스 토큰 설정
       if (data.data.token) {
         setAccessToken(`Bearer ${data.data.token}`);
@@ -115,6 +121,17 @@ export const useStoreLogin = () => {
           writtenReviews: 0,
           preferredSports: [],
         });
+
+        // 푸시 토큰 서버 등록 (사장님 로그인 성공 후)
+        try {
+          const pushToken = await registerForPushNotificationsAsync();
+          if (pushToken) {
+            await registerPushToken(pushToken);
+            console.log('✅ 사장님 로그인 후 푸시 토큰이 서버에 등록되었습니다');
+          }
+        } catch (tokenError) {
+          console.log('⚠️ 사장님 로그인 후 푸시 토큰 등록 실패 (시뮬레이터에서는 정상):', tokenError instanceof Error ? tokenError.message : String(tokenError));
+        }
       }
     },
     onError: (error) => {
@@ -132,7 +149,12 @@ export const useLogin = () => {
   return useMutation({
     mutationFn: async (data: Omit<LoginRequestDTO, 'expo_token'>) => {
       // expo token 가져오기 (선택적)
-      const expoToken = await registerForPushNotificationsAsync();
+      let expoToken = null;
+              try {
+          expoToken = await registerForPushNotificationsAsync();
+        } catch (error) {
+          console.log('⚠️ 푸시 토큰 등록 실패 (시뮬레이터에서는 정상):', error instanceof Error ? error.message : String(error));
+        }
       
       // expo token을 포함한 로그인 요청 (토큰이 없어도 진행)
       const loginData: LoginRequestDTO = {
@@ -142,7 +164,7 @@ export const useLogin = () => {
       
       return login(loginData);
     },
-    onSuccess: (data:LoginResponseDTO) => {
+    onSuccess: async (data:LoginResponseDTO) => {
       // 로그인 성공 시 액세스 토큰 설정
       if (data.data.token) {
         setAccessToken(`Bearer ${data.data.token}`);
@@ -173,6 +195,17 @@ export const useLogin = () => {
           writtenReviews: 0,
           preferredSports: [],
         });
+
+        // 푸시 토큰 서버 등록 (로그인 성공 후)
+        try {
+          const pushToken = await registerForPushNotificationsAsync();
+          if (pushToken) {
+            await registerPushToken(pushToken);
+            console.log('✅ 로그인 후 푸시 토큰이 서버에 등록되었습니다');
+          }
+        } catch (tokenError) {
+          console.log('⚠️ 로그인 후 푸시 토큰 등록 실패:', tokenError);
+        }
       }
     },
     onError: (error) => {

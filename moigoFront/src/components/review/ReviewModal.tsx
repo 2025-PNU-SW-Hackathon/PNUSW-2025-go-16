@@ -57,7 +57,7 @@ export default function ReviewModal({ visible, match, onClose, onSubmit }: Revie
         <View className="p-4 bg-gray-100 rounded-lg">
           <View className="flex-row justify-between items-start mb-2">
             <Text className="text-lg font-bold text-mainDark">{match?.title}</Text>
-            <Text className="text-sm text-mainGrayText">{match?.location.split(',')[0]}</Text>
+            <Text className="text-sm text-mainGrayText">{match?.location?.split(',')[0] || '위치 정보 없음'}</Text>
           </View>
           <View className="flex-row items-center">
             <Feather name="calendar" size={16} color={COLORS.mainGrayText} />

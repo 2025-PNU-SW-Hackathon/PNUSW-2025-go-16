@@ -12,6 +12,7 @@ import { usePushNotifications } from '@/hooks/usePushNotifications';
 import PushNotificationBanner from '@/components/common/PushNotificationBanner';
 import { useAuthStore } from '@/store/authStore';
 import { useNotificationStore } from '@/store/notificationStore';
+import { registerPushToken } from '@/apis/users';
 
 // 환경변수 로깅
 const { API_URL, WS_URL } = (Constants.expoConfig?.extra ?? {}) as any;
@@ -109,7 +110,18 @@ export default function App() {
           if (token) {
             console.log('Push notification token:', token);
             setPushToken(token); // 토큰을 상태에 저장
-            // 토큰은 로그인 시 서버로 전송됩니다
+            
+            // 로그인된 사용자가 있으면 토큰을 서버로 전송
+            if (user) {
+              try {
+                await registerPushToken(token);
+                console.log('✅ 푸시 토큰이 서버에 등록되었습니다');
+              } catch (tokenError) {
+                console.log('⚠️ 푸시 토큰 서버 등록 실패:', tokenError);
+              }
+            } else {
+              console.log('📝 로그인 후 푸시 토큰이 서버에 등록됩니다');
+            }
           } else {
             console.log('푸시 알림 토큰을 가져올 수 없습니다. 알림 없이 계속 진행합니다.');
           }

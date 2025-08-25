@@ -36,7 +36,12 @@ interface PushNotificationHandlerProps {
 }
 
 function handleRegistrationError(errorMessage: string) {
-  console.error('Push Notification Error:', errorMessage);
+  console.warn('Push Notification Warning:', errorMessage);
+  // 시뮬레이터에서는 에러를 던지지 않고 null 반환
+  if (errorMessage.includes('Must use physical device')) {
+    console.log('💡 시뮬레이터에서는 푸시 알림이 제한됩니다. 실제 기기에서 테스트해주세요.');
+    return null;
+  }
   throw new Error(errorMessage);
 }
 
@@ -99,8 +104,10 @@ export function usePushNotifications(handlers?: PushNotificationHandlerProps) {
         return null;
       }
     } else {
-      handleRegistrationError('Must use physical device for push notifications');
-      return null;
+      const result = handleRegistrationError('Must use physical device for push notifications');
+      if (result === null) {
+        return null;
+      }
     }
   };
 

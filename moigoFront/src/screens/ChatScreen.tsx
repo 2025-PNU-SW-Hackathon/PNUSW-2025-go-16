@@ -202,9 +202,9 @@ export default function ChatScreen() {
   // 로딩 상태
   if (isLoading && !(data as any)?.data) {
     return (
-      <View className="flex-1 bg-gray-50 justify-center items-center">
+      <View className="flex-1 justify-center items-center bg-gray-50">
         <ActivityIndicator size="large" color="#007AFF" />
-        <Text className="text-gray-600 mt-4">채팅방을 불러오는 중...</Text>
+        <Text className="mt-4 text-gray-600">채팅방을 불러오는 중...</Text>
       </View>
     );
   }
@@ -212,13 +212,13 @@ export default function ChatScreen() {
   // 에러 상태
   if (error) {
     return (
-      <View className="flex-1 bg-gray-50 justify-center items-center px-4">
-        <Text className="text-gray-600 text-center mb-4">채팅방 목록을 불러오는데 실패했습니다.</Text>
+      <View className="flex-1 justify-center items-center px-4 bg-gray-50">
+        <Text className="mb-4 text-center text-gray-600">채팅방 목록을 불러오는데 실패했습니다.</Text>
         <TouchableOpacity 
-          className="bg-blue-500 px-6 py-3 rounded-lg"
+          className="px-6 py-3 bg-blue-500 rounded-lg"
           onPress={() => refetch()}
         >
-          <Text className="text-white font-semibold">다시 시도</Text>
+          <Text className="font-semibold text-white">다시 시도</Text>
         </TouchableOpacity>
       </View>
     );
@@ -243,7 +243,7 @@ export default function ChatScreen() {
         {/* 매칭 채팅 섹션 */}
         {matchingRooms.length > 0 && (
           <View className="mb-6">
-            <Text className="text-lg font-semibold text-gray-900 mb-3">매칭 채팅</Text>
+            <Text className="mb-3 text-lg font-semibold text-gray-900">매칭 채팅</Text>
             {matchingRooms.map(room => (
               <ChatRoomItem
                 key={room.id}
@@ -257,7 +257,7 @@ export default function ChatScreen() {
         {/* 가게 채팅 섹션 */}
         {storeRooms.length > 0 && (
           <View>
-            <Text className="text-lg font-semibold text-gray-900 mb-3">가게 채팅</Text>
+            <Text className="mb-3 text-lg font-semibold text-gray-900">가게 채팅</Text>
             {storeRooms.map(room => (
               <ChatRoomItem
                 key={room.id}
@@ -271,7 +271,7 @@ export default function ChatScreen() {
         {/* 빈 상태 */}
         {chatRooms.length === 0 && !isLoading && (
           <View className="flex-1 justify-center items-center py-20">
-            <Text className="text-gray-500 text-center">참여 중인 채팅방이 없습니다.</Text>
+            <Text className="text-center text-gray-500">참여 중인 채팅방이 없습니다.</Text>
           </View>
         )}
       </ScrollView>
