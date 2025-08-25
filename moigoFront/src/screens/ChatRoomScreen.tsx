@@ -313,7 +313,11 @@ export default function ChatRoomScreen() {
             storeName: msg.store_name || '가게 이름',
             rating: msg.store_rating || 0,
             reviewCount: 0, // API에서 제공되지 않는 경우 기본값
-            imageUrl: msg.store_thumbnail || ''
+            imageUrl: msg.store_thumbnail ? 
+              (msg.store_thumbnail.startsWith('/') ? 
+                `http://spotple.kr:3001${msg.store_thumbnail}` : 
+                msg.store_thumbnail
+              ) : ''
           } : undefined,
           // 가게 관련 추가 필드들
           store_name: msg.store_name,
@@ -1739,7 +1743,7 @@ export default function ChatRoomScreen() {
               storeName: msg.store_name || '가게 이름',
               rating: msg.store_rating || 0,
               reviewCount: 0,
-              imageUrl: msg.store_thumbnail || ''
+              imageUrl: msg.store_thumbnail || '/api/v1/images/53' // 기본 이미지 URL 추가
             }}
             storeId={msg.store_id}
             chatRoom={chatRoom}

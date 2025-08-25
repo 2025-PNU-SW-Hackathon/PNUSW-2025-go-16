@@ -30,51 +30,68 @@ export default function StoreSearchModal({ isVisible, onClose, onSelectStore }: 
     onClose();
   };
 
-  const renderStoreItem = ({ item }: { item: ChatStoreListItemDTO }) => (
-    <TouchableOpacity
-      onPress={() => handleSelectStore(item)}
-      className="flex-row items-center p-4 bg-white border-b border-gray-100"
-      activeOpacity={0.7}
-    >
-      {/* 가게 이미지 */}
-      <View className="w-16 h-16 bg-gray-200 rounded-lg mr-3 overflow-hidden">
-        {item.store_thumbnail ? (
-          <Image
-            source={{ uri: item.store_thumbnail }}
-            className="w-full h-full"
-            resizeMode="cover"
-          />
-        ) : (
-          <View className="w-full h-full bg-gray-300 justify-center items-center">
-            <Feather name="image" size={20} color="#9CA3AF" />
-          </View>
-        )}
-      </View>
+  const renderStoreItem = ({ item }: { item: ChatStoreListItemDTO }) => {
+    // 가게 썸네일 URL 처리 (포트 3001 포함)
+    const getThumbnailUrl = (thumbnailUrl: string | null | undefined) => {
+      if (!thumbnailUrl) return null;
+      
+      // 상대경로인 경우 포트 3001을 포함한 절대 URL로 변환
+      if (thumbnailUrl.startsWith('/')) {
+        return `http://spotple.kr:3001${thumbnailUrl}`;
+      }
+      
+      // 절대 URL인 경우 그대로 사용
+      return thumbnailUrl;
+    };
 
-      {/* 가게 정보 */}
-      <View className="flex-1">
-        <Text className="text-base font-semibold text-gray-900 mb-1">
-          {item.store_name}
-        </Text>
-        
-        <View className="flex-row items-center mb-1">
-          <Text className="text-yellow-400 text-sm mr-1">
-            {'★'.repeat(Math.floor(item.store_rating))}
-            {'☆'.repeat(5 - Math.floor(item.store_rating))}
+    const thumbnailUrl = getThumbnailUrl(item.store_thumbnail);
+
+    return (
+      <TouchableOpacity
+        onPress={() => handleSelectStore(item)}
+        className="flex-row items-center p-4 bg-white border-b border-gray-100"
+        activeOpacity={0.7}
+      >
+        {/* 가게 이미지 */}
+        <View className="overflow-hidden mr-3 w-16 h-16 bg-gray-200 rounded-lg">
+          {thumbnailUrl ? (
+            <Image
+              source={{ uri: thumbnailUrl }}
+              className="w-full h-full"
+              resizeMode="cover"
+            />
+          ) : (
+            <View className="justify-center items-center w-full h-full bg-gray-300">
+              <Feather name="image" size={20} color="#9CA3AF" />
+            </View>
+          )}
+        </View>
+
+        {/* 가게 정보 */}
+        <View className="flex-1">
+          <Text className="mb-1 text-base font-semibold text-gray-900">
+            {item.store_name}
           </Text>
-          <Text className="text-sm text-gray-600">
-            {item.store_rating.toString()}
+          
+          <View className="flex-row items-center mb-1">
+            <Text className="mr-1 text-sm text-yellow-400">
+              {'★'.repeat(Math.floor(item.store_rating))}
+              {'☆'.repeat(5 - Math.floor(item.store_rating))}
+            </Text>
+            <Text className="text-sm text-gray-600">
+              {item.store_rating.toString()}
+            </Text>
+          </View>
+
+          <Text className="text-sm text-gray-600" numberOfLines={1}>
+            📍 {item.store_address}
           </Text>
         </View>
 
-        <Text className="text-sm text-gray-600" numberOfLines={1}>
-          📍 {item.store_address}
-        </Text>
-      </View>
-
-      <Feather name="chevron-right" size={20} color="#9CA3AF" />
-    </TouchableOpacity>
-  );
+        <Feather name="chevron-right" size={20} color="#9CA3AF" />
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <Modal
@@ -84,7 +101,7 @@ export default function StoreSearchModal({ isVisible, onClose, onSelectStore }: 
     >
       <SafeAreaView className="flex-1 bg-gray-50">
         {/* 헤더 */}
-        <View className="flex-row items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
+        <View className="flex-row justify-between items-center px-4 py-3 bg-white border-b border-gray-200">
           <TouchableOpacity onPress={onClose} className="p-2">
             <Feather name="x" size={24} color="#374151" />
           </TouchableOpacity>
@@ -95,7 +112,7 @@ export default function StoreSearchModal({ isVisible, onClose, onSelectStore }: 
         {/* 검색 입력 */}
         <View className="p-4 bg-white border-b border-gray-200">
           <View className="flex-row items-center">
-            <View className="flex-1 flex-row items-center px-3 py-2 bg-gray-100 rounded-lg mr-2">
+            <View className="flex-row flex-1 items-center px-3 py-2 mr-2 bg-gray-100 rounded-lg">
               <Feather name="search" size={20} color="#6B7280" />
               <TextInput
                 value={keyword}
@@ -108,10 +125,10 @@ export default function StoreSearchModal({ isVisible, onClose, onSelectStore }: 
             </View>
             <TouchableOpacity
               onPress={handleSearch}
-              className="px-4 py-2 bg-mainOrange rounded-lg"
+              className="px-4 py-2 rounded-lg bg-mainOrange"
               activeOpacity={0.8}
             >
-              <Text className="text-white font-medium">검색</Text>
+              <Text className="font-medium text-white">검색</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -125,12 +142,12 @@ export default function StoreSearchModal({ isVisible, onClose, onSelectStore }: 
         ) : error ? (
           <View className="flex-1 justify-center items-center px-4">
             <Feather name="alert-circle" size={48} color="#EF4444" />
-            <Text className="mt-4 text-gray-600 text-center">가게 검색에 실패했습니다.</Text>
+            <Text className="mt-4 text-center text-gray-600">가게 검색에 실패했습니다.</Text>
             <TouchableOpacity
               onPress={() => refetch()}
-              className="mt-4 px-6 py-3 bg-mainOrange rounded-lg"
+              className="px-6 py-3 mt-4 rounded-lg bg-mainOrange"
             >
-              <Text className="text-white font-semibold">다시 시도</Text>
+              <Text className="font-semibold text-white">다시 시도</Text>
             </TouchableOpacity>
           </View>
         ) : storeListData?.data && storeListData.data.length > 0 ? (
@@ -144,17 +161,17 @@ export default function StoreSearchModal({ isVisible, onClose, onSelectStore }: 
         ) : searchKeyword ? (
           <View className="flex-1 justify-center items-center px-4">
             <Feather name="search" size={48} color="#9CA3AF" />
-            <Text className="mt-4 text-gray-600 text-center">
+            <Text className="mt-4 text-center text-gray-600">
               "{searchKeyword}"에 대한 검색 결과가 없습니다.
             </Text>
-            <Text className="text-sm text-gray-500 text-center mt-2">
+            <Text className="mt-2 text-sm text-center text-gray-500">
               다른 키워드로 검색해보세요.
             </Text>
           </View>
         ) : (
           <View className="flex-1 justify-center items-center px-4">
             <Feather name="map-pin" size={48} color="#9CA3AF" />
-            <Text className="mt-4 text-gray-600 text-center">
+            <Text className="mt-4 text-center text-gray-600">
               가게명이나 주소를 입력하여 검색해보세요.
             </Text>
           </View>

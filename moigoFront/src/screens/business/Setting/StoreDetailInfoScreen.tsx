@@ -12,9 +12,12 @@ import {
   useToggleStoreFacility,
   useAddStoreFacility,
   useStoreFacilities,
-  useDeleteStoreFacility
+  useDeleteStoreFacility,
+  useUploadStoreImages,
+  useStoreImages
 } from '@/hooks/queries/useUserQueries';
 import type { MenuItemDTO, FacilitiesDTO } from '@/types/DTO/users';
+import Constants from 'expo-constants';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'StoreDetailInfo'>;
 
@@ -31,6 +34,44 @@ interface Facility {
   checked: boolean;
   type: string;
 }
+
+interface StoreImage {
+  id: string;
+  url: string;
+  is_main?: boolean;
+}
+
+// 이미지 URL을 절대 경로로 변환하는 유틸리티 함수
+const convertToAbsoluteUrl = (relativeUrl: string): string => {
+  // 이미 절대 URL인 경우 그대로 반환
+  if (relativeUrl.startsWith('http://') || relativeUrl.startsWith('https://')) {
+    return relativeUrl;
+  }
+  
+  // 포트 3001을 포함한 BASE_URL 사용
+  const BASE_URL = 'http://spotple.kr:3001';
+  
+  console.log('🔧 [URL 변환] BASE_URL:', BASE_URL);
+  console.log('🔧 [URL 변환] 입력 URL:', relativeUrl);
+  
+  // 상대 경로를 절대 URL로 변환
+  if (relativeUrl.startsWith('/api/v1/')) {
+    // /api/v1/images/50 → http://spotple.kr:3001/api/v1/images/50
+    const result = `${BASE_URL}${relativeUrl}`;
+    console.log('🔧 [URL 변환] /api/v1 유지:', result);
+    return result;
+  }
+  
+  if (relativeUrl.startsWith('/')) {
+    const result = `${BASE_URL}${relativeUrl}`;
+    console.log('🔧 [URL 변환] 슬래시 시작:', result);
+    return result;
+  }
+  
+  const result = `${BASE_URL}/${relativeUrl}`;
+  console.log('🔧 [URL 변환] 기본 처리:', result);
+  return result;
+};
 
 export default function StoreDetailInfoScreen() {
   const navigation = useNavigation<NavigationProp>();
@@ -49,6 +90,12 @@ export default function StoreDetailInfoScreen() {
   
   // 편의시설 삭제 훅
   const { mutate: deleteFacilityMutation } = useDeleteStoreFacility();
+  
+  // 이미지 업로드 훅
+  const { mutate: uploadImages, isPending: isUploading } = useUploadStoreImages();
+  
+  // 매장 이미지 조회 훅
+  const { data: storeImagesData } = useStoreImages();
   
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -81,19 +128,22 @@ export default function StoreDetailInfoScreen() {
 
   const [facilities, setFacilities] = useState<Facility[] | null>(null);
 
-  // 실제 이미지 URI 배열로 변경
-  const [photos, setPhotos] = useState<string[]>([]);
+  // 매장 이미지 상태 (백엔드에서 받은 이미지 정보)
+  const [storeImages, setStoreImages] = useState<StoreImage[]>([]);
+  
+  // 새로 선택된 이미지들 (아직 업로드되지 않은 로컬 이미지)
+  const [pendingImages, setPendingImages] = useState<string[]>([]);
 
-  // 선택된 이미지들이 있으면 photos에 추가
+  // 선택된 이미지들이 있으면 pendingImages에 추가
   useEffect(() => {
     if (selectedImages.length > 0) {
-      const newImages = selectedImages.filter(img => !photos.includes(img));
+      const newImages = selectedImages.filter(img => !pendingImages.includes(img));
       if (newImages.length > 0) {
-        setPhotos(prev => [...prev, ...newImages]);
+        setPendingImages(prev => [...prev, ...newImages]);
         setSelectedImages([]); // 선택된 이미지들 초기화
       }
     }
-  }, [selectedImages, photos, setSelectedImages]);
+  }, [selectedImages, pendingImages, setSelectedImages]);
 
   // API 데이터로 초기화
   useEffect(() => {
@@ -103,7 +153,7 @@ export default function StoreDetailInfoScreen() {
       console.log('🏪 [화면] 전체 storeInfoData:', storeInfoData);
       console.log('🏪 [화면] store_info:', info);
       console.log('🏪 [화면] facilities 필드:', info.facilities);
-      console.log('🏪 [화면] photos 필드:', info.photos); // 사진 필드 로깅 추가
+      console.log('🏪 [화면] photos 필드:', info.photos);
       
       // 매장 소개
       if (info.bio) {
@@ -124,31 +174,46 @@ export default function StoreDetailInfoScreen() {
       // 편의시설은 별도 API에서 조회하므로 여기서는 설정하지 않음
       console.log('🏪 [화면] 편의시설은 별도 API에서 조회됨');
       
-      // 사진 - 더 자세한 로깅 추가
+      // 사진 - 백엔드에서 받은 이미지 URL들을 storeImages에 저장
       if (info.photos && Array.isArray(info.photos) && info.photos.length > 0) {
         console.log('🏪 [화면] 사진 데이터 로드됨:', info.photos);
         
-        // 잘린 URL 필터링 (file://로 시작하고 .png, .jpg, .jpeg로 끝나는 완전한 URL만 허용)
-        const validPhotos = info.photos.filter(photo => {
-          const isValid = photo.startsWith('file://') && 
-                         (photo.endsWith('.png') || photo.endsWith('.jpg') || photo.endsWith('.jpeg')) &&
-                         photo.length > 50; // 최소 길이 체크 (잘린 URL 방지)
+        // 백엔드에서 받은 이미지 URL들을 StoreImage 형태로 변환
+        // 상대 경로를 절대 URL로 변환
+        const images: StoreImage[] = info.photos.map((photoUrl: string, index: number) => {
+          const absoluteUrl = convertToAbsoluteUrl(photoUrl);
+          console.log(`🏪 [화면] 이미지 ${index} URL 변환:`, photoUrl, '→', absoluteUrl);
           
-          if (!isValid) {
-            console.warn('🏪 [화면] 잘린 이미지 URL 감지됨:', photo);
-          }
-          
-          return isValid;
+          return {
+            id: `existing_${index}`,
+            url: absoluteUrl,
+            is_main: index === 0 // 첫 번째 이미지를 메인으로 간주
+          };
         });
         
-        console.log('🏪 [화면] 유효한 사진 개수:', validPhotos.length, '전체:', info.photos.length);
-        setPhotos(validPhotos);
+        setStoreImages(images);
+        console.log('🏪 [화면] 변환된 이미지 데이터:', images);
       } else {
         console.log('🏪 [화면] 사진 데이터가 없거나 빈 배열:', info.photos);
-        setPhotos([]); // 사진이 없으면 빈 배열로 설정
+        setStoreImages([]);
       }
     }
   }, [storeInfoData]);
+
+  // 매장 이미지 데이터가 로드되면 상태 업데이트
+  useEffect(() => {
+    if (storeImagesData?.data?.images) {
+      console.log('🏪 [화면] 매장 이미지 API 데이터 로드됨:', storeImagesData.data.images);
+      
+      const images: StoreImage[] = storeImagesData.data.images.map((img: any) => ({
+        id: img.image_id || img.id,
+        url: img.url || img.image_url,
+        is_main: img.is_main === 1 || img.is_main === true
+      }));
+      
+      setStoreImages(images);
+    }
+  }, [storeImagesData]);
 
   // 편의시설 데이터가 로드되면 상태 업데이트 (한 번만 실행)
   useEffect(() => {
@@ -185,12 +250,7 @@ export default function StoreDetailInfoScreen() {
       setFacilities(updatedFacilities);
       console.log('✅ [화면] 편의시설 상태 업데이트 완료');
     }
-  }, [facilitiesData]); // facilities 의존성 제거
-
-  // photos 상태 변화 추적
-  useEffect(() => {
-    console.log('🏪 [화면] photos 상태 변화:', photos);
-  }, [photos]);
+  }, [facilitiesData]);
 
   // 토스트 표시 함수들
   const showSuccessMessage = (message: string) => {
@@ -368,7 +428,7 @@ export default function StoreDetailInfoScreen() {
     );
   };
 
-  const removePhoto = (index: number) => {
+  const removePhoto = (index: number, isPending: boolean = false) => {
     Alert.alert(
       '사진 삭제',
       '이 사진을 삭제하시겠습니까?',
@@ -377,14 +437,23 @@ export default function StoreDetailInfoScreen() {
         { 
           text: '삭제', 
           style: 'destructive',
-          onPress: () => setPhotos(prev => prev.filter((_, i) => i !== index))
+          onPress: () => {
+            if (isPending) {
+              // 아직 업로드되지 않은 이미지 삭제
+              setPendingImages(prev => prev.filter((_, i) => i !== index));
+            } else {
+              // 이미 업로드된 이미지 삭제 (백엔드에서 삭제 처리 필요)
+              setStoreImages(prev => prev.filter((_, i) => i !== index));
+            }
+          }
         }
       ]
     );
   };
 
   const addPhoto = async () => {
-    if (photos.length >= 10) {
+    const totalImages = storeImages.length + pendingImages.length;
+    if (totalImages >= 10) {
       Alert.alert('알림', '최대 10장까지만 추가할 수 있습니다.');
       return;
     }
@@ -392,7 +461,8 @@ export default function StoreDetailInfoScreen() {
   };
 
   const addMultiplePhotos = async () => {
-    const remainingSlots = 10 - photos.length;
+    const totalImages = storeImages.length + pendingImages.length;
+    const remainingSlots = 10 - totalImages;
     if (remainingSlots <= 0) {
       Alert.alert('알림', '최대 10장까지만 추가할 수 있습니다.');
       return;
@@ -400,7 +470,80 @@ export default function StoreDetailInfoScreen() {
     await pickMultipleImages();
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    try {
+      // 1. 새로 선택된 이미지가 있으면 먼저 업로드
+      if (pendingImages.length > 0) {
+        console.log('📤 [화면] 이미지 업로드 시작:', pendingImages.length, '장');
+        
+        // React Native에서는 File 객체가 없으므로 FormData에 직접 추가
+        const formData = new FormData();
+        pendingImages.forEach((imageUri, index) => {
+          // React Native에서 이미지 URI를 FormData에 추가
+          const imageFile = {
+            uri: imageUri,
+            type: 'image/jpeg', // 기본 타입
+            name: `image_${Date.now()}_${index}.jpg`
+          } as any;
+          
+          formData.append('images', imageFile);
+        });
+        
+        // 이미지 업로드 API 호출
+        uploadImages(formData as any, {
+          onSuccess: (response) => {
+            console.log('✅ [화면] 이미지 업로드 성공:', response);
+            console.log('🔍 [화면] 응답 데이터 구조:', JSON.stringify(response, null, 2));
+            
+            // 업로드된 이미지들을 storeImages에 추가
+            if (response.data?.images) {
+              console.log('🔍 [화면] 이미지 배열:', response.data.images);
+              
+              const newImages: StoreImage[] = response.data.images.map((img: any, index: number) => {
+                console.log(`🔍 [화면] 이미지 ${index} 데이터:`, img);
+                
+                // 백엔드 응답 구조에 따라 URL 추출
+                const relativeUrl = img.url || img.image_url || img.path || `/api/v1/images/${img.image_id || img.id}`;
+                
+                // 상대 경로를 절대 URL로 변환
+                const absoluteUrl = convertToAbsoluteUrl(relativeUrl);
+                console.log(`🔍 [화면] 이미지 ${index} URL 변환:`, relativeUrl, '→', absoluteUrl);
+                
+                return {
+                  id: img.image_id || img.id || `uploaded_${Date.now()}_${index}`,
+                  url: absoluteUrl,
+                  is_main: false
+                };
+              });
+              
+              console.log('🔍 [화면] 변환된 이미지들:', newImages);
+              
+              setStoreImages(prev => [...prev, ...newImages]);
+              setPendingImages([]); // pending 이미지들 초기화
+              
+              // 이미지 업로드 완료 후 가게 정보 저장
+              saveStoreInfo();
+            } else {
+              console.error('❌ [화면] 응답에 images 배열이 없음:', response);
+              showErrorMessage('이미지 업로드 응답 형식이 올바르지 않습니다.');
+            }
+          },
+          onError: (error) => {
+            console.error('❌ [화면] 이미지 업로드 실패:', error);
+            showErrorMessage('이미지 업로드에 실패했습니다.');
+          }
+        });
+      } else {
+        // 이미지가 없으면 바로 가게 정보 저장
+        saveStoreInfo();
+      }
+    } catch (error) {
+      console.error('❌ [화면] 저장 처리 중 오류:', error);
+      showErrorMessage('저장 처리 중 오류가 발생했습니다.');
+    }
+  };
+
+  const saveStoreInfo = () => {
     // API 데이터 형식으로 변환 (편의시설 제외)
     const apiMenuItems: MenuItemDTO[] = menuItems.map(item => ({
       name: item.name,
@@ -408,15 +551,43 @@ export default function StoreDetailInfoScreen() {
       description: item.description,
     }));
 
+    // 기존 이미지 URL들과 새로 업로드된 이미지 URL들을 합침
+    // pendingImages는 로컬 파일 경로이므로 제외하고, storeImages의 URL만 사용
+    // 백엔드에 저장할 때는 상대 경로로 변환
+    const allPhotoUrls = storeImages.map(img => {
+      // 절대 URL을 상대 경로로 변환 (백엔드 저장용)
+      if (img.url.startsWith('http://') || img.url.startsWith('https://')) {
+        console.log('🔧 [상대 경로 변환] 원본 URL:', img.url);
+        
+        // http://spotple.kr/images/50 → /images/50
+        if (img.url.startsWith('http://spotple.kr/')) {
+          const relativePath = img.url.replace('http://spotple.kr', '');
+          console.log(`🔧 [상대 경로 변환] 변환 결과:`, img.url, '→', relativePath);
+          return relativePath;
+        }
+        
+        // https://spotple.kr/images/50 → /images/50 (HTTPS도 처리)
+        if (img.url.startsWith('https://spotple.kr/')) {
+          const relativePath = img.url.replace('https://spotple.kr', '');
+          console.log(`🔧 [상대 경로 변환] HTTPS 변환 결과:`, img.url, '→', relativePath);
+          return relativePath;
+        }
+      }
+      
+      // 이미 상대 경로인 경우 그대로 사용
+      return img.url;
+    });
+
     const apiData = {
       menu: apiMenuItems,
-      photos: photos,
+      photos: allPhotoUrls,
       sports_categories: [],
       bio: formData.introduction,
     };
 
     console.log('🏪 [화면] 저장할 데이터 (편의시설 제외):', apiData);
     console.log('🏪 [화면] 편의시설은 별도 API로 관리됨');
+    console.log('🏪 [화면] 사용할 이미지 URL들:', allPhotoUrls);
     
     // API 호출 (편의시설 제외)
     updateStoreDetailInfo(apiData);
@@ -429,6 +600,9 @@ export default function StoreDetailInfoScreen() {
   const getCharacterCount = () => {
     return `${formData.introduction.length}/500`;
   };
+
+  // 전체 이미지 개수 계산
+  const totalImageCount = storeImages.length + pendingImages.length;
 
   return (
     <View className="flex-1 bg-white">
@@ -550,10 +724,10 @@ export default function StoreDetailInfoScreen() {
         {/* 매장 사진 */}
         <View className="mb-8">
           <Text className="mb-3 text-lg font-bold text-gray-800">매장 사진</Text>
-          <Text className="mb-3 text-sm text-gray-500">최대 10장</Text>
+          <Text className="mb-3 text-sm text-gray-500">최대 10장 ({totalImageCount}/10)</Text>
           
           {/* 사진 추가 버튼들 */}
-          {photos.length < 10 && (
+          {totalImageCount < 10 && (
             <View className="flex-row gap-3 mb-4">
               <TouchableOpacity 
                 className="flex-1 justify-center items-center h-32 rounded-xl border-2 border-gray-300 border-dashed"
@@ -573,56 +747,74 @@ export default function StoreDetailInfoScreen() {
             </View>
           )}
 
-          {/* 기존 사진들 */}
-          {photos.length > 0 && (
-            <View className="flex-row flex-wrap gap-3">
-              {photos.map((photo, index) => {
-                // 잘린 URL 체크
-                const isTruncated = !photo.startsWith('file://') || 
-                                   !(photo.endsWith('.png') || photo.endsWith('.jpg') || photo.endsWith('.jpeg')) ||
-                                   photo.length < 50;
-                
-                return (
-                  <View key={index} className="relative">
-                    {isTruncated ? (
-                      // 잘린 URL인 경우 에러 표시
-                      <View className="justify-center items-center w-20 h-20 bg-red-100 rounded-lg border border-red-300">
-                        <Feather name="alert-triangle" size={20} color="#EF4444" />
-                        <Text className="mt-1 text-xs text-red-600 text-center">잘린 이미지</Text>
+          {/* 기존 업로드된 사진들 */}
+          {storeImages.length > 0 && (
+            <View className="mb-4">
+              <Text className="mb-2 text-sm font-medium text-gray-600">업로드된 사진</Text>
+              <View className="flex-row flex-wrap gap-3">
+                {storeImages.map((image, index) => (
+                  <View key={image.id} className="relative">
+                    <Image 
+                      source={{ uri: image.url }} 
+                      style={{ width: 80, height: 80, borderRadius: 8 }}
+                      resizeMode="cover"
+                      onLoadStart={() => console.log(`🏪 [화면] 기존 이미지 ${index} 로딩 시작:`, image.url)}
+                      onLoad={() => console.log(`🏪 [화면] 기존 이미지 ${index} 로딩 완료:`, image.url)}
+                      onError={(error) => console.error(`🏪 [화면] 기존 이미지 ${index} 로딩 실패:`, error.nativeEvent, image.url)}
+                    />
+                    {image.is_main && (
+                      <View className="absolute -top-1 -left-1 justify-center items-center w-6 h-6 bg-orange-500 rounded-full">
+                        <Text className="text-xs font-bold text-white">M</Text>
                       </View>
-                    ) : (
-                      // 정상 이미지 표시
-                      <Image 
-                        source={{ uri: photo }} 
-                        style={{ width: 80, height: 80, borderRadius: 8 }}
-                        resizeMode="cover"
-                        onLoadStart={() => console.log(`🏪 [화면] 이미지 ${index} 로딩 시작:`, photo)}
-                        onLoad={() => console.log(`🏪 [화면] 이미지 ${index} 로딩 완료:`, photo)}
-                        onError={(error) => console.error(`🏪 [화면] 이미지 ${index} 로딩 실패:`, error.nativeEvent, photo)}
-                      />
                     )}
                     <TouchableOpacity 
                       className="absolute -top-2 -right-2 justify-center items-center w-6 h-6 bg-red-500 rounded-full"
-                      onPress={() => removePhoto(index)}
+                      onPress={() => removePhoto(index, false)}
                     >
                       <Feather name="x" size={14} color="white" />
                     </TouchableOpacity>
                   </View>
-                );
-              })}
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* 새로 선택된 사진들 (아직 업로드되지 않음) */}
+          {pendingImages.length > 0 && (
+            <View className="mb-4">
+              <Text className="mb-2 text-sm font-medium text-gray-600">업로드 대기 중 ({pendingImages.length}장)</Text>
+              <View className="flex-row flex-wrap gap-3">
+                {pendingImages.map((imageUri, index) => (
+                  <View key={`pending_${index}`} className="relative">
+                    <Image 
+                      source={{ uri: imageUri }} 
+                      style={{ width: 80, height: 80, borderRadius: 8 }}
+                      resizeMode="cover"
+                      onLoadStart={() => console.log(`🏪 [화면] 대기 이미지 ${index} 로딩 시작:`, imageUri)}
+                      onLoad={() => console.log(`🏪 [화면] 대기 이미지 ${index} 로딩 완료:`, imageUri)}
+                      onError={(error) => console.error(`🏪 [화면] 대기 이미지 ${index} 로딩 실패:`, error.nativeEvent, imageUri)}
+                    />
+                    <View className="absolute top-1 left-1 justify-center items-center px-2 py-1 bg-yellow-500 rounded-full">
+                      <Text className="text-xs font-bold text-white">대기</Text>
+                    </View>
+                    <TouchableOpacity 
+                      className="absolute -top-2 -right-2 justify-center items-center w-6 h-6 bg-red-500 rounded-full"
+                      onPress={() => removePhoto(index, true)}
+                    >
+                      <Feather name="x" size={14} color="white" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
             </View>
           )}
 
           {/* 사진이 없을 때 안내 메시지 */}
-          {photos.length === 0 && (
+          {totalImageCount === 0 && (
             <View className="justify-center items-center py-8 bg-gray-50 rounded-xl border border-gray-200">
               <Feather name="image" size={48} color="#9CA3AF" />
               <Text className="mt-2 text-gray-500">아직 추가된 사진이 없습니다</Text>
               <Text className="text-sm text-gray-400">사진을 추가하여 매장을 더 매력적으로 보이게 하세요</Text>
-              {/* 디버깅 정보 추가 */}
-              <Text className="mt-2 text-xs text-gray-300">
-                photos 배열 길이: {photos.length}
-              </Text>
             </View>
           )}
         </View>
@@ -643,10 +835,10 @@ export default function StoreDetailInfoScreen() {
             className="flex-1 px-6 py-4 bg-orange-500 rounded-xl"
             onPress={handleSave}
             activeOpacity={0.7}
-            disabled={isUpdating}
+            disabled={isUpdating || isUploading}
           >
             <Text className="font-medium text-center text-white">
-              {isUpdating ? '저장 중...' : '저장'}
+              {isUpdating || isUploading ? '저장 중...' : '저장'}
             </Text>
           </TouchableOpacity>
         </View>

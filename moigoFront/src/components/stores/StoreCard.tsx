@@ -58,25 +58,40 @@ export default function StoreCard({ store, onPress }: StoreCardProps) {
     return sportTypes[storeId as keyof typeof sportTypes] || '축구';
   };
 
+  // 가게 썸네일 URL 처리 (포트 3001 포함)
+  const getThumbnailUrl = (thumbnailUrl: string | null | undefined) => {
+    if (!thumbnailUrl) return null;
+    
+    // 상대경로인 경우 포트 3001을 포함한 절대 URL로 변환
+    if (thumbnailUrl.startsWith('/')) {
+      return `http://spotple.kr:3001${thumbnailUrl}`;
+    }
+    
+    // 절대 URL인 경우 그대로 사용
+    return thumbnailUrl;
+  };
+
+  const thumbnailUrl = getThumbnailUrl(store.store_thumbnail);
+
   return (
     <TouchableOpacity
       onPress={() => onPress(store)}
-      className="mb-4 bg-white rounded-lg shadow-sm overflow-hidden"
+      className="overflow-hidden mb-4 bg-white rounded-lg shadow-sm"
       activeOpacity={0.8}
     >
       {/* 가게 이미지 */}
       <View className="w-full h-48 bg-gray-200">
-        {store.store_thumbnail ? (
+        {thumbnailUrl ? (
           <Image
-            source={{ uri: store.store_thumbnail }}
+            source={{ uri: thumbnailUrl }}
             className="w-full h-full"
             resizeMode="cover"
             onLoad={() => {}}
             onError={() => {}}
           />
         ) : (
-          <View className="w-full h-full bg-gray-300 justify-center items-center">
-            <Text className="text-gray-500 text-sm">이미지 없음</Text>
+          <View className="justify-center items-center w-full h-full bg-gray-300">
+            <Text className="text-sm text-gray-500">이미지 없음</Text>
           </View>
         )}
       </View>
@@ -84,13 +99,13 @@ export default function StoreCard({ store, onPress }: StoreCardProps) {
       {/* 가게 정보 */}
       <View className="p-4">
         {/* 가게명 */}
-        <Text className="text-lg font-bold text-gray-900 mb-1">
+        <Text className="mb-1 text-lg font-bold text-gray-900">
           {store.store_name || '가게명 없음'}
         </Text>
 
         {/* 평점 */}
         <View className="flex-row items-center mb-2">
-          <Text className="text-yellow-400 text-base mr-1">
+          <Text className="mr-1 text-base text-yellow-400">
             {renderStars(store.store_rating || 0)}
           </Text>
           <Text className="text-sm text-gray-600">
@@ -99,27 +114,27 @@ export default function StoreCard({ store, onPress }: StoreCardProps) {
         </View>
 
         {/* 위치 정보 */}
-        <Text className="text-sm text-gray-600 mb-2">
+        <Text className="mb-2 text-sm text-gray-600">
           📍 {extractLocationInfo(store.store_address || '')}
         </Text>
 
         {/* 스크린 정보 */}
-        <Text className="text-sm text-gray-600 mb-3">
+        <Text className="mb-3 text-sm text-gray-600">
           📺 {getScreenInfo(store.store_id || '1')}
         </Text>
 
         {/* 상태 태그 */}
-        <View className="flex-row items-center justify-between">
+        <View className="flex-row justify-between items-center">
           <View className="flex-row">
             {hasGameToday(store.store_id || '1') ? (
-              <View className="px-3 py-1 bg-green-100 rounded-full mr-2">
-                <Text className="text-green-700 text-xs font-medium">
+              <View className="px-3 py-1 mr-2 bg-green-100 rounded-full">
+                <Text className="text-xs font-medium text-green-700">
                   오늘 경기 있음
                 </Text>
               </View>
             ) : (
-              <View className="px-3 py-1 bg-yellow-100 rounded-full mr-2">
-                <Text className="text-yellow-700 text-xs font-medium">
+              <View className="px-3 py-1 mr-2 bg-yellow-100 rounded-full">
+                <Text className="text-xs font-medium text-yellow-700">
                   {getSportType(store.store_id || '1')} 전문
                 </Text>
               </View>
@@ -127,8 +142,8 @@ export default function StoreCard({ store, onPress }: StoreCardProps) {
           </View>
 
           {/* 상세보기 버튼 */}
-          <View className="px-4 py-2 bg-mainOrange rounded-lg">
-            <Text className="text-white text-sm font-medium">상세보기</Text>
+          <View className="px-4 py-2 rounded-lg bg-mainOrange">
+            <Text className="text-sm font-medium text-white">상세보기</Text>
           </View>
         </View>
       </View>
