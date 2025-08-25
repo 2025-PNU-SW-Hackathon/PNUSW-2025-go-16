@@ -10,6 +10,7 @@ import SystemMessage from '@/components/chat/SystemMessage';
 import StoreShareMessage from '@/components/chat/StoreShareMessage';
 import ReservationDepositInfo from '@/components/chat/ReservationDepositInfo';
 import PaymentGuideUI from '@/components/chat/PaymentGuideUI';
+import PaymentStatusBoard from '@/components/chat/PaymentStatusBoard';
 import PaymentModal from '@/components/common/PaymentModal';
 import DropdownMenu, { DropdownOption } from '@/components/common/DropdownMenu';
 import HostBadge from '@/components/chat/HostBadge';
@@ -1355,44 +1356,41 @@ export default function ChatRoomScreen() {
   const hostMenuOptions: DropdownOption[] = [
     { 
       id: 'host_1', 
-      label: '🏪 가게 선택/변경', 
+      label: '매칭 정보 보기', 
+      icon: 'info',
       onPress: () => {
-        console.log('🏪 [방장 권한] 가게 선택/변경');
-        navigation.navigate('StoreList', { 
-          chatRoom: chatRoom,
-          isHost: true 
-        });
+        console.log('ℹ️ [방장 권한] 매칭 정보 보기');
+        Alert.alert('매칭 정보', '매칭에 대한 상세 정보를 확인할 수 있습니다.');
       }
     },
     { 
       id: 'host_2', 
-      label: reservationStatus === 1 ? '🔓 매칭 모집 허용하기' : '🔒 매칭 모집 마감하기', 
-      onPress: handleReservationStatusChange 
+      label: '매칭 정보 수정하기', 
+      icon: 'edit',
+      onPress: () => {
+        console.log('✏️ [방장 권한] 매칭 정보 수정하기');
+        setShowEditMeetingModal(true);
+      }
     },
     { 
       id: 'host_3', 
-      label: '💰 정산하기', 
-      onPress: handlePaymentMenu 
+      label: reservationStatus === 1 ? '매칭 모집 허용하기' : '매칭 모집 마감하기', 
+      icon: reservationStatus === 1 ? 'unlock' : 'lock',
+      onPress: handleReservationStatusChange 
     },
     { 
       id: 'host_4', 
-      label: '👥 참여자 관리', 
+      label: '참여자 목록', 
+      icon: 'users',
       onPress: () => {
-        console.log('👥 [방장 권한] 참여자 관리');
+        console.log('👥 [방장 권한] 참여자 목록');
         setShowParticipantModal(true);
       }
     },
     { 
       id: 'host_5', 
-      label: '✏️ 모임 정보 수정', 
-      onPress: () => {
-        console.log('✏️ [방장 권한] 모임 정보 수정');
-        setShowEditMeetingModal(true);
-      }
-    },
-    { 
-      id: 'host_6', 
-      label: '🚪 채팅방 나가기', 
+      label: '채팅방 나가기', 
+      icon: 'log-out',
       onPress: () => {
         Alert.alert(
           '방장 권한 이양',
@@ -1405,11 +1403,12 @@ export default function ChatRoomScreen() {
       }
     },
     { 
-      id: 'host_8', 
-      label: '🚨 신고하기', 
+      id: 'host_6', 
+      label: '신고하기', 
+      icon: 'alert-triangle',
       isDanger: true, 
       onPress: () => {
-        console.log('📖 [방장] 신고하기');
+        console.log('🚨 [방장] 신고하기');
         Alert.alert('신고하기', '부적절한 사용자나 내용을 신고할 수 있습니다.');
       }
     },
@@ -1419,19 +1418,27 @@ export default function ChatRoomScreen() {
   const participantMenuOptions: DropdownOption[] = [
     { 
       id: 'participant_1', 
-      label: '🏪 가게 둘러보기', 
+      label: '매칭 정보 보기', 
+      icon: 'info',
       onPress: () => {
-        console.log('🏪 [참여자 권한] 가게 둘러보기');
-        // StoreList로 이동 (보기 전용)
-        navigation.navigate('StoreList', { 
-          chatRoom: chatRoom,
-          isHost: false
-        });
+        console.log('ℹ️ [참여자 권한] 매칭 정보 보기');
+        // 매칭 정보 모달 또는 화면으로 이동
+        Alert.alert('매칭 정보', '매칭에 대한 상세 정보를 확인할 수 있습니다.');
       }
     },
     { 
-      id: 'participant_5', 
-      label: '🚪 채팅방 나가기', 
+      id: 'participant_2', 
+      label: '참여자 목록', 
+      icon: 'users',
+      onPress: () => {
+        console.log('👥 [참여자 권한] 참여자 목록');
+        setShowParticipantModal(true);
+      }
+    },
+    { 
+      id: 'participant_3', 
+      label: '채팅방 나가기', 
+      icon: 'log-out',
       onPress: () => {
         // 🆕 모집 마감 시 일반 참여자 나가기 차단
         if (reservationStatus === 1 && !isCurrentUserHost) {
@@ -1454,11 +1461,12 @@ export default function ChatRoomScreen() {
       }
     },
     { 
-      id: 'participant_6', 
-      label: '🚨 신고하기', 
+      id: 'participant_4', 
+      label: '신고하기', 
+      icon: 'alert-triangle',
       isDanger: true, 
       onPress: () => {
-        console.log('📖 [참여자] 신고하기');
+        console.log('🚨 [참여자] 신고하기');
         Alert.alert('신고하기', '부적절한 사용자나 내용을 신고할 수 있습니다.');
       }
     },
@@ -1789,17 +1797,58 @@ export default function ChatRoomScreen() {
         
         if (isAnyPaymentMessage) {
           
-          // 정산 시작 메시지의 경우 PaymentGuideUI도 함께 렌더링
+          // 🆕 정산 현황판 메시지인 경우 시스템 메시지는 숨기고 PaymentStatusBoard만 렌더링
+          if (isPaymentStatusBoardMessage) {
+            // 정산 완료 여부 확인
+            const isPaymentCompleted = paymentStatusData?.data && 
+              ('payment_per_person' in paymentStatusData.data) &&
+              (paymentStatusData.data.payment_status === 'completed');
+            
+            // 정산이 완료되면 현황판 표시하지 않음
+            if (isPaymentCompleted) {
+              return null;
+            }
+            
+            return (
+              <View key={`payment-status-board-${msg.id}-${index}`} className="mx-4 my-2">
+                {paymentStatusData?.data && 'payment_per_person' in paymentStatusData.data && (
+                  <PaymentStatusBoard 
+                    data={{
+                      payment_per_person: parseFloat(paymentStatusData.data.payment_per_person) || 0,
+                      total_amount: parseFloat(paymentStatusData.data.total_amount) || 0,
+                      total_participants: paymentStatusData.data.total_participants || 0,
+                      store_account: paymentStatusData.data.store_info || {},
+                      participants: paymentStatusData.data.participants || [],
+                      completed_count: paymentStatusData.data.completed_payments || 0,
+                      payment_deadline: paymentStatusData.data.payment_deadline || '',
+                      last_updated: paymentStatusData.data.updated_at || new Date().toISOString()
+                    }}
+                    currentUserId={currentUserId}
+                    onPaymentComplete={() => setShowPaymentModal(true)}
+                    isLoading={paymentLoading}
+                  />
+                )}
+              </View>
+            );
+          }
+          
+          // 정산 시작 메시지의 경우 시스템 메시지는 숨기고 PaymentGuideUI만 렌더링
           if (isPaymentStartMessage) {
+            // 정산 완료 여부 확인 (여러 소스에서 체크)
+            const isPaymentCompleted = paymentGuideData?.is_completed || 
+                                     (paymentGuideData?.progress.completed === paymentGuideData?.progress.total) ||
+                                     (paymentStatusData?.data && 'payment_per_person' in paymentStatusData.data && paymentStatusData.data.payment_status === 'completed');
+            
+            // 정산이 완료되면 PaymentGuideUI 표시하지 않음
+            if (isPaymentCompleted) {
+              return null;
+            }
+            
             // ✅ payment_id 정확한 매칭 (서버에서 동일한 값 보장)
             const shouldShowPaymentGuideHere = showPaymentGuide && 
                                              paymentGuideData && 
                                              (paymentGuideData.payment_id === msg.payment_id || 
                                               !msg.payment_id); // payment_id가 없는 경우도 허용
-            
-            const isPaymentCompleted = paymentGuideData?.is_completed || 
-                                     (paymentGuideData?.progress.completed === paymentGuideData?.progress.total) ||
-                                     (paymentStatusData?.data && 'payment_per_person' in paymentStatusData.data && paymentStatusData.data.payment_status === 'completed');
             
             // 🔍 디버깅 로그 추가
             console.log('🔍 [정산 시작 메시지] PaymentGuideUI 표시 조건 확인:', {
@@ -1828,29 +1877,23 @@ export default function ChatRoomScreen() {
             
             return (
               <View key={msg.id}>
-                <SystemMessage
-                  message={msg.message}
-                  messageType={msg.message_type || 'system_join'}
-                  paymentId={msg.payment_id}
-                  paymentProgress={msg.payment_progress}
-                />
+                {/* 🆕 정산 시작 메시지는 텍스트 숨기고 PaymentGuideUI만 표시 */}
                 {/* 정산 시작 메시지 바로 아래에 PaymentGuideUI 표시 */}
-                {shouldShowPaymentGuideHere && !isPaymentCompleted ? (
-                  <>
-                    <PaymentGuideUI
-                      data={paymentGuideData}
-                      currentUserId={user?.id}
-                      onPaymentComplete={handleCompletePayment}
-                      isLoading={paymentLoading}
-                    />
-                    <Text style={{color: 'red', padding: 10}}>🔍 [디버깅] PaymentGuideUI 렌더링됨!</Text>
-                  </>
-                ) : (
-                  <Text style={{color: 'orange', padding: 10}}>🔍 [디버깅] PaymentGuideUI 조건 미충족: shouldShow={shouldShowPaymentGuideHere}, completed={isPaymentCompleted}</Text>
+                {shouldShowPaymentGuideHere && (
+                  <PaymentGuideUI
+                    data={paymentGuideData}
+                    currentUserId={user?.id}
+                    onPaymentComplete={handleCompletePayment}
+                    isLoading={paymentLoading}
+                  />
                 )}
-
               </View>
             );
+          }
+          
+          // 🆕 다른 정산 관련 메시지들(업데이트, 완료)도 텍스트 숨기기
+          if (isPaymentUpdateMessage || isPaymentCompletedMessage) {
+            return null; // 정산 업데이트나 완료 메시지도 텍스트 숨김
           }
           
           return (

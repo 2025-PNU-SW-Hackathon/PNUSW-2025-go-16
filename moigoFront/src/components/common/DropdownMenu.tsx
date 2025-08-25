@@ -1,9 +1,11 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, TouchableWithoutFeedback } from 'react-native';
+import Feather from 'react-native-vector-icons/Feather';
 
 export interface DropdownOption {
   id: string;
   label: string;
+  icon?: string;
   isDanger?: boolean;
   onPress: () => void;
 }
@@ -56,9 +58,17 @@ export default function DropdownMenu({
             <TouchableOpacity
               key={option.id}
               onPress={() => handleOptionPress(option)}
-              className={`px-4 py-3 border-b border-gray-100 last:border-b-0 ${customClassName.item || ''}`}
+              className={`px-4 py-3 border-b border-gray-100 last:border-b-0 flex-row items-center ${customClassName.item || ''}`}
               activeOpacity={0.7}
             >
+              {option.icon && (
+                <Feather 
+                  name={option.icon} 
+                  size={16} 
+                  color={option.isDanger ? '#EF4444' : '#6B7280'} 
+                  style={{ marginRight: 8 }}
+                />
+              )}
               <Text 
                 className={`text-sm ${
                   option.isDanger 
