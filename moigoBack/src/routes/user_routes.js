@@ -41,7 +41,9 @@ router.post('/store/:storeId/business-registration', storeController.completeBus
 // 🆕 사업자 등록 상태 확인 (GET /users/store/:storeId/business-registration/status)
 router.get('/store/:storeId/business-registration/status', storeController.checkBusinessRegistrationStatus);
 
-// 사용자 이미지 등록 라우팅, (현재 테스트용)
-//router.post('/thumbnail', userController.uploadThumbnail);
+// 프로필 이미지 업로드
+router.post('/me/thumbnail', authMiddleware, userController.uploadThumbnail);
 
+// 프로필 이미지 조회
+router.get('/:userId/thumbnail', userController.getThumbnail);
 module.exports = router;

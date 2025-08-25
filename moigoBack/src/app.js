@@ -14,6 +14,7 @@ const path = require('path');
 const paymentRoutes = require('./routes/payment_routes');
 const matchRoutes = require('./routes/match_routes');
 const { setIO } = require('./config/socket_hub');
+const imageRoutes = require('./routes/image_routes');
 dotenv.config({ path: path.resolve(__dirname, '../.env') }); 
 
 const app = express();
@@ -47,7 +48,7 @@ app.use('/api/v1/stores', storeRoutes);
 app.use('/api/v1/chats', chatRoutes);
 app.use('/api/v1/payment', paymentRoutes);
 app.use('/api/v1/matches', matchRoutes);
-
+app.use('/api/v1/images', imageRoutes);
 // 404 및 에러 핸들러 등록
 //app.use(notFound);
 app.use(errorHandler);
@@ -107,7 +108,7 @@ const test_token = jwt.sign(
 */
   const test_token = jwt.sign(
     {
-      user_id : 'yejun2'
+      user_id : 'yejun'
     },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '2h' }
