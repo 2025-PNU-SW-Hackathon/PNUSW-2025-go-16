@@ -1755,7 +1755,7 @@ export default function ChatRoomScreen() {
             isHost={isCurrentUserHost}
           />
         </View>
-      );
+      ))
     }
     
     // 시스템 메시지 그룹
@@ -1783,14 +1783,11 @@ export default function ChatRoomScreen() {
           messageId: msg.id,
           messageType: msg.message_type,
           message: msg.message.substring(0, 50),
-          isPaymentRelated: msg.message_type === 'system_payment_start' || 
-                          msg.message_type === 'system_payment_update' || 
-                          msg.message_type === 'system_payment_completed'
+          isPaymentRelated: msg.message_type === 'system_payment_start' || msg.message_type === 'system_payment_update' || msg.message_type === 'system_payment_completed'
         });
         
         // 정산 관련 메시지 감지 (message_type 또는 메시지 내용으로)
-        const isPaymentStartMessage = msg.message_type === 'system_payment_start' || 
-                                    (msg.type === 'system' && msg.message.includes('💰 정산이 시작'));
+        const isPaymentStartMessage = msg.message_type === 'system_payment_start' || (msg.type === 'system' && msg.message.includes('💰 정산이 시작'));
         const isPaymentStatusBoardMessage = msg.type === 'system' && msg.message.includes('💰 정산 현황판');
         const isPaymentUpdateMessage = msg.message_type === 'system_payment_update';
         const isPaymentCompletedMessage = msg.message_type === 'system_payment_completed';
@@ -1814,9 +1811,7 @@ export default function ChatRoomScreen() {
           // 정산 시작 메시지의 경우 시스템 메시지는 숨기고 PaymentGuideUI만 렌더링
           if (isPaymentStartMessage) {
             // 정산 완료 여부 확인 (여러 소스에서 체크)
-            const isPaymentCompleted = paymentGuideData?.is_completed || 
-                                     (paymentGuideData?.progress.completed === paymentGuideData?.progress.total) ||
-                                     (paymentStatusData?.data && 'payment_per_person' in paymentStatusData.data && paymentStatusData.data.payment_status === 'completed');
+            const isPaymentCompleted = paymentGuideData?.is_completed || (paymentGuideData?.progress.completed === paymentGuideData?.progress.total) || (paymentStatusData?.data && 'payment_per_person' in paymentStatusData.data && paymentStatusData.data.payment_status === 'completed');
             
             // 정산이 완료되면 PaymentGuideUI 표시하지 않음
             if (isPaymentCompleted) {
@@ -1915,7 +1910,7 @@ export default function ChatRoomScreen() {
         
         // 기존 메시지 그룹과 함께 렌더링
         return (
-          <View>
+          <View key={`backup-payment-${index}`}>
             <PaymentGuideUI
               data={paymentGuideData}
               currentUserId={user?.id}
