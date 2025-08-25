@@ -6,6 +6,27 @@ const imageService = require('../services/image_service');
 const { getConnection } = require('../config/db_config');
 
 
+/**
+ * GET /api/v1/images/:imageId
+ * - DB 메타 조회 후 로컬 파일을 스트리밍으로 응답
+ * - image_service.sendImageById 가 Content-Type/Cache-Control 세팅 및 pipe 처리
+ */
+exports.getImageById = async (req, res, next) => {
+  try {
+    const { imageId } = req.params;
+    console.log('finding ', imageId);
+    // 숫자/문자 모두 허용 (BIGINT PK 대비). 검증만 간단히.
+    if (!imageId || String(imageId).trim().length === 0) {
+      return res.status(400).json({ error: 'imageId required' });
+    }
+
+    await imageService.sendImageById(res, imageId);
+    // sendImageById 내부에서 성공/404/500까지 처리합니다.
+  } catch (err) {
+    next(err);
+  }
+};
+
 // 사용자 프로필 이미지 저장
 /**
  * POST /api/v1/users/me/thumbnail
