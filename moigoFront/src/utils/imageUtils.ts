@@ -112,3 +112,6 @@ export function getStoreThumbnail(
   return null;
 }
 
+
+
+

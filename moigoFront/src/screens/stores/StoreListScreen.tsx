@@ -28,65 +28,25 @@ export default function StoreListScreen() {
   // 가게 목록 조회
   const { data: storeListData, isLoading, error, refetch } = useStoreList(filterParams);
 
-  // 디버깅용 로그
-  console.log('=== StoreListScreen 데이터 상태 ===');
-  console.log('isLoading:', isLoading);
-  console.log('error:', error);
-  console.log('storeListData:', storeListData);
-  console.log('storeListData?.data:', storeListData?.data);
-  console.log('storeListData?.data?.length:', storeListData?.data?.length);
-  
-  // 썸네일 URL 상세 로그
-  if (storeListData?.data && storeListData.data.length > 0) {
-    console.log('🖼️ === 가게 썸네일 URL 분석 ===');
-    storeListData.data.forEach((store, index) => {
-      console.log(`가게 ${index + 1}:`, {
-        store_id: store.store_id,
-        store_name: store.store_name,
-        store_thumbnail: store.store_thumbnail,
-        thumbnail_type: typeof store.store_thumbnail,
-        thumbnail_length: store.store_thumbnail?.length || 0,
-        is_valid_url: store.store_thumbnail && store.store_thumbnail.startsWith('http')
-      });
-    });
-  }
-  
-  // Key 중복 체크
-  if (storeListData?.data) {
-    const storeIds = storeListData.data.map(store => store.store_id);
-    const duplicateIds = storeIds.filter((id, index) => storeIds.indexOf(id) !== index);
-    if (duplicateIds.length > 0) {
-      console.warn('🚨 중복된 store_id 발견:', duplicateIds);
-    }
-    
-    console.log('📊 Store IDs:', storeIds);
-    console.log('📊 Store ID 타입들:', storeIds.map(id => typeof id));
+  // 디버깅용 로그 (주요 에러만)
+  if (error) {
+    console.error('❌ StoreListScreen 에러:', error);
   }
 
   // 가게 카드 클릭 핸들러
   const handleStorePress = (store: StoreListItemDTO) => {
-    console.log('=== StoreCard 클릭됨 ===');
-    console.log('store:', store);
-    console.log('store.store_id 원본값:', store?.store_id);
-    console.log('store.store_id 타입:', typeof store?.store_id);
-    console.log('store.store_id 길이:', String(store?.store_id || 0).length);
-    console.log('chatRoom:', chatRoom);
-    console.log('isHost:', isHost);
-    
-    // storeId를 숫자로 변환 (안전하게)
-    const numericStoreId = Number(store?.store_id || 0);
-    console.log('변환된 storeId:', numericStoreId, '타입:', typeof numericStoreId);
-    console.log('isNaN 체크:', isNaN(numericStoreId));
+    // storeId를 가져옴 (이제 string 타입)
+    const storeId = store?.store_id;
     
     // 유효한 storeId인지 확인
-    if (numericStoreId > 0) {
+    if (storeId) {
       navigation.navigate('StoreDetail', { 
-        storeId: numericStoreId,
+        storeId: storeId,
         chatRoom: chatRoom || undefined,
         isHost: isHost || false
       });
     } else {
-      console.error('유효하지 않은 storeId:', numericStoreId);
+      console.error('❌ 유효하지 않은 storeId:', storeId);
     }
   };
 

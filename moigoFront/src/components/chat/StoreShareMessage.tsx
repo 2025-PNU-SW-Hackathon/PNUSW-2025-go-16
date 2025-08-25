@@ -15,7 +15,7 @@ interface StoreShareMessageProps {
     reviewCount: number;
     imageUrl: string;
   };
-  storeId?: number; // 가게 ID 추가
+  storeId?: string; // 가게 ID 추가
   chatRoom?: any; // 채팅방 정보 (선택사항)
   isHost?: boolean; // 방장 여부 (선택사항)
 }
@@ -33,15 +33,7 @@ const StoreShareMessage: React.FC<StoreShareMessageProps> = ({
 }) => {
   const navigation = useNavigation<StoreShareNavigationProp>();
 
-  // 썸네일 없음 로그
-  React.useEffect(() => {
-    if (!storeInfo.imageUrl) {
-      console.log('⚠️ [StoreShareMessage] 썸네일 없음:', {
-        storeName: storeInfo.storeName,
-        imageUrl: storeInfo.imageUrl
-      });
-    }
-  }, [storeInfo.imageUrl, storeInfo.storeName]);
+  // 썸네일 로그 제거
 
   // 가게 상세로 이동하는 핸들러
   const handleStorePress = () => {
@@ -88,19 +80,8 @@ const StoreShareMessage: React.FC<StoreShareMessageProps> = ({
                     source={{ uri: storeInfo.imageUrl }}
                     className="w-full h-full"
                     resizeMode="cover"
-                    onLoad={() => {
-                      console.log('✅ [StoreShareMessage] 이미지 로드 성공:', {
-                        storeName: storeInfo.storeName,
-                        imageUrl: storeInfo.imageUrl
-                      });
-                    }}
-                    onError={(error) => {
-                      console.log('❌ [StoreShareMessage] 이미지 로드 실패:', {
-                        storeName: storeInfo.storeName,
-                        imageUrl: storeInfo.imageUrl,
-                        error: error.nativeEvent
-                      });
-                    }}
+                    onLoad={() => {}}
+                    onError={() => {}}
                   />
                 ) : (
                   <View className="w-full h-full bg-gray-300 justify-center items-center">

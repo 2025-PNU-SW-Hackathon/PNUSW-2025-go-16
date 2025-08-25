@@ -66,7 +66,8 @@ export default function RejectModal({
         {eventData && (
           <View className="p-4 bg-gray-50 rounded-xl">
             <Text className="mb-2 text-lg font-semibold text-gray-800">
-              {eventData.reservation_title || eventData.match_name || eventData.reservation_match}
+              {eventData.reservation_title || eventData.match_name || eventData.reservation_match || 
+               (eventData.reservation_ex2 && `${eventData.reservation_ex2} 경기 관람`) || '경기 관람 모임'}
             </Text>
             <Text className="text-sm text-gray-600">
               {parseParticipants(eventData.reservation_participant_info)} · {
@@ -78,7 +79,10 @@ export default function RejectModal({
             </Text>
             <View className="flex-row items-center mt-2">
               <View className="mr-2 w-2 h-2 bg-orange-500 rounded-full" />
-              <Text className="text-sm text-gray-600">{eventData.reservation_title || eventData.match_name || eventData.reservation_match}</Text>
+              <Text className="text-sm text-gray-600">
+                {eventData.reservation_title || eventData.match_name || eventData.reservation_match || 
+                 (eventData.reservation_ex2 && `${eventData.reservation_ex2} 경기 관람`) || '경기 관람 모임'}
+              </Text>
             </View>
             <View className="flex-row items-center mt-1">
               <View className="mr-2 w-2 h-2 bg-blue-500 rounded-full" />

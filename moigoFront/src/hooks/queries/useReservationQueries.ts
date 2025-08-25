@@ -113,10 +113,11 @@ export const useJoinReservation = () => {
       } else if (error?.response?.status === 403) {
         console.error('🔒 모집 마감된 모임 참여 시도 - 새 참여자 차단');
         console.error('모집 상태가 마감되어 신규 참여가 불가능함');
+      } else if (error?.response?.status === 400 && error?.response?.data?.errorCode === 'INVALID_ACTION') {
+        console.error('🔒 모집 마감된 모임 참여 시도 - 새 참여자 차단');
+        console.error('모집 상태가 마감되어 신규 참여가 불가능함');
       } else if (error?.response?.data?.errorCode === 'ALREADY_JOINED') {
         console.error('이미 참여 중인 모임입니다.');
-      } else if (error?.response?.data?.errorCode === 'INVALID_ACTION') {
-        console.error('참여할 수 없는 모임입니다.');
       }
     },
   });

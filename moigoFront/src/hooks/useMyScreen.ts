@@ -1,10 +1,11 @@
 import { useMyStore } from '@/store/myStore';
 import { useAuthStore } from '@/store/authStore';
 import { useNavigation } from '@react-navigation/native';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types/RootStackParamList';
 import { useGetMyInfo } from '@/hooks/queries/useUserQueries';
+import { useLogout } from '@/hooks/queries/useAuthQueries';
 import { useQueryClient } from '@tanstack/react-query';
 
 export function useMyScreen() {
@@ -20,12 +21,15 @@ export function useMyScreen() {
     setLoading,
   } = useMyStore();
 
-  const { user: authUser, logout: authLogout } = useAuthStore();
+  const { user: authUser, logout: authLogout, isLoggedIn, token } = useAuthStore();
+  const logoutMutation = useLogout();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // users/me API 호출
+
   const { data: myInfo, isLoading: isMyInfoLoading, error: myInfoError, refetch: refetchMyInfo } = useGetMyInfo();
   
   const queryClient = useQueryClient();
+
   
   // API 데이터가 있으면 store에 저장
   useEffect(() => {
@@ -70,15 +74,24 @@ export function useMyScreen() {
     }
   };
 
-  // 로그아웃 처리
   const handleLogout = () => {
+    console.log('🚀 [MyScreen] 로그아웃 시작');
     setLoading(true);
-    // myStore의 사용자 정보 초기화
-    resetUserProfile();
-    // 실제 로그아웃 로직
-    authLogout();
-    setLoading(false);
+    
+    // 🆕 React Query 뮤테이션을 사용한 완전한 로그아웃
+    logoutMutation.mutate(undefined, {
+      onSuccess: () => {
+        console.log('✅ [MyScreen] 로그아웃 완료');
+        setLoading(false);
+      },
+      onError: (error) => {
+        console.error('❌ [MyScreen] 로그아웃 실패:', error);
+        setLoading(false);
+      }
+    });
   };
+
+
 
   // 등급별 혜택 보기
   const handleViewGradeBenefits = () => {
@@ -118,6 +131,9 @@ export function useMyScreen() {
     userProfile,
     settings,
     isLoading: isLoading || isMyInfoLoading,
+    isRefreshing,
+    hasError: !!myInfoError,
+    error: myInfoError,
 
     // 액션
     toggleNotifications,

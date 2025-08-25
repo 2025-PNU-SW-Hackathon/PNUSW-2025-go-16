@@ -36,11 +36,39 @@ import type {
 
 // GET /users/me - 마이페이지 정보 조회 훅
 export const useGetMyInfo = () => {
+  const { isLoggedIn, token, user } = useAuthStore();
+  
   return useQuery({
     queryKey: ['my-info'],
-    queryFn: () => getMyInfo(),
+    queryFn: () => {
+      console.log('🔍 [useGetMyInfo] API 호출 시작:', {
+        isLoggedIn,
+        hasToken: !!token,
+        userId: user?.id,
+        timestamp: new Date().toISOString()
+      });
+      return getMyInfo();
+    },
     staleTime: 5 * 60 * 1000, // 5분
     gcTime: 15 * 60 * 1000, // 15분
+    enabled: isLoggedIn && !!token, // 🆕 로그인 상태와 토큰이 있을 때만 실행
+    retry: (failureCount, error) => {
+      console.log('❌ [useGetMyInfo] API 실패:', {
+        failureCount,
+        error: error?.message,
+        status: (error as any)?.response?.status
+      });
+      
+      // 401, 403 에러는 재시도하지 않음 (인증 문제)
+      if ((error as any)?.response?.status === 401 || (error as any)?.response?.status === 403) {
+        console.log('🚫 [useGetMyInfo] 인증 오류로 재시도 중단');
+        return false;
+      }
+      
+      // 최대 3번까지 재시도
+      return failureCount < 3;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // 지수 백오프
   });
 };
 

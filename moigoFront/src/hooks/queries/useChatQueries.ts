@@ -3,15 +3,13 @@ import {
   getChatRooms,
   enterChatRoom,
   getChatMessages,
-  leaveChatRoom,
-  updateChatRoomStatus,
+  getChatRoomDetail,
   kickUserFromChatRoom,
 } from '@/apis/chat';
 import type {
   ChatRoomListResponseDTO,
   ChatMessagesResponseDTO,
   EnterChatRoomRequestDTO,
-  UpdateChatRoomStatusRequestDTO,
 } from '@/types/DTO/chat';
 
 // 채팅방 목록 조회 (polling 최적화)
@@ -51,33 +49,6 @@ export const useEnterChatRoom = () => {
   });
 };
 
-// 채팅방 나가기
-export const useLeaveChatRoom = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: (roomId: number) => leaveChatRoom(roomId),
-    onSuccess: () => {
-      // 채팅방 목록 새로고침
-      queryClient.invalidateQueries({ queryKey: ['chatRooms'] });
-    },
-  });
-};
-
-// 채팅방 상태 변경
-export const useUpdateChatRoomStatus = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: ({ roomId, data }: { roomId: number; data: UpdateChatRoomStatusRequestDTO }) =>
-      updateChatRoomStatus(roomId, data),
-    onSuccess: () => {
-      // 채팅방 목록 새로고침
-      queryClient.invalidateQueries({ queryKey: ['chatRooms'] });
-    },
-  });
-};
-
 // 채팅방 유저 강퇴
 export const useKickUserFromChatRoom = () => {
   const queryClient = useQueryClient();
@@ -89,5 +60,16 @@ export const useKickUserFromChatRoom = () => {
       // 채팅방 목록 새로고침
       queryClient.invalidateQueries({ queryKey: ['chatRooms'] });
     },
+  });
+}; 
+
+// 🆕 채팅방 상세 정보 조회
+export const useChatRoomDetail = (roomId: number) => {
+  return useQuery({
+    queryKey: ['chatRoomDetail', roomId],
+    queryFn: () => getChatRoomDetail(roomId),
+    enabled: !!roomId,
+    staleTime: 30000, // 30초
+    refetchOnWindowFocus: false,
   });
 }; 

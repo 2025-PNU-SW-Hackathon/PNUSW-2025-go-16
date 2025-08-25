@@ -76,9 +76,16 @@ export default function RootNavigator() {
       {isLoggedIn ? (
         <>
           {/* 사용자 타입에 따라 다른 메인 화면 표시 */}
-          <Stack.Screen name="Main" options={{ headerShown: false }}>
-            {() => user?.userType === 'business' ? <BusinessNavigator /> : <MainTabNavigator />}
-          </Stack.Screen>
+          {user?.userType === 'business' ? (
+            <Stack.Screen name="Main" options={{ headerShown: false }}>
+              {() => <BusinessNavigator />}
+            </Stack.Screen>
+
+          ) : (
+            <Stack.Screen name="Main" options={{ headerShown: false }}>
+              {() => <MainTabNavigator />}
+            </Stack.Screen>
+          )}
           <Stack.Screen name="ChatRoom" component={ChatRoomScreen} options={{ headerShown: false }} />
           <Stack.Screen 
             name="MyInfoSetting" 

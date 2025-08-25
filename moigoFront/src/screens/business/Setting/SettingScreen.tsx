@@ -24,6 +24,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useMyStore } from '@/store/myStore';
 import { useStoreInfo } from '@/hooks/queries/useUserQueries';
 import { useUpdateStoreBasicInfo, useUpdateNotificationSettings, useUpdateReservationSettings, useReservationSettings, useDeleteAccount } from '@/hooks/queries/useUserQueries';
+import { useLogout } from '@/hooks/queries/useAuthQueries';
 import Toast from '@/components/common/Toast';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'StoreBasicInfo'>;
@@ -32,6 +33,7 @@ export default function SettingScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { logout: authLogout } = useAuthStore();
   const { resetUserProfile } = useMyStore();
+  const logoutMutation = useLogout();
   
   // API 훅 사용
   const { data: storeInfoData, isLoading: isStoreInfoLoading, refetch: refetchStoreInfo } = useStoreInfo();
@@ -227,20 +229,21 @@ export default function SettingScreen() {
   };
 
   const handleConfirmLogout = () => {
-    // 로그아웃 실행
-    console.log('로그아웃 실행');
+    console.log('🚀 [SettingScreen] 로그아웃 시작');
     
-    // myStore의 사용자 정보 초기화
-    resetUserProfile();
-    
-    // authStore의 로그아웃 실행
-    authLogout();
-    
-    // 모달 닫기
-    setShowLogoutModal(false);
-    
-    // 첫 화면(Onboarding)으로 이동
-    // RootNavigator에서 isLoggedIn이 false일 때 자동으로 Onboarding 화면으로 이동됨
+    // 🆕 React Query 뮤테이션을 사용한 완전한 로그아웃
+    logoutMutation.mutate(undefined, {
+      onSuccess: () => {
+        console.log('✅ [SettingScreen] 로그아웃 완료');
+        setShowLogoutModal(false);
+        // 첫 화면(Onboarding)으로 이동
+        // RootNavigator에서 isLoggedIn이 false일 때 자동으로 Onboarding 화면으로 이동됨
+      },
+      onError: (error) => {
+        console.error('❌ [SettingScreen] 로그아웃 실패:', error);
+        setShowLogoutModal(false);
+      }
+    });
   };
 
   const handleWithdraw = () => {

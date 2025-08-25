@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types/RootStackParamList';
-import { useStoreDetail, useShareStore } from '@/hooks/queries/useStoreQueries';
+import { useStoreDetail, useShareStore, useSelectStore } from '@/hooks/queries/useStoreQueries';
 import { useAuthStore } from '@/store/authStore';
 import Feather from 'react-native-vector-icons/Feather';
 
@@ -17,44 +17,25 @@ export default function StoreDetailScreen() {
   const { storeId, chatRoom, isHost } = route.params;
   const { user } = useAuthStore();
 
-  // 디버깅용 로그
-  console.log('=== StoreDetailScreen 렌더링 ===');
-  console.log('storeId:', storeId);
-  console.log('storeId 타입:', typeof storeId);
-  console.log('storeId 유효성:', !isNaN(storeId) && storeId > 0);
-  console.log('chatRoom:', chatRoom);
-  console.log('isHost:', isHost);
-  console.log('user:', user);
+  // 디버깅용 로그 (주요 에러만)
 
   // 실제 방장 여부 사용
   const actualIsHost = isHost || false;
 
-  // storeId 유효성 검사
-  const isValidStoreId = !isNaN(storeId) && storeId > 0;
+  // storeId 유효성 검사 (string 타입)
+  const isValidStoreId = storeId && storeId.trim().length > 0;
 
   // 가게 상세 정보 조회 (유효한 storeId일 때만)
   const { data: storeDetailData, isLoading, error, refetch } = useStoreDetail(storeId);
   
   // 가게 공유 mutation 훅
   const shareStoreMutation = useShareStore();
+  // 🆕 가게 선택 mutation 훅
+  const selectStoreMutation = useSelectStore();
 
-  // 디버깅용 로그
-  console.log('=== StoreDetailScreen API 상태 ===');
-  console.log('isLoading:', isLoading);
-  console.log('error:', error);
-  console.log('storeDetailData:', storeDetailData);
-  console.log('storeDetailData?.data:', storeDetailData?.data);
-  
-  // 썸네일 URL 상세 로그
-  if (storeDetailData?.data) {
-    console.log('🖼️ === 가게 상세 썸네일 URL 분석 ===', {
-      store_id: storeDetailData.data.store_id,
-      store_name: storeDetailData.data.store_name,
-      store_thumbnail: storeDetailData.data.store_thumbnail,
-      thumbnail_type: typeof storeDetailData.data.store_thumbnail,
-      thumbnail_length: storeDetailData.data.store_thumbnail?.length || 0,
-      is_valid_url: storeDetailData.data.store_thumbnail && storeDetailData.data.store_thumbnail.startsWith('http')
-    });
+  // 디버깅용 로그 (주요 에러만)
+  if (error) {
+    console.error('❌ StoreDetailScreen 에러:', error);
   }
 
   // 실제 데이터 사용 (API 데이터가 없으면 기본값 사용)
@@ -166,7 +147,7 @@ export default function StoreDetailScreen() {
       return;
     }
 
-    if (!storeId || storeId <= 0) {
+    if (!storeId || storeId.trim().length === 0) {
       Alert.alert('오류', '가게 정보가 올바르지 않습니다.');
       return;
     }
@@ -193,38 +174,35 @@ export default function StoreDetailScreen() {
     }
   };
 
-  // 선택하기 핸들러 (방장만)
+  // 🆕 선택하기 핸들러 (방장만) - 실제 가게 선택 API 사용
   const handleSelectPress = async () => {
     if (!chatRoom?.chat_room_id) {
       Alert.alert('오류', '채팅방 정보가 없습니다.');
       return;
     }
 
-    if (!storeId || storeId <= 0) {
+    if (!storeId || storeId.trim().length === 0) {
       Alert.alert('오류', '가게 정보가 올바르지 않습니다.');
       return;
     }
 
     Alert.alert(
       '가게 선택',
-      `${storeDetail.store_name}을 최종 선택하시겠습니까?\n다른 가게로 변경할 수 없습니다.`,
+      `${storeDetail.store_name}을 모임의 최종 가게로 선택하시겠습니까?\n\n※ 선택된 가게는 언제든 변경 가능합니다.`,
       [
         { text: '취소', style: 'cancel' },
         {
-          text: '선택하기',
+          text: '👑 선택하기',
           onPress: async () => {
             try {
-              console.log('=== 가게 선택 시작 ===');
-              console.log('chatRoom.chat_room_id:', chatRoom.chat_room_id);
-              console.log('storeId:', storeId);
               
-              // 가게 공유 API 호출 (선택하기도 같은 API 사용)
-              await shareStoreMutation.mutateAsync({
+              // 🆕 실제 가게 선택 API 호출
+              const result = await selectStoreMutation.mutateAsync({
                 roomId: chatRoom.chat_room_id!,
-                storeId: storeId
+                storeId: storeId.toString() // number를 string으로 변환
               });
 
-              Alert.alert('성공', `${storeDetail.store_name}을 선택했습니다!`, [
+              Alert.alert('성공', `${storeDetail.store_name}을 모임의 가게로 선택했습니다! 🎉\n\n모든 참여자에게 알림이 전송되었습니다.`, [
                 {
                   text: '확인',
                   onPress: () => navigation.goBack()
@@ -232,7 +210,7 @@ export default function StoreDetailScreen() {
               ]);
             } catch (error: any) {
               console.error('가게 선택 실패:', error);
-              Alert.alert('실패', error.message || '가게 선택에 실패했습니다.');
+              Alert.alert('선택 실패', error.message || '가게 선택에 실패했습니다.');
             }
           }
         }
@@ -489,13 +467,13 @@ export default function StoreDetailScreen() {
               {actualIsHost && (
                 <TouchableOpacity
                   onPress={handleSelectPress}
-                  disabled={shareStoreMutation.isPending}
+                  disabled={selectStoreMutation.isPending || shareStoreMutation.isPending}
                   className={`flex-1 py-3 rounded-lg ${
-                    shareStoreMutation.isPending ? 'bg-gray-400' : 'bg-orange-500'
+                    selectStoreMutation.isPending || shareStoreMutation.isPending ? 'bg-gray-400' : 'bg-orange-500'
                   }`}
                   activeOpacity={0.8}
                 >
-                  {shareStoreMutation.isPending ? (
+                  {selectStoreMutation.isPending ? (
                     <View className="flex-row items-center justify-center">
                       <ActivityIndicator size="small" color="white" />
                       <Text className="text-white text-center font-medium ml-2">선택 중...</Text>

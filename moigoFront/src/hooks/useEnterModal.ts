@@ -54,7 +54,12 @@ export function useEnterModal() {
       } else if (error?.response?.status === 409) {
         errorMessage = '이미 참여 중인 모임입니다';
       } else if (error?.response?.status === 400) {
-        errorMessage = '참여할 수 없는 모임입니다';
+        // 서버에서 400 + "INVALID_ACTION" 에러코드로 모집 마감 알림
+        if (error?.response?.data?.errorCode === 'INVALID_ACTION') {
+          errorMessage = '모집이 마감된 모임입니다.\n새로운 참여자는 받지 않고 있습니다.';
+        } else {
+          errorMessage = '참여할 수 없는 모임입니다';
+        }
       } else if (error?.response?.data?.message) {
         errorMessage = error.response.data.message;
       }

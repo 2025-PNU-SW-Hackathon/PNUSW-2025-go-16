@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   signup, 
   login, 
@@ -20,7 +20,9 @@ import type {
 import { setAccessToken } from '../../apis/apiClient';
 import { useMyStore } from '../../store/myStore';
 import { useAuthStore } from '../../store/authStore';
+import { useSettingsStore } from '../../store/settingsStore';
 import { usePushNotifications } from '../usePushNotifications';
+import { socketManager } from '../../utils/socketUtils';
 import { registerPushToken } from '../../apis/users';
 
 // POST /auth/signup - 회원가입 훅
@@ -214,20 +216,49 @@ export const useLogin = () => {
 
 // POST /auth/logout - 로그아웃 훅
 export const useLogout = () => {
+  const queryClient = useQueryClient();
   const { resetUserProfile } = useMyStore();
   const { logout: authLogout } = useAuthStore();
+  const { logout: settingsLogout } = useSettingsStore();
   
   return useMutation({
     mutationFn: logout,
     onSuccess: () => {
-      // 로그아웃 성공 시 액세스 토큰 제거
+      console.log('🧹 [로그아웃] 데이터 초기화 시작');
+      
+      // 1. 액세스 토큰 제거
       setAccessToken(null);
-      // 사용자 정보 초기화
-      resetUserProfile();
-      authLogout();
+      
+      // 2. 소켓 연결 완전 해제
+      console.log('📡 [로그아웃] 소켓 연결 해제');
+      socketManager.disconnect();
+      
+      // 3. React Query 캐시 완전 초기화
+      console.log('🗑️ [로그아웃] React Query 캐시 초기화');
+      queryClient.clear();
+      
+      // 4. 개별 쿼리 무효화 (추가 보장)
+      queryClient.invalidateQueries();
+      
+      // 5. 모든 Store 상태 초기화
+      console.log('👤 [로그아웃] 모든 Store 상태 초기화');
+      resetUserProfile();     // myStore 초기화
+      authLogout();          // authStore 초기화
+      settingsLogout();      // settingsStore 초기화
+      
+      console.log('✅ [로그아웃] 완전한 데이터 초기화 완료');
     },
     onError: (error) => {
-      console.error('로그아웃 실패:', error);
+      console.error('❌ 로그아웃 실패:', error);
+      
+      // 실패해도 클라이언트 측 정리는 수행
+      console.log('⚠️ [로그아웃] 서버 요청 실패, 클라이언트 데이터만 초기화');
+      setAccessToken(null);
+      socketManager.disconnect();
+      queryClient.clear();
+      resetUserProfile();
+      authLogout();
+      settingsLogout();
     },
   });
 }; 

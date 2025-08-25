@@ -118,11 +118,14 @@ export interface StoreDashboardResponseDTO {
 // 예약 관리 DTO (실제 API 응답에 맞게 수정)
 export interface StoreReservationDTO {
   reservation_id: number;
-  reservation_match: string;
+  reservation_match?: string;                  // 선택적 필드로 변경 (서버에서 안 보냄)
   reservation_participant_info: string;        // ✅ 실제 API 응답 필드
   reservation_start_time: string;
   reservation_status: string;                  // ✅ 실제 API 응답 필드 ("PENDING_APPROVAL" 등)
   reservation_table_info: string;              // ✅ 실제 API 응답 필드
+  reservation_ex2?: string;                    // ✅ 실제 API 응답 필드 (경기 코드)
+  reservation_title?: string;                  // 실제 모임 제목 (없을 수 있음)
+  match_name?: string;                         // 경기명 (없을 수 있음)
 }
 
 // 예약 관리 목록 응답 DTO
@@ -133,7 +136,7 @@ export interface StoreReservationsResponseDTO {
 
 // 예약 승인/거절 요청 DTO (올바른 API 명세에 맞게 수정)
 export interface ReservationActionRequestDTO {
-  action: 'approve' | 'reject';
+  action: 'APPROVE' | 'REJECT';  // 대문자 사용
   reason?: string; // 거절 시 사유
 }
 

@@ -8,16 +8,7 @@ interface StoreCardProps {
 }
 
 export default function StoreCard({ store, onPress }: StoreCardProps) {
-  // 썸네일 없음 로그
-  React.useEffect(() => {
-    if (!store.store_thumbnail) {
-      console.log('⚠️ [StoreCard] 썸네일 없음:', {
-        storeId: store.store_id,
-        storeName: store.store_name,
-        thumbnail: store.store_thumbnail
-      });
-    }
-  }, [store.store_thumbnail, store.store_id, store.store_name]);
+  // 썸네일 로그 제거
 
   // 평점을 별점으로 변환
   const renderStars = (rating: number) => {
@@ -41,39 +32,35 @@ export default function StoreCard({ store, onPress }: StoreCardProps) {
   };
 
   // 스크린 정보 (임시 데이터)
-  const getScreenInfo = (storeId: number) => {
+  const getScreenInfo = (storeId: string) => {
     const screenInfo = {
-      1: '대형 스크린 4개',
-      2: '프로젝터 스크린 2개',
-      3: '스크린 골프 시설',
-      4: 'TV 8대',
+      '1': '대형 스크린 4개',
+      '2': '프로젝터 스크린 2개',
+      '3': '스크린 골프 시설',
+      '4': 'TV 8대',
     };
     return screenInfo[storeId as keyof typeof screenInfo] || 'TV 4대';
   };
 
   // 오늘 경기 여부 (임시 데이터)
-  const hasGameToday = (storeId: number) => {
-    return [1, 2, 4].includes(storeId);
+  const hasGameToday = (storeId: string) => {
+    return ['1', '2', '4'].includes(storeId);
   };
 
   // 스포츠 종목 (임시 데이터)
-  const getSportType = (storeId: number) => {
+  const getSportType = (storeId: string) => {
     const sportTypes = {
-      1: '축구',
-      2: '야구',
-      3: '야구',
-      4: '농구',
+      '1': '축구',
+      '2': '야구',
+      '3': '야구',
+      '4': '농구',
     };
     return sportTypes[storeId as keyof typeof sportTypes] || '축구';
   };
 
   return (
     <TouchableOpacity
-      onPress={() => {
-        console.log('=== StoreCard TouchableOpacity 클릭됨 ===');
-        console.log('store:', store);
-        onPress(store);
-      }}
+      onPress={() => onPress(store)}
       className="mb-4 bg-white rounded-lg shadow-sm overflow-hidden"
       activeOpacity={0.8}
     >
@@ -84,21 +71,8 @@ export default function StoreCard({ store, onPress }: StoreCardProps) {
             source={{ uri: store.store_thumbnail }}
             className="w-full h-full"
             resizeMode="cover"
-            onLoad={() => {
-              console.log('✅ [StoreCard] 이미지 로드 성공:', {
-                storeId: store.store_id,
-                storeName: store.store_name,
-                thumbnailUrl: store.store_thumbnail
-              });
-            }}
-            onError={(error) => {
-              console.log('❌ [StoreCard] 이미지 로드 실패:', {
-                storeId: store.store_id,
-                storeName: store.store_name,
-                thumbnailUrl: store.store_thumbnail,
-                error: error.nativeEvent
-              });
-            }}
+            onLoad={() => {}}
+            onError={() => {}}
           />
         ) : (
           <View className="w-full h-full bg-gray-300 justify-center items-center">
@@ -131,13 +105,13 @@ export default function StoreCard({ store, onPress }: StoreCardProps) {
 
         {/* 스크린 정보 */}
         <Text className="text-sm text-gray-600 mb-3">
-          📺 {getScreenInfo(store.store_id || 0)}
+          📺 {getScreenInfo(store.store_id || '1')}
         </Text>
 
         {/* 상태 태그 */}
         <View className="flex-row items-center justify-between">
           <View className="flex-row">
-            {hasGameToday(store.store_id || 0) ? (
+            {hasGameToday(store.store_id || '1') ? (
               <View className="px-3 py-1 bg-green-100 rounded-full mr-2">
                 <Text className="text-green-700 text-xs font-medium">
                   오늘 경기 있음
@@ -146,7 +120,7 @@ export default function StoreCard({ store, onPress }: StoreCardProps) {
             ) : (
               <View className="px-3 py-1 bg-yellow-100 rounded-full mr-2">
                 <Text className="text-yellow-700 text-xs font-medium">
-                  {getSportType(store.store_id || 0)} 전문
+                  {getSportType(store.store_id || '1')} 전문
                 </Text>
               </View>
             )}
