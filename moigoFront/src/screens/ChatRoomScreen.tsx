@@ -1755,7 +1755,7 @@ export default function ChatRoomScreen() {
             isHost={isCurrentUserHost}
           />
         </View>
-      ))
+      ));
     }
     
     // 시스템 메시지 그룹
