@@ -249,6 +249,20 @@ module.exports = async function handleSocket(io) {
                 console.log('📢 [DEBUG] 전송자에게도 확정 메시지 전송');
                 socket.emit('newMessage', broadcastMessage);
                 
+                // 🔄 7. 채팅 리스트 업데이트를 위한 이벤트 전송
+                const chatListUpdateData = {
+                    chat_room_id: parseInt(room),
+                    last_message: message,
+                    last_message_time: new Date().toISOString(),
+                    last_message_sender_id: socket.user.user_id,
+                    last_message_sender_name: userName
+                };
+                
+                console.log('📋 [DEBUG] 채팅 리스트 업데이트 이벤트 전송');
+                
+                // 해당 채팅방에 있는 모든 사용자들에게 채팅 리스트 업데이트 알림
+                io.to(room).emit('chatListUpdate', chatListUpdateData);
+                
                 console.log('✅ [DEBUG] newMessage 브로드캐스트 완료');
                 
                 // 소켓 방 상태 재확인
