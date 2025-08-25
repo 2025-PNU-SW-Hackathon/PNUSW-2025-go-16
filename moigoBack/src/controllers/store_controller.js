@@ -2,6 +2,9 @@
 // 요청을 받아 가게 관련 서비스로 전달하고 응답 처리
 
 const storeService = require('../services/store_service');
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
+const imageService = require('../services/image_service');
 
 // 🔍 가게 목록 조회 컨트롤러
 exports.getStoreList = async (req, res, next) => {
@@ -829,6 +832,190 @@ exports.toggleFacilityAvailability = async (req, res, next) => {
       success: true,
       message: '편의시설 상태가 변경되었습니다.',
       data: result
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 🆕 가게 이미지 관리 엔드포인트들
+
+// 가게 이미지 업로드 (여러 장)
+exports.uploadStoreImages = [
+  upload.array('images', 10), // 최대 10장까지 업로드 가능
+  async (req, res, next) => {
+    try {
+      const store_id = req.user.store_id;
+      
+      if (!store_id) {
+        return res.status(401).json({
+          success: false,
+          message: '사장님 계정으로만 접근 가능합니다.'
+        });
+      }
+
+      const files = Array.isArray(req.files) ? req.files : [];
+      
+      if (files.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: '업로드할 이미지가 없습니다.'
+        });
+      }
+
+      const result = await storeService.uploadStoreImages(store_id, files);
+      
+      res.json({
+        success: true,
+        message: `${result.uploaded_count}장의 이미지가 업로드되었습니다.`,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+];
+
+// 가게 이미지 목록 조회
+exports.getStoreImages = async (req, res, next) => {
+  try {
+    const { storeId } = req.params;
+    
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        message: '가게 ID가 필요합니다.'
+      });
+    }
+
+    const images = await storeService.getStoreImages(storeId);
+    
+    res.json({
+      success: true,
+      data: {
+        store_id: storeId,
+        images: images,
+        count: images.length
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 가게 이미지 순서 변경
+exports.reorderStoreImages = async (req, res, next) => {
+  try {
+    const store_id = req.user.store_id;
+    const { imageOrder } = req.body;
+    
+    if (!store_id) {
+      return res.status(401).json({
+        success: false,
+        message: '사장님 계정으로만 접근 가능합니다.'
+      });
+    }
+
+    if (!imageOrder || !Array.isArray(imageOrder)) {
+      return res.status(400).json({
+        success: false,
+        message: '이미지 순서 배열이 필요합니다.'
+      });
+    }
+
+    const result = await storeService.reorderStoreImages(store_id, imageOrder);
+    
+    res.json({
+      success: true,
+      message: result.message,
+      data: result
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 가게 이미지 삭제
+exports.deleteStoreImage = async (req, res, next) => {
+  try {
+    const store_id = req.user.store_id;
+    const { image_id } = req.params;
+    
+    if (!store_id) {
+      return res.status(401).json({
+        success: false,
+        message: '사장님 계정으로만 접근 가능합니다.'
+      });
+    }
+
+    if (!image_id) {
+      return res.status(400).json({
+        success: false,
+        message: '삭제할 이미지 ID가 필요합니다.'
+      });
+    }
+
+    const result = await storeService.deleteStoreImage(store_id, image_id);
+    
+    res.json({
+      success: true,
+      message: result.message,
+      data: result
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 가게 메인 이미지 설정
+exports.setMainStoreImage = async (req, res, next) => {
+  try {
+    const store_id = req.user.store_id;
+    const { image_id } = req.params;
+    
+    if (!store_id) {
+      return res.status(401).json({
+        success: false,
+        message: '사장님 계정으로만 접근 가능합니다.'
+      });
+    }
+
+    if (!image_id) {
+      return res.status(400).json({
+        success: false,
+        message: '메인 이미지로 설정할 이미지 ID가 필요합니다.'
+      });
+    }
+
+    const result = await storeService.setMainStoreImage(store_id, image_id);
+    
+    res.json({
+      success: true,
+      message: result.message,
+      data: result
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 가게 이미지 스트리밍 응답 (첫 번째 이미지)
+exports.getStoreMainImage = async (req, res, next) => {
+  try {
+    const { storeId } = req.params;
+    
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        message: '가게 ID가 필요합니다.'
+      });
+    }
+
+    // imageService를 사용하여 첫 번째 이미지 스트리밍
+    await imageService.sendImageByOwner(res, {
+      ownerId: storeId,
+      ownerType: 'store',
+      index: 0
     });
   } catch (err) {
     next(err);

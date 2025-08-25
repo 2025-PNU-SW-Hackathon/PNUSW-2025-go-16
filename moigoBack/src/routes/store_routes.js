@@ -76,4 +76,27 @@ router.delete('/me/facilities/:facility_id', authMiddleware, storeController.del
 // 편의시설 사용 가능 여부 토글 (PUT /stores/me/facilities/:facility_id/toggle)
 router.put('/me/facilities/:facility_id/toggle', authMiddleware, storeController.toggleFacilityAvailability);
 
+// 🆕 가게 이미지 관리 라우트들 - 사장님만 접근 가능
+// 가게 이미지 업로드 (POST /stores/me/images) - 여러 장 업로드 가능
+router.post('/me/images', authMiddleware, storeController.uploadStoreImages);
+
+// 가게 이미지 목록 조회 (GET /stores/me/images)
+router.get('/me/images', authMiddleware, storeController.getStoreImages);
+
+// 가게 이미지 순서 변경 (PUT /stores/me/images/reorder)
+router.put('/me/images/reorder', authMiddleware, storeController.reorderStoreImages);
+
+// 가게 이미지 삭제 (DELETE /stores/me/images/:image_id)
+router.delete('/me/images/:image_id', authMiddleware, storeController.deleteStoreImage);
+
+// 가게 메인 이미지 설정 (PUT /stores/me/images/:image_id/main)
+router.put('/me/images/:image_id/main', authMiddleware, storeController.setMainStoreImage);
+
+// 🆕 공개 이미지 조회 라우트들 (인증 불필요)
+// 가게 이미지 목록 조회 (GET /stores/:storeId/images)
+router.get('/:storeId/images', storeController.getStoreImages);
+
+// 가게 메인 이미지 스트리밍 (GET /stores/:storeId/main-image)
+router.get('/:storeId/main-image', storeController.getStoreMainImage);
+
 module.exports = router; 
