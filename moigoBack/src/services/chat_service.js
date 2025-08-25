@@ -1398,8 +1398,8 @@ exports.selectStore = async (user_id, room_id, store_id) => {
 
 // 💰 정산 시스템 서비스
 
-// 방장이 정산 시작
-exports.startPayment = async (user_id, room_id, payment_per_person) => {
+// 방장이 정산 시작 (자동 가격 계산)
+exports.startPayment = async (user_id, room_id) => {
   const conn = getConnection();
 
   try {
@@ -1435,7 +1435,7 @@ exports.startPayment = async (user_id, room_id, payment_per_person) => {
 
     const reservation = reservationInfo[0];
 
-    // 모집 마감 상태 확인
+    // 🔴 조건 1: 모집 마감 상태 확인
     if (reservation.reservation_status !== 1) {
       const err = new Error("모집이 마감된 후에만 정산을 시작할 수 있습니다.");
       err.statusCode = 400;
@@ -1443,7 +1443,7 @@ exports.startPayment = async (user_id, room_id, payment_per_person) => {
       throw err;
     }
 
-    // 가게 선택 완료 확인
+    // 🔴 조건 2: 가게 선택 완료 확인
     if (!reservation.selected_store_id) {
       const err = new Error("가게가 선택된 후에만 정산을 시작할 수 있습니다.");
       err.statusCode = 400;
@@ -1483,10 +1483,9 @@ exports.startPayment = async (user_id, room_id, payment_per_person) => {
       }
     }
 
-    // 4. 가게 계좌 정보 조회
+    // 4. 가게 정보 및 예약금 정보 조회
     const [storeInfo] = await conn.query(
-      `SELECT store_name, bank_name, account_number, account_holder, 
-              COALESCE(payment_per_person, 25000) as default_payment
+      `SELECT store_name, bank_name, account_number, account_holder, deposit_amount
        FROM store_table WHERE store_id = ?`,
       [reservation.selected_store_id]
     );
@@ -1499,9 +1498,20 @@ exports.startPayment = async (user_id, room_id, payment_per_person) => {
     }
 
     const store = storeInfo[0];
-    const finalPaymentAmount = payment_per_person || store.default_payment;
+    
+    // 🔴 가게에서 설정한 예약금을 참가자 수로 나누어 1인당 금액 계산 (n빵)
     const totalParticipants = reservation.reservation_participant_cnt;
-    const totalAmount = finalPaymentAmount * totalParticipants;
+    const storeDepositAmount = store.deposit_amount || 0;
+    
+    if (storeDepositAmount <= 0) {
+      const err = new Error("가게에서 예약금이 설정되지 않았습니다. 가게에 문의해주세요.");
+      err.statusCode = 400;
+      err.errorCode = "NO_DEPOSIT_AMOUNT";
+      throw err;
+    }
+    
+    const paymentPerPerson = Math.ceil(storeDepositAmount / totalParticipants); // 올림 처리로 n빵
+    const totalAmount = paymentPerPerson * totalParticipants;
 
     // 5. 정산 세션 생성
     const paymentId = `payment_${room_id}_${Date.now()}`;
@@ -1514,7 +1524,7 @@ exports.startPayment = async (user_id, room_id, payment_per_person) => {
         total_amount, total_participants, started_by, payment_deadline)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [paymentId, room_id, room_id, reservation.selected_store_id,
-        finalPaymentAmount, totalAmount, totalParticipants, user_id, paymentDeadline]
+        paymentPerPerson, totalAmount, totalParticipants, user_id, paymentDeadline]
     );
 
     // 6. 참여자별 정산 기록 생성
@@ -1664,8 +1674,9 @@ exports.startPayment = async (user_id, room_id, payment_per_person) => {
       payment_id: paymentId,
       chat_room_id: parseInt(room_id),
       total_participants: totalParticipants,
-      payment_per_person: finalPaymentAmount,
+      payment_per_person: paymentPerPerson,
       total_amount: totalAmount,
+      store_deposit_amount: storeDepositAmount, // 🆕 가게 원래 예약금
       store_account: {
         bank_name: store.bank_name,
         account_number: store.account_number,
