@@ -354,17 +354,32 @@ exports.getReservationDetail = async (reservation_id) => {
 exports.approveReservation = async (reservationId, store_id, action) => {
   const conn = getConnection();
   try {
-    // 예약이 해당 매장의 것인지 확인
-    const [reservation] = await conn.query(
-      'SELECT * FROM reservation_table WHERE reservation_id = ? AND store_id = ?',
-      [reservationId, store_id]
+    console.log('🔍 [DEBUG] approveReservation 파라미터:', { reservationId, store_id, action });
+    
+    // 먼저 예약이 존재하는지 확인
+    const [reservationCheck] = await conn.query(
+      'SELECT reservation_id, store_id, selected_store_id, reservation_status FROM reservation_table WHERE reservation_id = ?',
+      [reservationId]
     );
     
-    if (reservation.length === 0) {
-      const err = new Error('해당 예약을 찾을 수 없습니다.');
+    console.log('🔍 [DEBUG] 예약 조회 결과:', reservationCheck);
+    
+    if (reservationCheck.length === 0) {
+      const err = new Error('예약을 찾을 수 없습니다.');
       err.statusCode = 404;
       throw err;
     }
+    
+    // 예약이 해당 매장의 것인지 확인 (selected_store_id로 체크)
+    const reservationData = reservationCheck[0];
+    
+    if (reservationData.selected_store_id !== store_id) {
+      const err = new Error(`해당 예약에 대한 권한이 없습니다. 예약의 store_id: ${reservationData.selected_store_id}, 요청한 store_id: ${store_id}`);
+      err.statusCode = 403;
+      throw err;
+    }
+    
+    console.log('✅ [DEBUG] 매장 권한 확인 통과');
     
     const newStatus = action === 'APPROVE' ? 1 : 2; // 1: 승인, 2: 거절
     
