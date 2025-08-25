@@ -10,7 +10,6 @@ import SystemMessage from '@/components/chat/SystemMessage';
 import StoreShareMessage from '@/components/chat/StoreShareMessage';
 import ReservationDepositInfo from '@/components/chat/ReservationDepositInfo';
 import PaymentGuideUI from '@/components/chat/PaymentGuideUI';
-import PaymentStatusBoard from '@/components/chat/PaymentStatusBoard';
 import PaymentModal from '@/components/common/PaymentModal';
 import DropdownMenu, { DropdownOption } from '@/components/common/DropdownMenu';
 import HostBadge from '@/components/chat/HostBadge';
@@ -1380,6 +1379,12 @@ export default function ChatRoomScreen() {
     },
     { 
       id: 'host_4', 
+      label: '정산하기', 
+      icon: 'credit-card',
+      onPress: handlePaymentMenu 
+    },
+    { 
+      id: 'host_5', 
       label: '참여자 목록', 
       icon: 'users',
       onPress: () => {
@@ -1388,7 +1393,7 @@ export default function ChatRoomScreen() {
       }
     },
     { 
-      id: 'host_5', 
+      id: 'host_6', 
       label: '채팅방 나가기', 
       icon: 'log-out',
       onPress: () => {
@@ -1403,7 +1408,7 @@ export default function ChatRoomScreen() {
       }
     },
     { 
-      id: 'host_6', 
+      id: 'host_7', 
       label: '신고하기', 
       icon: 'alert-triangle',
       isDanger: true, 
@@ -1713,40 +1718,35 @@ export default function ChatRoomScreen() {
     //   messageTypes: group.messages.map(msg => ({ id: msg.id, type: msg.type, message_type: msg.message_type }))
     // });
     
-    // 🏪 가게 공유 메시지 그룹 처리
-    const storeShareMessages = group.messages.filter(msg => msg.type === 'store_share');
-    // console.log('🏪 [가게 공유 메시지 필터링]', {
-    //   totalMessages: group.messages.length,
-    //   storeShareCount: storeShareMessages.length,
-    //   allMessageTypes: group.messages.map(msg => msg.type)
-    // });
-    
-    if (storeShareMessages.length > 0) {
-      // console.log('✅ [가게 공유 메시지 그룹 렌더링]', {
-      //   groupId: group.id,
-      //   messagesCount: storeShareMessages.length,
-      //   firstMessage: storeShareMessages[0],
-      //   firstMessageStoreInfo: storeShareMessages[0]?.storeInfo
-      // });
+    // 🏪 일반 메시지 그룹 처리 (텍스트 + 가게 공유 포함)
+    if (group.type === 'user') {
+      // ChatMessage를 ChatBubble이 기대하는 형태로 변환
+      const chatBubbleMessages = group.messages.map(msg => ({
+        id: msg.id,
+        type: msg.type,
+        content: msg.message,
+        storeInfo: msg.storeInfo || (msg.type === 'store_share' ? {
+          storeName: msg.store_name || '가게 이름',
+          rating: msg.store_rating || 0,
+          reviewCount: 0,
+          imageUrl: msg.store_thumbnail || ''
+        } : undefined),
+        status: msg.status,
+        store_id: msg.store_id
+      }));
       
-      return storeShareMessages.map(msg => (
-        <View key={msg.id} className="mb-4">
-          <StoreShareMessage
-            isMyMessage={msg.senderId === user?.id}
-            senderName={msg.senderName}
-            senderAvatar={msg.senderAvatar}
-            storeInfo={msg.storeInfo || {
-              storeName: msg.store_name || '가게 이름',
-              rating: msg.store_rating || 0,
-              reviewCount: 0,
-              imageUrl: msg.store_thumbnail || ''
-            }}
-            storeId={msg.store_id}
+      return (
+        <View key={group.id}>
+          <ChatBubble
+            messages={chatBubbleMessages}
+            isMyMessage={group.isMyMessage}
+            senderName={group.senderName}
+            senderAvatar={group.senderAvatar}
             chatRoom={chatRoom}
             isHost={isCurrentUserHost}
           />
         </View>
-      ));
+      );
     }
     
     // 시스템 메시지 그룹
@@ -1797,39 +1797,9 @@ export default function ChatRoomScreen() {
         
         if (isAnyPaymentMessage) {
           
-          // 🆕 정산 현황판 메시지인 경우 시스템 메시지는 숨기고 PaymentStatusBoard만 렌더링
+          // 🆕 정산 현황판 메시지는 숨김 (정산 안내만 표시)
           if (isPaymentStatusBoardMessage) {
-            // 정산 완료 여부 확인
-            const isPaymentCompleted = paymentStatusData?.data && 
-              ('payment_per_person' in paymentStatusData.data) &&
-              (paymentStatusData.data.payment_status === 'completed');
-            
-            // 정산이 완료되면 현황판 표시하지 않음
-            if (isPaymentCompleted) {
-              return null;
-            }
-            
-            return (
-              <View key={`payment-status-board-${msg.id}-${index}`} className="mx-4 my-2">
-                {paymentStatusData?.data && 'payment_per_person' in paymentStatusData.data && (
-                  <PaymentStatusBoard 
-                    data={{
-                      payment_per_person: parseFloat(paymentStatusData.data.payment_per_person) || 0,
-                      total_amount: parseFloat(paymentStatusData.data.total_amount) || 0,
-                      total_participants: paymentStatusData.data.total_participants || 0,
-                      store_account: paymentStatusData.data.store_info || {},
-                      participants: paymentStatusData.data.participants || [],
-                      completed_count: paymentStatusData.data.completed_payments || 0,
-                      payment_deadline: paymentStatusData.data.payment_deadline || '',
-                      last_updated: paymentStatusData.data.updated_at || new Date().toISOString()
-                    }}
-                    currentUserId={currentUserId}
-                    onPaymentComplete={() => setShowPaymentModal(true)}
-                    isLoading={paymentLoading}
-                  />
-                )}
-              </View>
-            );
+            return null; // 정산 현황판 메시지는 표시하지 않음
           }
           
           // 정산 시작 메시지의 경우 시스템 메시지는 숨기고 PaymentGuideUI만 렌더링
