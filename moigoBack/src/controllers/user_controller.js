@@ -1,9 +1,9 @@
 // src/controllers/user_controller.js
 const userService = require('../services/user_service');
-const multer = require('multer');
-const upload = multer({ storage: multer.memoryStorage() }); // req.file.buffer 사용
-const imageService = require('../services/image_service');
-const { getConnection } = require('../config/db_config');
+//const multer = require('multer');
+//const upload = multer({ storage: multer.memoryStorage() }); // req.file.buffer 사용
+//const imageService = require('../services/image_service');
+//const { getConnection } = require('../config/db_config');
 
 // 👤 아이디 중복 검사 컨트롤러
 exports.checkUserIdDuplicate = async (req, res, next) => {
