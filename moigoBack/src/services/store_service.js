@@ -2,6 +2,7 @@
 
 const { getConnection } = require('../config/db_config');
 const bcrypt = require('bcryptjs');
+const imageService = require('./image_service');
 
 // 🔍 가게 목록 조회 서비스
 exports.getStoreList = async (filters) => {
@@ -14,8 +15,7 @@ exports.getStoreList = async (filters) => {
       s.store_name,
       s.store_address,
       s.store_phonenumber,
-      s.store_rating,
-      s.store_thumbnail
+      s.store_rating
     FROM store_table s
     WHERE 1=1
   `;
@@ -61,13 +61,37 @@ exports.getStoreList = async (filters) => {
 
   const [rows] = await conn.query(query, params);
   
-  // store_id는 문자열일 수도 있으므로 변환하지 않음
-  const convertedRows = rows.map(row => ({
-    ...row,
-    store_id: row.store_id  // 원본 값 유지
-  }));
+  // 각 가게의 첫 번째 이미지 정보 추가
+  const enrichedRows = await Promise.all(
+    rows.map(async (row) => {
+      try {
+        // images 테이블에서 해당 가게의 첫 번째 이미지 조회
+        const [imageRows] = await conn.query(
+          `SELECT id as image_id, object_key, mime_type 
+           FROM images 
+           WHERE owner_type = 'store' AND owner_id = ? AND is_public = 1
+           ORDER BY created_at ASC, id ASC 
+           LIMIT 1`,
+          [row.store_id]
+        );
+        
+        return {
+          ...row,
+          store_id: row.store_id,  // 원본 값 유지
+          store_thumbnail: imageRows.length > 0 ? `/api/v1/images/${imageRows[0].image_id}` : null
+        };
+      } catch (error) {
+        console.log(`⚠️ [getStoreList] 가게 ${row.store_id} 이미지 조회 실패:`, error.message);
+        return {
+          ...row,
+          store_id: row.store_id,
+          store_thumbnail: null
+        };
+      }
+    })
+  );
   
-  return convertedRows;
+  return enrichedRows;
 };
 
 // 가게 상세 정보 조회
@@ -95,7 +119,7 @@ exports.getStoreDetail = async (storeId) => {
         store_id, store_name, store_address, store_bio,
         store_open_hour, store_close_hour, store_holiday,
         store_max_people_cnt, store_min_people_cnt, store_max_table_cnt, store_max_parking_cnt, store_max_screen_cnt,
-        store_phonenumber, store_thumbnail, store_review_cnt, store_rating,
+        store_phonenumber, store_review_cnt, store_rating,
         business_number, owner_name, email
        FROM store_table 
        WHERE store_id = ?`,
@@ -110,10 +134,29 @@ exports.getStoreDetail = async (storeId) => {
       throw err;
     }
     
+    // 가게의 모든 이미지 정보 조회
+    const [imageRows] = await conn.query(
+      `SELECT id as image_id, object_key, mime_type, byte_size, created_at
+       FROM images 
+       WHERE owner_type = 'store' AND owner_id = ? AND is_public = 1
+       ORDER BY created_at ASC, id ASC`,
+      [storeId]
+    );
+    
+    // 이미지 정보를 URL 형태로 변환
+    const images = imageRows.map(img => ({
+      image_id: img.image_id,
+      url: `/api/v1/images/${img.image_id}`,
+      mime_type: img.mime_type,
+      byte_size: img.byte_size,
+      created_at: img.created_at
+    }));
+    
     // store_id는 문자열일 수도 있으므로 원본 값 유지
     const storeDetail = {
       ...rows[0],
-      store_id: rows[0].store_id
+      store_id: rows[0].store_id,
+      store_thumbnail: images.length > 0 ? `/api/v1/images/${images[0].image_id}` : null
     };
     
     return storeDetail;
@@ -666,8 +709,38 @@ exports.getMyStoreInfo = async (store_id) => {
       };
     }
     
-    // 사진 정보 (기본값)
-    const photos = store.store_thumbnail ? store.store_thumbnail.split(',') : [];
+    // 사진 정보 (images 테이블에서 가져오기)
+    let photos = [];
+    try {
+      const [imageRows] = await conn.query(
+        `SELECT id as image_id, object_key, mime_type, byte_size, created_at
+         FROM images 
+         WHERE owner_type = 'store' AND owner_id = ? AND is_public = 1
+         ORDER BY created_at ASC, id ASC`,
+        [store_id]
+      );
+      
+      photos = imageRows.map(img => ({
+        image_id: img.image_id,
+        url: `/api/v1/images/${img.image_id}`,
+        mime_type: img.mime_type,
+        byte_size: img.byte_size,
+        created_at: img.created_at
+      }));
+    } catch (error) {
+      console.log('⚠️ [getMyStoreInfo] 이미지 정보 조회 실패, 기본값 사용:', error.message);
+      // 에러 발생 시 기존 방식 사용 (하위 호환성)
+      photos = store.store_thumbnail ? store.store_thumbnail.split(',').map((url, index) => ({
+        image_id: `legacy_${index}`,
+        url: url,
+        mime_type: 'image/jpeg',
+        byte_size: 0,
+        created_at: new Date()
+      })) : [];
+    }
+    
+    // 명세서에 맞게 photos를 URL 문자열 배열로 변환
+    const photoUrls = photos.map(photo => photo.url);
     
     // 스포츠 카테고리 (기본값)
     const sports_categories = ['축구', '야구', '농구'];
@@ -730,7 +803,7 @@ exports.getMyStoreInfo = async (store_id) => {
         bio: store.store_bio,
         menu: menu,
         facilities: facilities,
-        photos: photos,
+        photos: photoUrls,
         sports_categories: sports_categories
       },
       reservation_settings: reservation_settings,
@@ -849,13 +922,61 @@ exports.updateMyStoreDetails = async (store_id, details) => {
       );
     }
     
-    // 사진 정보 업데이트
+    // 사진 정보 업데이트 (images 테이블 사용)
     if (photos && photos.length > 0) {
-      const photosString = photos.join(',');  // ✅ 모든 사진을 쉼표로 구분
-      await conn.query(
-        'UPDATE store_table SET store_thumbnail = ? WHERE store_id = ?',
-        [photosString, store_id]
-      );
+      // photos가 URL 문자열 배열인지 image_id 배열인지 확인
+      const isUrlArray = photos.every(photo => typeof photo === 'string' && photo.startsWith('/api/v1/images/'));
+      
+      if (isUrlArray) {
+        // URL 배열인 경우 image_id 추출
+        const imageIds = photos.map(url => {
+          const match = url.match(/\/api\/v1\/images\/(\d+)/);
+          return match ? match[1] : null;
+        }).filter(id => id !== null);
+        
+        // 기존 이미지들을 is_public = 0으로 설정
+        await conn.query(
+          `UPDATE images 
+           SET is_public = 0 
+           WHERE owner_type = 'store' AND owner_id = ?`,
+          [store_id]
+        );
+        
+        // 새로운 이미지들을 is_public = 1로 설정
+        for (const imageId of imageIds) {
+          await conn.query(
+            `UPDATE images 
+             SET is_public = 1 
+             WHERE id = ? AND owner_type = 'store' AND owner_id = ?`,
+            [imageId, store_id]
+          );
+        }
+        
+        console.log(`✅ [updateMyStoreDetails] ${imageIds.length}개 이미지 순서 업데이트 완료`);
+      } else {
+        // image_id 배열인 경우 (기존 로직)
+        // 기존 이미지들을 is_public = 0으로 설정
+        await conn.query(
+          `UPDATE images 
+           SET is_public = 0 
+           WHERE owner_type = 'store' AND owner_id = ?`,
+          [store_id]
+        );
+        
+        // 새로운 이미지들을 is_public = 1로 설정
+        for (const photo of photos) {
+          if (photo.image_id && !photo.image_id.startsWith('legacy_')) {
+            await conn.query(
+              `UPDATE images 
+               SET is_public = 1 
+               WHERE id = ? AND owner_type = 'store' AND owner_id = ?`,
+              [photo.image_id, store_id]
+            );
+          }
+        }
+        
+        console.log(`✅ [updateMyStoreDetails] ${photos.length}개 이미지 업데이트 완료`);
+      }
     }
     
     // 🆕 매장 소개 업데이트
@@ -894,7 +1015,6 @@ exports.updateMyStoreDetails = async (store_id, details) => {
   }
 };
 
-// 🆕 예약 설정 수정 (사장님 전용)
 // 🆕 예약 설정 조회
 exports.getMyStoreReservationSettings = async (store_id) => {
   const conn = getConnection();
@@ -1531,6 +1651,204 @@ exports.toggleFacilityAvailability = async (facility_id) => {
     if (!error.statusCode) {
       error.statusCode = 500;
       error.message = '편의시설 상태 변경 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+}; 
+
+// 🆕 가게 이미지 관리 API들
+
+// 가게 이미지 업로드 (여러 장)
+exports.uploadStoreImages = async (store_id, files) => {
+  const conn = getConnection();
+  try {
+    if (!files || files.length === 0) {
+      const err = new Error('업로드할 이미지가 없습니다.');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const savedImages = [];
+    
+    for (const file of files) {
+      // imageService를 사용하여 이미지 저장
+      const saved = await imageService.saveImageLocal({
+        ownerType: 'store',
+        ownerId: store_id,
+        file: file,
+        isPublic: 1,
+      });
+      
+      savedImages.push(saved);
+    }
+
+    // 업로드된 이미지 정보 반환
+    return {
+      store_id,
+      uploaded_count: savedImages.length,
+      images: savedImages.map(img => ({
+        image_id: img.image_id,
+        url: `/api/v1/images/${img.image_id}`,
+        object_key: img.object_key
+      }))
+    };
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '가게 이미지 업로드 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
+
+// 가게 이미지 목록 조회
+exports.getStoreImages = async (store_id) => {
+  const conn = getConnection();
+  try {
+    const [rows] = await conn.query(
+      `SELECT id as image_id, object_key, mime_type, byte_size, is_public, created_at
+       FROM images 
+       WHERE owner_type = 'store' AND owner_id = ? AND is_public = 1
+       ORDER BY created_at ASC, id ASC`,
+      [store_id]
+    );
+    
+    return rows.map(img => ({
+      image_id: img.image_id,
+      url: `/api/v1/images/${img.image_id}`,
+      mime_type: img.mime_type,
+      byte_size: img.byte_size,
+      is_public: img.is_public === 1,
+      created_at: img.created_at
+    }));
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '가게 이미지 조회 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
+
+// 가게 이미지 순서 변경
+exports.reorderStoreImages = async (store_id, imageOrder) => {
+  const conn = getConnection();
+  try {
+    // imageOrder는 [image_id1, image_id2, ...] 형태의 배열
+    if (!Array.isArray(imageOrder) || imageOrder.length === 0) {
+      const err = new Error('이미지 순서 배열이 올바르지 않습니다.');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    // 모든 이미지를 is_public = 0으로 설정
+    await conn.query(
+      `UPDATE images 
+       SET is_public = 0 
+       WHERE owner_type = 'store' AND owner_id = ?`,
+      [store_id]
+    );
+
+    // 순서대로 is_public = 1로 설정
+    for (let i = 0; i < imageOrder.length; i++) {
+      await conn.query(
+        `UPDATE images 
+         SET is_public = 1 
+         WHERE id = ? AND owner_type = 'store' AND owner_id = ?`,
+        [imageOrder[i], store_id]
+      );
+    }
+
+    return {
+      store_id,
+      message: '이미지 순서가 변경되었습니다.',
+      new_order: imageOrder
+    };
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '이미지 순서 변경 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
+
+// 가게 이미지 삭제
+exports.deleteStoreImage = async (store_id, image_id) => {
+  const conn = getConnection();
+  try {
+    // 이미지가 해당 가게의 것인지 확인
+    const [imageRows] = await conn.query(
+      `SELECT id FROM images 
+       WHERE id = ? AND owner_type = 'store' AND owner_id = ?`,
+      [image_id, store_id]
+    );
+
+    if (imageRows.length === 0) {
+      const err = new Error('삭제할 이미지를 찾을 수 없습니다.');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    // imageService를 사용하여 이미지 삭제
+    await imageService.deleteImage(image_id);
+
+    return {
+      success: true,
+      message: '이미지가 삭제되었습니다.',
+      deleted_image_id: image_id
+    };
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '이미지 삭제 중 오류가 발생했습니다.';
+    }
+    throw error;
+  }
+};
+
+// 가게 메인 이미지 설정
+exports.setMainStoreImage = async (store_id, image_id) => {
+  const conn = getConnection();
+  try {
+    // 이미지가 해당 가게의 것인지 확인
+    const [imageRows] = await conn.query(
+      `SELECT id FROM images 
+       WHERE id = ? AND owner_type = 'store' AND owner_id = ? AND is_public = 1`,
+      [image_id, store_id]
+    );
+
+    if (imageRows.length === 0) {
+      const err = new Error('메인 이미지로 설정할 이미지를 찾을 수 없습니다.');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    // 모든 이미지를 is_public = 0으로 설정
+    await conn.query(
+      `UPDATE images 
+       SET is_public = 0 
+       WHERE owner_type = 'store' AND owner_id = ?`,
+      [store_id]
+    );
+
+    // 선택된 이미지를 is_public = 1로 설정 (첫 번째 순서)
+    await conn.query(
+      `UPDATE images 
+       SET is_public = 1 
+       WHERE id = ? AND owner_type = 'store' AND owner_id = ?`,
+      [image_id, store_id]
+    );
+
+    return {
+      store_id,
+      message: '메인 이미지가 설정되었습니다.',
+      main_image_id: image_id
+    };
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+      error.message = '메인 이미지 설정 중 오류가 발생했습니다.';
     }
     throw error;
   }
