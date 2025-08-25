@@ -287,6 +287,62 @@ exports.getBankCodes = async () => {
   }
 };
 
+// 🏪 사장님 아이디 중복 검사
+exports.checkStoreIdDuplicate = async (store_id) => {
+  const conn = getConnection();
+  
+  try {
+    // 기본 검증
+    if (!store_id || store_id.trim() === '') {
+      return {
+        success: false,
+        message: '가게 ID를 입력해주세요.'
+      };
+    }
+
+    // 아이디 길이 검증 (3-20자)
+    if (store_id.length < 3 || store_id.length > 20) {
+      return {
+        success: false,
+        message: '가게 ID는 3자 이상 20자 이하로 입력해주세요.'
+      };
+    }
+
+    // 영문, 숫자, 언더스코어만 허용
+    const idPattern = /^[a-zA-Z0-9_]+$/;
+    if (!idPattern.test(store_id)) {
+      return {
+        success: false,
+        message: '가게 ID는 영문, 숫자, 언더스코어(_)만 사용 가능합니다.'
+      };
+    }
+
+    // DB에서 중복 확인
+    const [existingStores] = await conn.query(
+      'SELECT store_id FROM store_table WHERE store_id = ?',
+      [store_id]
+    );
+
+    if (existingStores.length > 0) {
+      return {
+        success: false,
+        available: false,
+        message: '이미 사용 중인 가게 ID입니다.'
+      };
+    }
+
+    return {
+      success: true,
+      available: true,
+      message: '사용 가능한 가게 ID입니다.'
+    };
+
+  } catch (error) {
+    console.error('가게 ID 중복 확인 중 오류:', error);
+    throw new Error('가게 ID 중복 확인 중 오류가 발생했습니다.');
+  }
+};
+
 // 🆕 1단계: 기본 사업자 회원가입 (아이디/비번/이메일/휴대폰번호)
 exports.registerStoreBasic = async (store_id, store_pwd, email, store_phonenumber) => {
   const conn = getConnection();
@@ -990,20 +1046,23 @@ exports.getMyStoreReservations = async (store_id) => {
         r.reservation_max_participant_cnt,
         r.reservation_status,
         r.reservation_ex2,
-        GROUP_CONCAT(u.user_name SEPARATOR ', ') as participant_names
+        r.reservation_user_name as participant_names,
+        r.selected_store_name,
+        ps.total_amount,
+        ps.payment_per_person,
+        ps.payment_status,
+        ps.started_at as payment_started_at,
+        ps.completed_at as payment_completed_at
        FROM reservation_table r
-       LEFT JOIN reservation_participant_table rp ON r.reservation_id = rp.reservation_id
-       LEFT JOIN user_table u ON rp.user_id = u.user_id
-       WHERE r.store_id = ?
-       GROUP BY r.reservation_id
+       LEFT JOIN payment_sessions ps ON r.reservation_id = ps.chat_room_id
+       WHERE r.selected_store_id = ?
        ORDER BY r.reservation_start_time DESC`,
       [store_id]
     );
     
     return rows.map(row => ({
       reservation_id: row.reservation_id,
-      match_name: row.match_name,
-      reservation_title: row.reservation_title,
+      reservation_match: row.reservation_match,
       reservation_start_time: row.reservation_start_time,
       reservation_participant_info: row.participant_names || '참가자 없음',
       reservation_table_info: '테이블 정보', // 실제 테이블 정보가 있다면 추가

@@ -272,6 +272,26 @@ exports.getMyStoreReservationSettings = async (req, res, next) => {
   }
 };
 
+// 🏪 사장님 아이디 중복 검사 컨트롤러
+exports.checkStoreIdDuplicate = async (req, res, next) => {
+  try {
+    const { store_id } = req.body;
+
+    // 기본 검증
+    if (!store_id) {
+      return res.status(400).json({
+        success: false,
+        message: '가게 ID를 입력해주세요.'
+      });
+    }
+
+    const result = await storeService.checkStoreIdDuplicate(store_id);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
 // 🏪 사장님 회원가입 컨트롤러
 exports.registerStore = async (req, res, next) => {
   try {

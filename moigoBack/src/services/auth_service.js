@@ -42,7 +42,8 @@ exports.login = async (user_id, user_pwd, expo_token) => {
     // JWT 토큰 생성
     const payload = {
       user_id: user.user_id,
-      user_name: user.user_name
+      user_name: user.user_name,
+      user_type: 'customer' // 일반 사용자 구분
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
@@ -119,7 +120,8 @@ exports.storeLogin = async (store_id, store_pwd, expo_token) => {
     // JWT 토큰 생성
     const payload = {
       store_id: store.store_id,
-      store_name: store.store_name
+      store_name: store.store_name,
+      user_type: 'business' // 사장님 계정 구분
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
