@@ -1369,10 +1369,20 @@ exports.selectStore = async (user_id, room_id, store_id) => {
 
       // 시스템 메시지도 함께 브로드캐스트 (기존 패턴과 동일하게)
       io.to(room_id.toString()).emit('newMessage', savedMessage);
+      
+      // 🔄 채팅 리스트 업데이트 이벤트 전송
+      const chatListUpdateData = {
+        chat_room_id: parseInt(room_id),
+        last_message: storeMessage,
+        last_message_time: new Date().toISOString(),
+        last_message_sender_id: 'system',
+        last_message_sender_name: 'System'
+      };
+      io.to(room_id.toString()).emit('chatListUpdate', chatListUpdateData);
 
       console.log('✅ [STORE SELECT] 소켓 이벤트 발송 완료:', {
         room_id: room_id,
-        events: ['storeSelected', 'newMessage'],
+        events: ['storeSelected', 'newMessage', 'chatListUpdate'],
         recipients_count: currentSockets.length
       });
 
@@ -1708,10 +1718,20 @@ exports.startPayment = async (user_id, room_id) => {
       
       // 🆕 정산 현황판 메시지 브로드캐스트
       io.to(room_id.toString()).emit('newMessage', paymentBoardMessage);
+      
+      // 🔄 채팅 리스트 업데이트 이벤트 전송 (정산 시작 메시지로)
+      const chatListUpdateData = {
+        chat_room_id: parseInt(room_id),
+        last_message: simpleMessage,
+        last_message_time: new Date().toISOString(),
+        last_message_sender_id: 'system',
+        last_message_sender_name: 'System'
+      };
+      io.to(room_id.toString()).emit('chatListUpdate', chatListUpdateData);
 
       console.log('✅ [PAYMENT START] 소켓 이벤트 발송 완료:', {
         room_id: room_id,
-        events: ['paymentStarted', 'newMessage'],
+        events: ['paymentStarted', 'newMessage', 'chatListUpdate'],
         payment_id: paymentId
       });
 
@@ -1905,6 +1925,16 @@ exports.completePayment = async (user_id, room_id, payment_method) => {
 
         // 정산 완료 시스템 메시지 브로드캐스트
         io.to(room_id.toString()).emit('newMessage', completionSystemMessage);
+        
+        // 🔄 채팅 리스트 업데이트 이벤트 전송
+        const chatListUpdateData = {
+          chat_room_id: parseInt(room_id),
+          last_message: '✅ 예약이 정상적으로 등록되었습니다.',
+          last_message_time: new Date().toISOString(),
+          last_message_sender_id: 'system',
+          last_message_sender_name: 'System'
+        };
+        io.to(room_id.toString()).emit('chatListUpdate', chatListUpdateData);
 
         // 🔴 예약 등록 완료 이벤트
         io.to(room_id.toString()).emit('reservationRegistered', {

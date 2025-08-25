@@ -418,6 +418,16 @@ exports.approveReservation = async (reservationId, store_id, action) => {
       // 해당 채팅방에 실시간 알림 전송
       io.to(reservationId.toString()).emit('newMessage', savedMessage);
       
+      // 🔄 채팅 리스트 업데이트 이벤트 전송
+      const chatListUpdateData = {
+        chat_room_id: parseInt(reservationId),
+        last_message: systemMessage,
+        last_message_time: new Date().toISOString(),
+        last_message_sender_id: 'system',
+        last_message_sender_name: 'System'
+      };
+      io.to(reservationId.toString()).emit('chatListUpdate', chatListUpdateData);
+      
       // 🏪 사장님에게도 예약 상태 변경 알림 전송
       const storeRoom = `store_${store_id}`;
       io.to(storeRoom).emit('reservationStatusChanged', {
