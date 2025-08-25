@@ -2405,10 +2405,10 @@ exports.getStoreListForChat = async (keyword, limit = 10) => {
 
     const [rows] = await conn.query(query, params);
 
-    // store_id를 숫자로 변환
+    // store_id는 문자열일 수도 있으므로 변환하지 않음
     const convertedRows = rows.map(row => ({
       ...row,
-      store_id: parseInt(row.store_id) || 0
+      store_id: row.store_id  // 원본 값 유지
     }));
 
     return convertedRows;

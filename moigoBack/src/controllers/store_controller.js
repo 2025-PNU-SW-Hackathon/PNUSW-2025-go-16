@@ -39,17 +39,8 @@ exports.getStoreDetail = async (req, res, next) => {
       });
     }
     
-    // storeId를 숫자로 변환
-    const numericStoreId = parseInt(storeId, 10);
-    
-    if (isNaN(numericStoreId) || numericStoreId <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: '유효하지 않은 가게 ID입니다.'
-      });
-    }
-    
-    const storeDetail = await storeService.getStoreDetail(numericStoreId);
+    // storeId는 문자열일 수도 있으므로 원본 값 사용
+    const storeDetail = await storeService.getStoreDetail(storeId);
     console.log('✅ [getStoreDetail] 조회 성공:', storeDetail);
     
     res.json({ success: true, data: storeDetail });
