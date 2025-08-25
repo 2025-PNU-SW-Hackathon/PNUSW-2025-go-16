@@ -1522,14 +1522,15 @@ exports.startPayment = async (user_id, room_id) => {
       throw err;
     }
     
-    const paymentPerPerson = Math.ceil(storeDepositAmount / totalParticipants); // 올림 처리로 n빵
+    // deposit_amount는 이미 인당 금액이므로 그대로 사용
+    const paymentPerPerson = storeDepositAmount;
     const totalAmount = paymentPerPerson * totalParticipants;
     
     console.log('💰 [PAYMENT] 최종 계산 결과:', {
       store_deposit_amount: storeDepositAmount,
       payment_per_person: paymentPerPerson,
       total_amount: totalAmount,
-      calculation: `${storeDepositAmount} ÷ ${totalParticipants} = ${paymentPerPerson} (올림)`
+      calculation: `인당 ${storeDepositAmount}원 × ${totalParticipants}명 = 총 ${totalAmount}원`
     });
 
     // 5. 정산 세션 생성
@@ -2986,7 +2987,7 @@ exports.sendReservationToStore = async (room_id, payment_id) => {
         reservation_ex2: reservation.reservation_ex2,
         // 추가 정산 정보
         total_amount: reservation.total_amount,
-        payment_per_person: Math.ceil(reservation.total_amount / reservation.total_participants),
+        payment_per_person: reservation.total_amount / reservation.total_participants, // 이미 올바른 인당 금액
         payment_status: 'completed',
         payment_completed_at: new Date().toISOString()
       };
