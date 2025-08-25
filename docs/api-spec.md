@@ -1169,7 +1169,8 @@ facilities.wifi.available ? '활성화 (주황색)' : '비활성화 (회색)';
     "user_email": "test@example.com",
     "user_phone_number": "010-1234-5678",
     "user_region": "서울",
-    "user_gender": 1
+    "user_gender": 1,
+    "user_thumbnail" : "/api/v1/users/:userId/thumbnail"
   }
 }
 ```
