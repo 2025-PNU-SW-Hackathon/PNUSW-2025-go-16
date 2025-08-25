@@ -1,8 +1,9 @@
 // src/screens/HomeScreen.tsx
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { useMyScreen } from '@/hooks/useMyScreen';
 import { COLORS } from '@/constants/colors';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 // 컴포넌트들
 import GradeCard from '@/components/my/GradeCard';
@@ -12,6 +13,9 @@ import MenuItem from '@/components/my/MenuItem';
 import ToggleSwitch from '@/components/common/ToggleSwitch';
 
 export default function MyScreen() {
+  const [refreshing, setRefreshing] = useState(false);
+  const navigation = useNavigation();
+  
   const {
     userProfile,
     settings,
@@ -24,7 +28,29 @@ export default function MyScreen() {
     handleContactCustomerService,
     toggleNotifications,
     handleEditPassword,
+    refreshUserProfile,
   } = useMyScreen();
+
+  // 화면이 포커스될 때마다 프로필 데이터 새로고침
+  useFocusEffect(
+    useCallback(() => {
+      refreshUserProfile();
+    }, [refreshUserProfile])
+  );
+
+  // 새로고침 처리
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      if (refreshUserProfile) {
+        await refreshUserProfile();
+      }
+    } catch (error) {
+      // 에러 처리 (필요시 사용자에게 알림)
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshUserProfile]);
 
   const handleLogoutPress = () => {
     Alert.alert('로그아웃', '정말 로그아웃 하시겠습니까?', [
@@ -52,7 +78,19 @@ export default function MyScreen() {
 
   return (
     <View className="flex-1 bg-white">
-      <ScrollView className="flex-1 pt-4">
+      <ScrollView 
+        className="flex-1 pt-4"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#FF6B35']} // 메인 오렌지 색상
+            tintColor="#FF6B35"
+            title="새로고침 중..."
+            titleColor="#FF6B35"
+          />
+        }
+      >
         {/* 등급 카드 */}
         <GradeCard
           grade={userProfile?.grade || 'BRONZE'}
