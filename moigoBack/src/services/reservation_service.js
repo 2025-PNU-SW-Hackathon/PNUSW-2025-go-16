@@ -415,18 +415,7 @@ exports.approveReservation = async (reservationId, store_id, action) => {
         action === 'APPROVE' ? 'system_reservation_approved' : 'system_reservation_rejected'
       );
       
-      // 해당 채팅방에 실시간 알림 전송
-      io.to(reservationId.toString()).emit('newMessage', savedMessage);
-      
-      // 🔄 채팅 리스트 업데이트 이벤트 전송 - 개별 사용자별로
-      const chatListUpdateData = {
-        chat_room_id: parseInt(reservationId),
-        last_message: systemMessage,
-        last_message_time: new Date().toISOString(),
-        last_message_sender_id: 'system',
-        last_message_sender_name: 'System'
-      };
-      
+      // 🔄 시스템 메시지를 개별 사용자별로 전송
       try {
         const conn = require('../config/db_config').getConnection();
         const [approvalParticipants] = await conn.query(
@@ -434,14 +423,39 @@ exports.approveReservation = async (reservationId, store_id, action) => {
           [reservationId]
         );
         
-        // 각 참여자에게 개별적으로 이벤트 전송
+        // 각 참여자에게 개별적으로 시스템 메시지 전송
+        for (const participant of approvalParticipants) {
+          const userSocketId = `user_${participant.user_id}`;
+          io.to(userSocketId).emit('newMessage', savedMessage);
+          console.log(`📢 [RESERVATION APPROVAL] 사용자 ${participant.user_id}에게 시스템 메시지 전송`);
+        }
+        
+        // 채팅 리스트 업데이트도 개별 전송
+        const chatListUpdateData = {
+          chat_room_id: parseInt(reservationId),
+          last_message: systemMessage,
+          last_message_time: new Date().toISOString(),
+          last_message_sender_id: 'system',
+          last_message_sender_name: 'System'
+        };
+        
         for (const participant of approvalParticipants) {
           const userSocketId = `user_${participant.user_id}`;
           io.to(userSocketId).emit('chatListUpdate', chatListUpdateData);
         }
+        
       } catch (error) {
-        console.error('❌ [RESERVATION APPROVAL] 채팅 리스트 업데이트 전송 실패:', error);
+        console.error('❌ [RESERVATION APPROVAL] 개별 전송 실패, 기존 방식으로 fallback:', error);
         // 실패 시 기존 방식으로 fallback
+        io.to(reservationId.toString()).emit('newMessage', savedMessage);
+        
+        const chatListUpdateData = {
+          chat_room_id: parseInt(reservationId),
+          last_message: systemMessage,
+          last_message_time: new Date().toISOString(),
+          last_message_sender_id: 'system',
+          last_message_sender_name: 'System'
+        };
         io.to(reservationId.toString()).emit('chatListUpdate', chatListUpdateData);
       }
       
