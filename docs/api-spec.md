@@ -286,11 +286,25 @@
       "store_name": "한신포차",
       "review_text": "재밌게 봤어요!",
       "review_rating": 4,
-      "review_created_time": "2025-07-28T22:00:00"
+      "review_created_time": "2025-07-28T22:00:00",
+      "images": [
+         {
+                          "image_id": 8,
+                          "url": "/api/v1/images/8",
+                          "mime_type": "image/jpeg"
+                      },
+                      {
+                          "image_id": 7,
+                          "url": "/api/v1/images/7",
+                          "mime_type": "image/jpeg"
+                      }
+                  ]
     }
   ]
 }
 ```
+
+
 
 ---
 
