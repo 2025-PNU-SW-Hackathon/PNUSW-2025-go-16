@@ -131,7 +131,7 @@ export function useProfile() {
       form.append('user_region', userProfile.region || '서울');
       form.append('user_email', formData.email);
   
-            if (images.length > 0) {
+      if (images.length > 0) {
         const filename = images[0].split('/').pop() ?? 'photo.jpg';
         const match = /\.(\w+)$/.exec(filename);
         const type = match ? `image/${match[1]}` : 'image/jpeg';
@@ -143,44 +143,48 @@ export function useProfile() {
         } as any);
       }
   
-      await updateProfileMutation.mutateAsync(form);
-  
-      // myStore 업데이트 (로컬 이미지 유지)
-      updateUserProfile({
-        name: formData.name,
-        phone: formData.phone,
-        email: formData.email,
-        birthDate: formData.birthDate,
-        gender: formData.gender,
-        bio: formData.bio,
-        profileImage: images.length > 0 ? images[0] : userProfile.profileImage,
-      });
+      // 서버에 프로필 업데이트 요청
+      const response = await updateProfileMutation.mutateAsync(form);
+      console.log('프로필 업데이트 응답:', response);
       
-      // 관련된 모든 쿼리 무효화 (마이 탭 데이터도 새로고침)
+      // 서버 응답 후 최신 데이터 가져오기
+      await refetchMyInfo();
+      
+      // 서버에서 받은 최신 데이터로 로컬 상태 업데이트
+      if (myInfo?.data) {
+        const serverData = myInfo.data;
+        
+        // 프로필 정보 업데이트
+        updateUserProfile({
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+          birthDate: formData.birthDate,
+          gender: formData.gender,
+          bio: formData.bio,
+          profileImage: serverData.user_thumbnail ? 
+            (serverData.user_thumbnail.startsWith('/') ? 
+              `http://spotple.kr:3001${serverData.user_thumbnail}` : 
+              serverData.user_thumbnail
+            ) : 
+            userProfile.profileImage,
+        });
+        
+        // 서버 이미지가 있으면 로컬 이미지 초기화
+        if (serverData.user_thumbnail) {
+          setImages([]);
+        }
+      }
+      
+      // 관련된 모든 쿼리 무효화
       await queryClient.invalidateQueries({ queryKey: ['my-info'] });
       await queryClient.invalidateQueries({ queryKey: ['user-profile'] });
       await queryClient.invalidateQueries({ queryKey: ['matching-history'] });
-      
-      // 현재 프로필 데이터도 새로고침
-      await refetchMyInfo();
-      
-      // 서버 응답이 오면 로컬 이미지를 서버 이미지로 교체
-      if (myInfo?.data?.user_thumbnail && myInfo.data.user_thumbnail !== (images.length > 0 ? images[0] : null)) {
-        // 서버 이미지 URL에 캐시 방지 쿼리 파라미터 추가
-        let serverImageUrl = myInfo.data.user_thumbnail;
-        if (serverImageUrl.startsWith('/')) {
-          serverImageUrl = `http://spotple.kr:3001${serverImageUrl}`;
-        } else {
-          serverImageUrl = `${serverImageUrl}`;
-        }
-        
-        updateProfileImage(serverImageUrl);
-        setImages([]); // 선택된 이미지 초기화
-      }
   
       setIsModalOpen(true);
       setIsEditing(false);
     } catch (error) {
+      console.error('프로필 저장 실패:', error);
       // 실패 시 로컬 이미지도 롤백
       if (images.length > 0) {
         updateProfileImage(userProfile.profileImage || '');
