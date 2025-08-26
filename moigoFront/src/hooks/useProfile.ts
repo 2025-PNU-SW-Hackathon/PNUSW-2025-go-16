@@ -12,7 +12,7 @@ import { useQueryClient } from '@tanstack/react-query';
 export function useProfile() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { userProfile, isLoading, updateUserProfile, updateProfileImage, setLoading } = useMyStore();
-  const { image, pickImage, setImage } = useImagePicker();
+  const { images, pickImage, setImages } = useImagePicker();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<ProfileFormData>({
     name: '',
@@ -50,14 +50,15 @@ export function useProfile() {
   // API에서 최신 데이터를 가져와서 profileData 업데이트
   useEffect(() => {
     if (myInfo?.data) {
-      // 새로운 썸네일이 있으면 즉시 교체
+      // 새로운 썸네일이 있으면 즉시 교체 (절대 URL로 변환)
       if (myInfo.data.user_thumbnail && myInfo.data.user_thumbnail !== userProfile?.profileImage) {
-        updateProfileImage(myInfo.data.user_thumbnail);
-        
-        // 로컬 선택 이미지도 초기화 (서버 이미지로 교체됨)
-        if (image && image !== myInfo.data.user_thumbnail) {
-          setImage(null);
+        // 상대경로를 절대 URL로 변환
+        let absoluteThumbnailUrl = myInfo.data.user_thumbnail;
+        if (myInfo.data.user_thumbnail.startsWith('/')) {
+          absoluteThumbnailUrl = `http://spotple.kr:3001${myInfo.data.user_thumbnail}`;
         }
+        
+        updateProfileImage(absoluteThumbnailUrl);
       }
       
       // formData도 최신 데이터로 업데이트
@@ -69,7 +70,7 @@ export function useProfile() {
         gender: (myInfo.data.user_gender === 1 ? 'male' : 'female') as 'male' | 'female',
       }));
     }
-  }, [myInfo, userProfile?.profileImage, updateProfileImage, image]);
+  }, [myInfo, userProfile?.profileImage, updateProfileImage]);
 
   // 편집 모드 시작
   const startEditing = () => {
@@ -114,7 +115,7 @@ export function useProfile() {
     
     // 즉시 로컬에 저장하고 myStore에 반영 (즉시 표시)
     updateProfileImage(imageUri);
-    setImage(imageUri);
+    setImages([imageUri]);
   };
 
   // 프로필 저장
@@ -130,13 +131,13 @@ export function useProfile() {
       form.append('user_region', userProfile.region || '서울');
       form.append('user_email', formData.email);
   
-      if (image) {
-        const filename = image.split('/').pop() ?? 'photo.jpg';
+            if (images.length > 0) {
+        const filename = images[0].split('/').pop() ?? 'photo.jpg';
         const match = /\.(\w+)$/.exec(filename);
         const type = match ? `image/${match[1]}` : 'image/jpeg';
-  
+
         form.append('thumbnail', {
-          uri: image,
+          uri: images[0],
           name: filename,
           type,
         } as any);
@@ -152,7 +153,7 @@ export function useProfile() {
         birthDate: formData.birthDate,
         gender: formData.gender,
         bio: formData.bio,
-        profileImage: image || userProfile.profileImage,
+        profileImage: images.length > 0 ? images[0] : userProfile.profileImage,
       });
       
       // 관련된 모든 쿼리 무효화 (마이 탭 데이터도 새로고침)
@@ -164,26 +165,26 @@ export function useProfile() {
       await refetchMyInfo();
       
       // 서버 응답이 오면 로컬 이미지를 서버 이미지로 교체
-      if (myInfo?.data?.user_thumbnail && myInfo.data.user_thumbnail !== image) {
+      if (myInfo?.data?.user_thumbnail && myInfo.data.user_thumbnail !== (images.length > 0 ? images[0] : null)) {
         // 서버 이미지 URL에 캐시 방지 쿼리 파라미터 추가
         let serverImageUrl = myInfo.data.user_thumbnail;
         if (serverImageUrl.startsWith('/')) {
-          serverImageUrl = `http://spotple.kr:3001${serverImageUrl}?t=${Date.now()}`;
+          serverImageUrl = `http://spotple.kr:3001${serverImageUrl}`;
         } else {
-          serverImageUrl = `${serverImageUrl}?t=${Date.now()}`;
+          serverImageUrl = `${serverImageUrl}`;
         }
         
         updateProfileImage(serverImageUrl);
-        setImage(null); // 선택된 이미지 초기화
+        setImages([]); // 선택된 이미지 초기화
       }
   
       setIsModalOpen(true);
       setIsEditing(false);
     } catch (error) {
       // 실패 시 로컬 이미지도 롤백
-      if (image) {
+      if (images.length > 0) {
         updateProfileImage(userProfile.profileImage || '');
-        setImage(null);
+        setImages([]);
       }
     } finally {
       setLoading(false);
@@ -277,7 +278,7 @@ export function useProfile() {
       writtenReviews: 0,
       preferredSports: [],
     },
-    image,
+    images,
     formData,
     isLoading,
     isEditing,

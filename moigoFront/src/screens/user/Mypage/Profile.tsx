@@ -17,7 +17,7 @@ export default function Profile() {
   const {
     profileData,
     formData,
-    image,
+    images,
     isLoading,
     isEditing,
     isFormValid,
@@ -95,9 +95,25 @@ export default function Profile() {
       >
         {/* 프로필 이미지 */}
         <ProfileImage 
-          imageUri={image} 
+          imageUri={images.length > 0 ? images[0] : null} 
           onImageChange={handleImagePress}
-          thumbnailUrl={myInfo?.data?.user_thumbnail || profileData.profileImage}
+          thumbnailUrl={(() => {
+            // API에서 받은 상대 경로만 절대 URL로 변환
+            // profileData.profileImage는 이미 절대 URL이므로 그대로 사용
+            if (myInfo?.data?.user_thumbnail && myInfo.data.user_thumbnail.startsWith('/')) {
+              const absoluteUrl = `http://spotple.kr:3001${myInfo.data.user_thumbnail}`;
+              console.log('🔍 [Profile] API 상대 경로 → 절대 URL 변환:', {
+                original: myInfo.data.user_thumbnail,
+                converted: absoluteUrl,
+                profileDataImage: profileData.profileImage
+              });
+              return absoluteUrl;
+            }
+            
+            // profileData.profileImage 사용 (이미 절대 URL)
+            console.log('🔍 [Profile] profileData.profileImage 사용:', profileData.profileImage);
+            return profileData.profileImage;
+          })()}
         />
 
         {/* 기본 정보 */}

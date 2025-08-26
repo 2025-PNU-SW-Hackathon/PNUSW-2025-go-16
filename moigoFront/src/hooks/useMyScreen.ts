@@ -34,12 +34,10 @@ export function useMyScreen() {
   // API 데이터가 있으면 store에 저장
   useEffect(() => {
     if (myInfo?.data) {
-      // 이미지 URL에 캐시 방지 쿼리 파라미터 추가
+      // 상대경로를 절대 URL로 변환 (useProfile과 동일한 로직)
       let profileImageUrl = myInfo.data.user_thumbnail;
       if (profileImageUrl && profileImageUrl.startsWith('/')) {
-        profileImageUrl = `http://spotple.kr:3001${profileImageUrl}?t=${Date.now()}`;
-      } else if (profileImageUrl) {
-        profileImageUrl = `${profileImageUrl}?t=${Date.now()}`;
+        profileImageUrl = `http://spotple.kr:3001${profileImageUrl}`;
       }
       
       const userProfile = {
