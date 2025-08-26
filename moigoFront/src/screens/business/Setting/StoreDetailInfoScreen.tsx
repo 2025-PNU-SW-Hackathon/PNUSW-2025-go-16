@@ -48,8 +48,8 @@ const convertToAbsoluteUrl = (relativeUrl: string): string => {
     return relativeUrl;
   }
   
-  // 포트 3001을 포함한 BASE_URL 사용
-  const BASE_URL = 'http://spotple.kr:3001';
+  // HTTPS BASE_URL 사용
+  const BASE_URL = 'https://spotple.kr';
   
   console.log('🔧 [URL 변환] BASE_URL:', BASE_URL);
   console.log('🔧 [URL 변환] 입력 URL:', relativeUrl);

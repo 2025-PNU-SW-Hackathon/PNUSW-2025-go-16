@@ -88,7 +88,7 @@ export default function MyScreen() {
         </Text>
         <TouchableOpacity 
           className="bg-mainOrange px-6 py-3 rounded-lg"
-          onPress={handleRefresh}
+          onPress={onRefresh}
           disabled={isRefreshing}
         >
           <Text className="text-white font-medium">

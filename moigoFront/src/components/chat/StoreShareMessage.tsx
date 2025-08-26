@@ -49,9 +49,9 @@ const StoreShareMessage: React.FC<StoreShareMessageProps> = ({
       return firstImage;
     }
     
-    // 상대경로인 경우 포트 3001을 포함한 절대 URL로 변환
+    // 상대경로인 경우 HTTPS 절대 URL로 변환
     if (imageUrl.startsWith('/')) {
-      return `http://spotple.kr:3001${imageUrl}`;
+      return `https://spotple.kr${imageUrl}`;
     }
     
     // 절대 URL인 경우 그대로 사용

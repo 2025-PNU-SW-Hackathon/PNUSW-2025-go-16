@@ -31,13 +31,13 @@ export default function StoreSearchModal({ isVisible, onClose, onSelectStore }: 
   };
 
   const renderStoreItem = ({ item }: { item: ChatStoreListItemDTO }) => {
-    // 가게 썸네일 URL 처리 (포트 3001 포함)
+    // 가게 썸네일 URL 처리 (HTTPS)
     const getThumbnailUrl = (thumbnailUrl: string | null | undefined) => {
       if (!thumbnailUrl) return null;
       
-      // 상대경로인 경우 포트 3001을 포함한 절대 URL로 변환
+      // 상대경로인 경우 HTTPS 절대 URL로 변환
       if (thumbnailUrl.startsWith('/')) {
-        return `http://spotple.kr:3001${thumbnailUrl}`;
+        return `https://spotple.kr${thumbnailUrl}`;
       }
       
       // 절대 URL인 경우 그대로 사용

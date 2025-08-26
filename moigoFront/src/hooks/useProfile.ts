@@ -55,7 +55,7 @@ export function useProfile() {
         // 상대경로를 절대 URL로 변환
         let absoluteThumbnailUrl = myInfo.data.user_thumbnail;
         if (myInfo.data.user_thumbnail.startsWith('/')) {
-          absoluteThumbnailUrl = `http://spotple.kr:3001${myInfo.data.user_thumbnail}`;
+          absoluteThumbnailUrl = `https://spotple.kr${myInfo.data.user_thumbnail}`;
         }
         
         updateProfileImage(absoluteThumbnailUrl);
@@ -148,11 +148,13 @@ export function useProfile() {
       console.log('프로필 업데이트 응답:', response);
       
       // 서버 응답 후 최신 데이터 가져오기
-      await refetchMyInfo();
+      const refetchResult = await refetchMyInfo();
+      console.log('프로필 데이터 새로고침 결과:', refetchResult);
       
-      // 서버에서 받은 최신 데이터로 로컬 상태 업데이트
-      if (myInfo?.data) {
-        const serverData = myInfo.data;
+      // 새로고침된 데이터로 로컬 상태 업데이트
+      if (refetchResult.data?.data) {
+        const serverData = refetchResult.data.data;
+        console.log('새로고침된 서버 데이터:', serverData);
         
         // 프로필 정보 업데이트
         updateUserProfile({
@@ -173,7 +175,10 @@ export function useProfile() {
         // 서버 이미지가 있으면 로컬 이미지 초기화
         if (serverData.user_thumbnail) {
           setImages([]);
+          console.log('이미지 초기화 완료, 새로운 프로필 이미지:', serverData.user_thumbnail);
         }
+      } else {
+        console.log('새로고침된 데이터가 없음');
       }
       
       // 관련된 모든 쿼리 무효화

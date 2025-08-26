@@ -37,7 +37,7 @@ export function useMyScreen() {
       // 상대경로를 절대 URL로 변환 (useProfile과 동일한 로직)
       let profileImageUrl = myInfo.data.user_thumbnail;
       if (profileImageUrl && profileImageUrl.startsWith('/')) {
-        profileImageUrl = `http://spotple.kr:3001${profileImageUrl}`;
+        profileImageUrl = `https://spotple.kr${profileImageUrl}`;
       }
       
       const userProfile = {

@@ -81,7 +81,7 @@ export function isValidImageUrl(url: string | null | undefined): boolean {
  * 서버 기본 URL (환경변수나 설정에서 가져와야 함)
  * 실제 프로젝트에서는 config 파일에서 관리하는 것이 좋습니다.
  */
-export const DEFAULT_SERVER_BASE_URL = 'http://spotple.kr:3001'; // 개발 환경용 포트 3001
+export const DEFAULT_SERVER_BASE_URL = 'https://spotple.kr'; // 배포 환경용 HTTPS
 
 /**
  * 가게 썸네일을 안전하게 가져오는 메인 함수
