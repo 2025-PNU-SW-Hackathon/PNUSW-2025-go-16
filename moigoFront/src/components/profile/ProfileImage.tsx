@@ -20,7 +20,7 @@ export default function ProfileImage({ imageUri, onImageChange, thumbnailUrl }: 
     if (thumbnailUrl) {
       // 상대경로인 경우 절대 URL로 변환
       if (thumbnailUrl.startsWith('/')) {
-        const absoluteUrl = `http://spotple.kr:3001${thumbnailUrl}`;
+        const absoluteUrl = `https://spotple.kr${thumbnailUrl}`;
         return { uri: absoluteUrl };
       }
       // 절대 URL인 경우 그대로 사용

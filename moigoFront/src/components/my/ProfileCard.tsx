@@ -25,7 +25,7 @@ export default function ProfileCard({
     
     // 상대경로인 경우 절대 URL로 변환
     if (profileImage.startsWith('/')) {
-      const absoluteUrl = `http://spotple.kr:3001${profileImage}`;
+      const absoluteUrl = `https://spotple.kr${profileImage}`;
       return { uri: absoluteUrl };
     }
     

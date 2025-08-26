@@ -164,7 +164,7 @@ export function useProfile() {
           bio: formData.bio,
           profileImage: serverData.user_thumbnail ? 
             (serverData.user_thumbnail.startsWith('/') ? 
-              `http://spotple.kr:3001${serverData.user_thumbnail}` : 
+              `https://spotple.kr${serverData.user_thumbnail}` : 
               serverData.user_thumbnail
             ) : 
             userProfile.profileImage,
