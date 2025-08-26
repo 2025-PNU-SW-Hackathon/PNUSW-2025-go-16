@@ -25,7 +25,9 @@
         "applinks:moigo.com"
       ],
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "갤러리 접근을 허용해야 사진 업로드가 가능합니다.",
+        "NSCameraUsageDescription": "카메라 접근을 허용해야 사진 촬영이 가능합니다."
       }
     },
     "android": {
@@ -41,7 +43,12 @@
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.WAKE_LOCK",
-        "android.permission.ACCESS_NETWORK_STATE"
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.CAMERA"
       ],
       "intentFilters": [
         {
