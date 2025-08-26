@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, TextInput, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, TextInput, Alert, ActivityIndicator, ScrollView, TouchableWithoutFeedback, Keyboard, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 
@@ -175,6 +175,9 @@ export default function MeetingEditModal({
               className={`p-3 bg-white rounded-lg border ${errors.description ? 'border-red-300' : 'border-gray-300'}`}
               editable={isCurrentUserHost}
               textAlignVertical="top"
+              blurOnSubmit={Platform.OS === 'ios'}
+              returnKeyType="done"
+              onBlur={() => Platform.OS === 'android' && Keyboard.dismiss()}
             />
             {errors.description && (
               <Text className="text-sm text-red-600 mt-1">{errors.description}</Text>

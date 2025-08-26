@@ -2170,6 +2170,9 @@ export default function ChatRoomScreen() {
             multiline
             placeholderTextColor="#9CA3AF"
             editable={isUserLoaded}
+            blurOnSubmit={false}
+            returnKeyType="send"
+            onSubmitEditing={handleSendMessage}
           />
           
           {/* 전송 버튼 (입력 필드 안에) */}
