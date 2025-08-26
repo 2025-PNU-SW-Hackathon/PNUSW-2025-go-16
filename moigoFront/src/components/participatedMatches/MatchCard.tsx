@@ -6,24 +6,36 @@ import { COLORS } from '@/constants/colors';
 
 interface MatchCardProps {
   match: ParticipatedMatch;
-  onWriteReview: (matchId: string) => void;
+  onWriteReview: (match: ParticipatedMatch) => void;
 }
 
 export default function MatchCard({ match, onWriteReview }: MatchCardProps) {
+  // 날짜를 문자열로 변환
+  const formatDate = (date: string | Date) => {
+    if (date instanceof Date) {
+      return date.toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    }
+    return date;
+  };
+
   return (
-    <View className="bg-white rounded-xl p-4 mb-4 shadow-sm border border-gray-100">
+    <View className="p-4 mb-4 bg-white rounded-xl border border-gray-100 shadow-sm">
       {/* 제목 */}
-      <Text className="text-lg font-bold text-mainDark mb-2">
+      <Text className="mb-2 text-lg font-bold text-mainDark">
         {match.title}
       </Text>
       
       {/* 날짜와 시간 */}
-      <Text className="text-sm text-mainGrayText mb-1">
-        {match.date} {match.time}
+      <Text className="mb-1 text-sm text-mainGrayText">
+        {formatDate(match.date)} {match.time}
       </Text>
       
       {/* 위치 */}
-      <Text className="text-sm text-mainGrayText mb-3">
+      <Text className="mb-3 text-sm text-mainGrayText">
         {match.location}
       </Text>
       
@@ -37,14 +49,14 @@ export default function MatchCard({ match, onWriteReview }: MatchCardProps) {
             color={COLORS.mainGrayText}
             className="mr-1"
           />
-          <Text className="text-sm text-mainGrayText ml-1">
+          <Text className="ml-1 text-sm text-mainGrayText">
             총 {match.participants}명 참여
           </Text>
         </View>
         
         {/* 리뷰 작성 버튼 */}
         <TouchableOpacity
-          onPress={() => onWriteReview(match.id)}
+          onPress={() => onWriteReview(match)}
           className={`px-4 py-2 rounded-full ${
             match.hasReview 
               ? 'bg-gray-300' 

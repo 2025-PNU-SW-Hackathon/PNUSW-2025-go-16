@@ -1,7 +1,6 @@
 import { TouchableOpacity, Text, Alert, Image, View } from 'react-native';
 import { COLORS } from '@/constants/colors';
 import { getTextColor } from '@/utils';
-import { twMerge } from 'tailwind-merge';
 
 interface PrimaryButtonProps {
   title?: string;
@@ -28,7 +27,7 @@ export default function PrimaryButton({
   
   return (
     <TouchableOpacity
-      className={twMerge("items-center px-5 py-3 rounded-lg", className)}
+      className={`items-center px-5 py-3 rounded-lg ${className || ''}`}
       style={{ backgroundColor: buttonColor }}
       onPress={onPress}
       activeOpacity={0.8}

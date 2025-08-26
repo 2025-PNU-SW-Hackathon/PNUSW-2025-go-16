@@ -4,6 +4,8 @@ import { useMyStore } from '@/store/myStore';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/types/RootStackParamList';
+import { useDeleteAccount } from './queries/useUserQueries';
+import { useLogout } from './queries/useAuthQueries';
 
 export function useMyInfoSetting() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -28,6 +30,8 @@ export function useMyInfoSetting() {
 
   const { logout: authLogout } = useAuthStore();
   const { resetUserProfile } = useMyStore();
+  const deleteAccountMutation = useDeleteAccount();
+  const logoutMutation = useLogout();
 
   // 프로필 관리
   const handleProfileManagement = () => {
@@ -115,22 +119,38 @@ export function useMyInfoSetting() {
     console.log('의견 보내기 페이지로 이동');
   };
 
-  // 로그아웃
+  // 로그아웃 - 완전한 데이터 초기화
   const handleLogout = () => {
+    console.log('🚀 [MyInfoSetting] 로그아웃 시작');
     setLoading(true);
-    // myStore의 사용자 정보 초기화
-    resetUserProfile();
-    authLogout();
-    setLoading(false);
+    
+    // 🆕 React Query 뮤테이션을 사용한 완전한 로그아웃
+    logoutMutation.mutate(undefined, {
+      onSuccess: () => {
+        console.log('✅ [MyInfoSetting] 로그아웃 완료');
+        setLoading(false);
+      },
+      onError: (error) => {
+        console.error('❌ [MyInfoSetting] 로그아웃 실패:', error);
+        setLoading(false);
+      }
+    });
   };
 
   // 회원탈퇴
-  const handleWithdraw = () => {
-    setLoading(true);
-    // myStore의 사용자 정보 초기화
-    resetUserProfile();
-    authLogout();
-    setLoading(false);
+  const handleWithdraw = async () => {
+    try {
+      console.log('🚀 [회원탈퇴] handleWithdraw 시작');
+      setLoading(true);
+      console.log('🚀 [회원탈퇴] API 호출 시작');
+      await deleteAccountMutation.mutateAsync();
+      console.log('✅ [회원탈퇴] API 호출 성공');
+      // 회원 탈퇴 성공 시 자동으로 로그아웃되고 로그인 전 화면으로 이동됨
+      // useDeleteAccount에서 logout() 호출
+    } catch (error) {
+      console.error('❌ [회원탈퇴] API 호출 실패:', error);
+      setLoading(false);
+    }
   };
 
   return {
@@ -163,5 +183,8 @@ export function useMyInfoSetting() {
     handleSendFeedback,
     handleLogout,
     handleWithdraw,
+    
+    // 회원 탈퇴 상태
+    isDeletingAccount: deleteAccountMutation.isPending,
   };
 }

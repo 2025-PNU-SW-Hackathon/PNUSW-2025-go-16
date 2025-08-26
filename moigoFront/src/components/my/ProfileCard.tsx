@@ -1,3 +1,4 @@
+import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import TagChip from '@/components/common/TagChip';
@@ -16,14 +17,36 @@ export default function ProfileCard({
   preferredSports,
   onEdit,
 }: ProfileCardProps) {
+  // 프로필 이미지 소스 생성 (상대경로를 절대 URL로 변환)
+  const getImageSource = () => {
+    if (!profileImage) {
+      return null;
+    }
+    
+    // 상대경로인 경우 절대 URL로 변환
+    if (profileImage.startsWith('/')) {
+      const absoluteUrl = `https://spotple.kr${profileImage}`;
+      return { uri: absoluteUrl };
+    }
+    
+    // 절대 URL인 경우 그대로 사용
+    return { uri: profileImage };
+  };
+
+  const imageSource = getImageSource();
+
   return (
     <View className="px-4 py-8 mx-4 mb-4 bg-white rounded-2xl border-2 border-mainGray">
       <View className="flex-row justify-between items-center">
         <View className="flex-row flex-1 items-center">
           {/* 프로필 이미지 */}
           <View className="overflow-hidden mr-4 w-16 h-16 bg-gray-200 rounded-full">
-            {profileImage ? (
-              <Image source={{ uri: profileImage }} className="w-full h-full" />
+            {imageSource ? (
+              <Image 
+                source={imageSource} 
+                className="w-full h-full" 
+                resizeMode="cover"
+              />
             ) : (
               <View className="justify-center items-center w-full h-full">
                 <Feather name="user" size={32} color={COLORS.mainDarkGray} />

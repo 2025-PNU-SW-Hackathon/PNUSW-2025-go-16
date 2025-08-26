@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TextInput } from 'react-native';
+import { View, Text, TextInput, Platform, Keyboard } from 'react-native';
 
 interface BioTextAreaProps {
   value: string;
@@ -28,6 +28,9 @@ export default function BioTextArea({
           editable={isEditable}
           className="bg-gray-100 rounded-lg px-4 py-3 text-gray-900 min-h-[100]"
           textAlignVertical="top"
+          blurOnSubmit={Platform.OS === 'ios'}
+          returnKeyType="done"
+          onBlur={() => Platform.OS === 'android' && isEditable && Keyboard.dismiss()}
         />
         <Text className="absolute right-2 bottom-2 text-xs text-gray-500">
           {value.length}/{maxLength}자

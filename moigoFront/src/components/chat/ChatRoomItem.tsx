@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { ChatRoom } from '@/types/ChatTypes';
+import { formatTimeAgo } from '@/utils/dateUtils';
 
 interface ChatRoomItemProps {
   chatRoom: ChatRoom;
@@ -8,59 +9,51 @@ interface ChatRoomItemProps {
 }
 
 export default function ChatRoomItem({ chatRoom, onPress }: ChatRoomItemProps) {
-  return (
+  // 채팅방 이름에서 첫 글자 추출
+  const getIconText = () => {
+    return (chatRoom.title || chatRoom.name || '채팅').charAt(0);
+  };
+
+  // 시간 포맷팅 - timestamp가 이미 포맷된 상태로 제공됨
+  const timeAgo = chatRoom.timestamp || '시간 없음';
+
+  // 읽지 않은 메시지 수 (임시로 랜덤 설정)
+  const unreadCount = chatRoom.unreadCount || (Math.random() > 0.5 ? 2 : 0);
+
+    return (
     <TouchableOpacity
       onPress={() => onPress(chatRoom)}
       activeOpacity={0.7}
-      className="bg-white rounded-lg p-4 mb-3 shadow-sm"
+      className="flex-row items-center px-4 py-4 my-2 bg-white rounded-2xl border border-gray-200 shadow-sm"
     >
-      <View className="flex-row items-start">
-        {/* 아이콘 */}
-        <View 
-          className="w-12 h-12 rounded-full items-center justify-center mr-3"
-          style={{ backgroundColor: chatRoom.icon.backgroundColor }}
-        >
-          <Text 
-            className="text-xs font-bold text-center leading-tight"
-            style={{ color: chatRoom.icon.textColor }}
-            numberOfLines={2}
-          >
-            {chatRoom.icon.text}
-          </Text>
+      {/* 왼쪽 아이콘 */}
+      <View className="justify-center items-center mr-3 w-12 h-12 bg-orange-500 rounded-full">
+        <Text className="text-lg font-semibold text-white">{getIconText()}</Text>
+      </View>
+      
+      {/* 중간 내용 */}
+      <View className="flex-1 mr-2">
+        <View className="flex-row justify-between items-center">
+            <Text className="text-base font-semibold text-black" numberOfLines={1}>
+              {chatRoom.title || chatRoom.name}
+            </Text>
+            <Text className="text-xs text-gray-400">{timeAgo}</Text>
         </View>
-
-        {/* 채팅방 정보 */}
-        <View className="flex-1">
-          <View className="flex-row items-center justify-between mb-1">
-            <Text className="text-base font-semibold text-gray-900 flex-1">
-              {chatRoom.title}
-            </Text>
-            <Text className="text-xs text-gray-500 ml-2">
-              {chatRoom.timestamp}
+          <View className="flex-1">
+            <Text className="mt-1 text-sm text-gray-500" numberOfLines={1}>
+              참여자 {(chatRoom as any).reservation_participant_cnt || 0}명
             </Text>
           </View>
-          
-          <Text className="text-sm text-gray-600 mb-1">
-            {chatRoom.subtitle}
+        <View className="flex-row justify-between items-center mt-1">
+          <Text className="flex-1 text-sm text-gray-500" numberOfLines={1}>
+            {chatRoom.lastMessage || '메시지가 없습니다.'}
           </Text>
-          
-          <View className="flex-row items-center justify-between">
-            <Text 
-              className="text-sm text-gray-700 flex-1 mr-2"
-              numberOfLines={1}
-            >
-              {chatRoom.lastMessage}
-            </Text>
-            
-            {/* 읽지 않은 메시지 수 */}
-            {chatRoom.unreadCount > 0 && (
-              <View className="bg-red-500 rounded-full min-w-[20px] h-5 items-center justify-center px-1">
-                <Text className="text-xs text-white font-bold">
-                  {chatRoom.unreadCount}
-                </Text>
-              </View>
-            )}
-          </View>
+          {/* 오른쪽 읽지 않은 메시지 카운트 */}
+          {unreadCount > 0 && (
+            <View className="bg-red-500 rounded-full min-w-[20px] h-5 justify-center items-center px-1.5 ml-2">
+              <Text className="text-xs font-semibold text-white">{unreadCount}</Text>
+            </View>
+          )}
         </View>
       </View>
     </TouchableOpacity>
