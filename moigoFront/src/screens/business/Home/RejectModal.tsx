@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, ActivityIndicator, TextInput } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator, TextInput, TouchableWithoutFeedback, Keyboard, Platform } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import ModalBox from "@/components/common/ModalBox";
 import type { StoreReservationDTO } from "@/types/DTO/users";
@@ -114,6 +114,9 @@ export default function RejectModal({
           multiline
           numberOfLines={3}
           textAlignVertical="top"
+          blurOnSubmit={Platform.OS === 'ios'}
+          returnKeyType="done"
+          onBlur={() => Platform.OS === 'android' && Keyboard.dismiss()}
         />
       </View>
       

@@ -1,4 +1,4 @@
-import { View, Text, TextInput } from 'react-native';
+import { View, Text, TextInput, TouchableWithoutFeedback, Keyboard, Platform } from 'react-native';
 import { COLORS } from '@/constants/colors';
 
 import ModalBox from '@/components/common/ModalBox';
@@ -63,6 +63,9 @@ function EnterModal({ visible, onClose, event, showSuccessToast, showErrorToast 
               multiline
               numberOfLines={4}
               textAlignVertical="top"
+              blurOnSubmit={Platform.OS === 'ios'}
+              returnKeyType="done"
+              onBlur={() => Platform.OS === 'android' && Keyboard.dismiss()}
             />
           </View>
 

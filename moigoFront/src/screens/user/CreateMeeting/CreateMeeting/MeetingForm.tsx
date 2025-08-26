@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Platform, Keyboard } from 'react-native';
 
 interface MeetingFormProps {
   meetingName: string;
@@ -81,6 +81,10 @@ export default function MeetingForm({
           maxLength={300}
           multiline
           className="p-3 rounded-xl border border-gray-200 min-h-[80px]"
+          textAlignVertical="top"
+          blurOnSubmit={Platform.OS === 'ios'}
+          returnKeyType="done"
+          onBlur={() => Platform.OS === 'android' && Keyboard.dismiss()}
         />
         {errors.description && (
           <Text className="mt-1 text-sm text-red-500">{errors.description.message}</Text>

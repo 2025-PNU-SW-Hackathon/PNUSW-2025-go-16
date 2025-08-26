@@ -40,6 +40,7 @@
       "package": "com.sehankim.moigoFront",
       "versionCode": 1,
       "supportsTablet": true,
+      "softwareKeyboardLayoutMode": "pan",
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.WAKE_LOCK",
